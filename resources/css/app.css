@@ -56,6 +56,25 @@
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-ring: var(--sidebar-ring);
+
+    --color-normaltype: var(--normaltype);
+    --color-firetype: var(--firetype);
+    --color-watertype: var(--watertype);
+    --color-electrictype: var(--electrictype);
+    --color-grasstype: var(--grasstype);
+    --color-icetype: var(--icetype);
+    --color-fightingtype: var(--fightingtype);
+    --color-poisontype: var(--poisontype);
+    --color-groundtype: var(--groundtype);
+    --color-flyingtype: var(--flyingtype);
+    --color-psychictype: var(--psychictype);
+    --color-bugtype: var(--bugtype);
+    --color-rocktype: var(--rocktype);
+    --color-ghosttype: var(--ghosttype);
+    --color-dragontype: var(--dragontype);
+    --color-darktype: var(--darktype);
+    --color-steeltype: var(--steeltype);
+    --color-fairytype: var(--fairytype); 
 }
 
 /*
@@ -119,6 +138,24 @@
     --sidebar-border: hsl(0 0% 91%);
     --sidebar-ring: hsl(217.2 91.2% 59.8%);
     --sidebar: hsl(0 0% 98%);
+    --normaltype: hsl(0 0% 66.7%);
+    --firetype: hsl(12, 85%, 43%);
+    --watertype: hsl(207 90% 54%);
+    --electrictype: hsl(56 94% 57%);
+    --grasstype: hsl(123, 63%, 36%);
+    --icetype: hsl(195 100% 81%);
+    --fightingtype: hsl(19, 80%, 49%);
+    --poisontype: hsl(283 77% 57%);
+    --groundtype: hsl(45, 71%, 27%);
+    --flyingtype: hsl(199, 100%, 50%);
+    --psychictype: hsl(323, 100%, 68%);
+    --bugtype: hsl(140, 96%, 45%);
+    --rocktype: hsl(34, 84%, 57%);
+    --ghosttype: hsl(270, 100%, 78%);
+    --dragontype: hsl(256, 78%, 57%);
+    --darktype: hsl(37, 31%, 15%);
+    --steeltype: hsl(240, 1%, 32%);
+    --fairytype: hsl(310, 100%, 76%);
 }
 
 .dark {
@@ -155,6 +192,24 @@
     --sidebar-border: hsl(0 0% 15.9%);
     --sidebar-ring: hsl(217.2 91.2% 59.8%);
     --sidebar: hsl(240 5.9% 10%);
+    --normaltype: hsl(0 0% 66.7%);
+    --firetype: hsl(12, 85%, 43%);
+    --watertype: hsl(207 90% 54%);
+    --electrictype: hsl(56 94% 57%);
+    --grasstype: hsl(123, 63%, 36%);
+    --icetype: hsl(195 100% 81%);
+    --fightingtype: hsl(19, 80%, 49%);
+    --poisontype: hsl(283 77% 57%);
+    --groundtype: hsl(45, 71%, 27%);
+    --flyingtype: hsl(199, 100%, 50%);
+    --psychictype: hsl(323, 100%, 68%);
+    --bugtype: hsl(140, 96%, 45%);
+    --rocktype: hsl(34, 84%, 57%);
+    --ghosttype: hsl(270, 100%, 78%);
+    --dragontype: hsl(256, 78%, 57%);
+    --darktype: hsl(37, 31%, 15%);
+    --steeltype: hsl(240, 1%, 32%);
+    --fairytype: hsl(310, 100%, 76%);
 }
 
 @layer base {
