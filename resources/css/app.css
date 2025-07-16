@@ -141,7 +141,7 @@
     --normaltype: hsl(0 0% 66.7%);
     --firetype: hsl(12, 85%, 43%);
     --watertype: hsl(207 90% 54%);
-    --electrictype: hsl(56 94% 57%);
+    --electrictype: hsl(56, 67%, 47%);
     --grasstype: hsl(123, 63%, 36%);
     --icetype: hsl(195 100% 81%);
     --fightingtype: hsl(19, 80%, 49%);
@@ -195,15 +195,15 @@
     --normaltype: hsl(0 0% 66.7%);
     --firetype: hsl(12, 85%, 43%);
     --watertype: hsl(207 90% 54%);
-    --electrictype: hsl(56 94% 57%);
+    --electrictype: hsl(54, 92%, 52%);
     --grasstype: hsl(123, 63%, 36%);
     --icetype: hsl(195 100% 81%);
     --fightingtype: hsl(19, 80%, 49%);
     --poisontype: hsl(283 77% 57%);
     --groundtype: hsl(45, 71%, 27%);
-    --flyingtype: hsl(199, 100%, 50%);
+    --flyingtype: hsl(184, 100%, 50%);
     --psychictype: hsl(323, 100%, 68%);
-    --bugtype: hsl(140, 96%, 45%);
+    --bugtype: hsl(123, 84%, 59%);
     --rocktype: hsl(34, 84%, 57%);
     --ghosttype: hsl(270, 100%, 78%);
     --dragontype: hsl(256, 78%, 57%);
