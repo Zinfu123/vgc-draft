@@ -59,7 +59,11 @@ return [
             'throw' => false,
             'report' => false,
         ],
-
+        's3-team-logos' => [
+            'driver' => 'scoped',
+            'disk' => 's3',
+            'prefix' => 'TeamsLogos',
+        ],
     ],
 
     /*
