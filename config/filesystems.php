@@ -64,6 +64,11 @@ return [
             'disk' => 's3',
             'prefix' => 'TeamsLogos',
         ],
+        's3-league-logos' => [
+            'driver' => 'scoped',
+            'disk' => 's3',
+            'prefix' => 'LeagueLogos',
+        ],
     ],
 
     /*

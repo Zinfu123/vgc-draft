@@ -8,14 +8,23 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
 use App\Modules\League\Actions\CreateLeague;
+use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Storage;
 
 class LeagueController extends Controller
 {
     public function index()
     {
         $currentLeagues = League::where('status', 1)->get();
+        $currentLeaguesUrl = $currentLeagues->map(function ($league) {
+            if ($league->logo !== null) {
+                $league->logo = Storage::disk('s3-league-logos')->url( $league->logo);
+            }
+            return $league;
+        });
+        Log::info($currentLeaguesUrl);
         return Inertia::render('league/LeagueIndex', [
-            'currentLeagues' => $currentLeagues
+            'currentLeagues' => $currentLeaguesUrl,
         ]);
     }
 
@@ -29,6 +38,6 @@ class LeagueController extends Controller
     public function create(Request $request)
     {
         $league = (new CreateLeague())->create($request);
-        return redirect()->route('leagues.index', ['league_id' => $league->id]);
+        return redirect()->route('leagues.detail', ['league' => $league->id]);
     }
 }

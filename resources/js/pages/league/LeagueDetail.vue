@@ -31,6 +31,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex flex-col max-w-4xl mx-auto items-center">
             <h1 class="text-3xl font-bold">{{ props.league.name }}</h1>
+            <button @click="createTeam" class="bg-blue-500 text-white p-2 rounded-md">Create Team</button>
         </div>
     </AppLayout>
 </template>

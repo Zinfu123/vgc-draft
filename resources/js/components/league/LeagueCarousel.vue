@@ -2,17 +2,22 @@
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { Card, CardContent } from '@/components/ui/card';
 import { router } from '@inertiajs/vue3';
+import { useStorage } from '@vueuse/core';
 
 interface Leagues {
     id: number;
     name: string;
-    logo?: string;
     draft_date: string;
     set_start_date: string;
 }
 
+interface LeagueLogos {
+    logo: string;
+}
+
 interface props {
     leagues: Leagues[];
+    leagueLogos?: LeagueLogos[];
 }
 
 const props = defineProps<props>();
@@ -27,11 +32,11 @@ const props = defineProps<props>();
             }"
             >
             <CarouselContent class="mt-10 w-[800px]">
-                <CarouselItem v-for="league in leagues" :key="league.id" class="md:basis-1/2 lg:basis-1/3" @click="router.get(`/leagues/${league.id}`)">
-                <Card class="flex aspect-square items-center ">
+                <CarouselItem v-for="league in leagues" :key="league.id" class="md:basis-1/2 lg:basis-1/3" :style="{ backgroundImage: `url(${leagueLogos?.[0]?.logo})` }" @click="router.get(`/leagues/${league.id}`)">
+                <Card class="flex aspect-square items-center hover:bg-black/50 cursor-pointer" >
                 <CardHeader>  
                     <CardTitle>
-                        {{ league.name }}
+                        {{ leagueLogos?.[0]?.logo }}
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
