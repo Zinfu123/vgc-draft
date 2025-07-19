@@ -29,7 +29,7 @@ const props = defineProps<props>();
             >
             <CarouselContent class="mt-10 w-[800px]">
                 <CarouselItem v-for="league in leagues" :key="league.id" class="md:basis-1/2 lg:basis-1/3" @click="router.get(`/leagues/${league.id}`)">
-                <Card class="flex aspect-square items-center hover:bg-black/50 cursor-pointer" :style="{ backgroundImage: `url(${league.logo})`, backgroundSize: 'cover', backgroundPosition: 'center'}" style="transparency">
+                <Card class="flex aspect-square items-center hover:bg-black/50 cursor-pointer">
                 <CardHeader>  
                     <CardTitle>
                         {{ league.name}}
@@ -37,10 +37,13 @@ const props = defineProps<props>();
                 </CardHeader>
                 <CardContent>
                     <div>
-                        draft date: {{ league.draft_date }}
+                        Draft Date: {{ league.draft_date }}
                     </div>
                     <div>
-                        start date: {{ league.set_start_date }}
+                        Start Date: {{ league.set_start_date }}
+                    </div>
+                    <div>
+                        <img :src="league.logo" alt="League Logo" class="w-40 h-40">
                     </div>
                 </CardContent>
                 </Card>

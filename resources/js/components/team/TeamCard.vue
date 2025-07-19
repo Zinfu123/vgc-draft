@@ -8,6 +8,7 @@ interface Teams {
     set_wins: number;
     set_losses: number;
     victory_points: number;
+    coach: string;
 }
 
 interface props {

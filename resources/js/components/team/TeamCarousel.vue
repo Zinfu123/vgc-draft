@@ -13,7 +13,7 @@ interface Teams {
 }
 
 interface props {
-    teams: Teams[];
+    leagueteams: Teams[];
 }
 
 const props = defineProps<props>();
@@ -28,7 +28,7 @@ const props = defineProps<props>();
             }"
             >
             <CarouselContent class="flex justify-center items-center">
-                <CarouselItem v-for="team in teams" :key="team.id" class="md:basis-1/2 lg:basis-1/3 h-[500px] w-[900px] flex justify-center items-center" @click="router.get(`/teams/${team.id}`)">
+                <CarouselItem v-for="team in leagueteams" :key="team.id" class="md:basis-1/2 lg:basis-1/3 h-[500px] w-[900px] flex justify-center items-center" @click="router.get(`/teams/${team.id}`)">
                 <TeamCard :team="team" />
                 </CarouselItem>
                 </CarouselContent>

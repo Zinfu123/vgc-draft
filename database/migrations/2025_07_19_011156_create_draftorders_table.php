@@ -11,11 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('drafts', function (Blueprint $table) {
+        Schema::create('draft_order', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('league_id')->constrained('leagues')->onDelete('cascade');
-            $table->integer('round_number');
+            $table->foreignId('league_id')->constrained('leagues');
+            $table->foreignId('user_id')->constrained('users');
+            $table->integer('pick_number');
             $table->integer('status');
+            $table->integer('is_last_pick')->default(0);
             $table->timestamps();
         });
     }
@@ -25,6 +27,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('drafts');
+        Schema::dropIfExists('draftorders');
     }
 };

@@ -5,7 +5,7 @@ namespace App\Modules\League\Actions;
 use App\Modules\League\Models\League;
 use Illuminate\Http\Request;
 use App\Modules\League\Actions\LeagueLogoUploadAction;
-
+use Illuminate\Support\Facades\Auth;
 
 class CreateEditLeagueAction
 {
@@ -29,6 +29,7 @@ class CreateEditLeagueAction
             'set_start_date' => $request->set_start_date,
             'set_frequency' => $request->set_frequency,
             'logo' => $logo,
+            'league_owner' => Auth::user()->id,
         ]);
         return $league;
     }

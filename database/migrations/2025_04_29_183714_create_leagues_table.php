@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('leagues', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('winner')->constrained('users')->onDelete('cascade')->nullable();
+            $table->foreignId('winner')->nullable()->constrained('users')->onDelete('cascade');
             $table->integer('set_frequency')->default(1);
             $table->string('name');
             $table->string('logo')->nullable();
@@ -21,6 +21,7 @@ return new class extends Migration
             $table->date('set_start_date')->nullable();
             $table->integer('status')->default(1);
             $table->integer('draft_points')->default(80); 
+            $table->foreignId('league_owner')->constrained('users')->onDelete('cascade');
             $table->timestamps();
         });
     }

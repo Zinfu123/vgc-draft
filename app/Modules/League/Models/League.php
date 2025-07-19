@@ -18,6 +18,7 @@ class League extends Model
         'draft_date',
         'set_start_date',
         'draft_points',
+        'league_owner',
         'status',
         'created_at',
         'updated_at',
