@@ -3,7 +3,6 @@
 namespace App\Modules\Teams\Actions;
 
 use App\Modules\Teams\Models\Team;
-use App\Modules\Teams\Actions\TeamLogoUploadAction;
 use Illuminate\Http\Request;
 
 class CreateEditTeamAction
@@ -18,7 +17,7 @@ class CreateEditTeamAction
             'pick_position' => 'required|integer',
         ]);
         if ($request->hasFile('logo')) {
-            $logo = (new TeamLogoUploadAction())->upload($request);
+            $logo = (new TeamLogoUploadAction)->upload($request);
         } else {
             $logo = null;
         }
@@ -29,6 +28,7 @@ class CreateEditTeamAction
             'logo' => $logo,
             'pick_position' => $request->pick_position,
         ]);
+
         return $team;
     }
 }

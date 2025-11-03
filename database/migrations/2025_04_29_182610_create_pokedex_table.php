@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('pokedex', function (Blueprint $table) {
             $table->id();
+            $table->float('nationaldex_id');
             $table->string('name');
             $table->string('type1');
             $table->string('type2')->nullable();

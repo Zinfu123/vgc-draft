@@ -3,8 +3,6 @@
 namespace App\Modules\League\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Modules\League\Models\League;
-use App\Models\User;
 
 class LeaguePokemon extends Model
 {
@@ -12,7 +10,28 @@ class LeaguePokemon extends Model
 
     protected $fillable = [
         'league_id',
-        'pokemon_id',
-        'pokemon_name',
+        'pokedex_id',
+        'name',
+        'cost',
     ];
+
+    public function league()
+    {
+        return $this->belongsTo(League::class);
+    }
+
+    public function pokemon()
+    {
+        return $this->belongsTo(\App\Modules\Pokedex\Models\Pokedex::class, 'pokedex_id');
+    }
+
+    public function draftedBy()
+    {
+        return $this->belongsTo(\App\Modules\Teams\Models\Team::class);
+    }
+
+    public function draftPicks()
+    {
+        return $this->hasMany(\App\Modules\Draft\Models\DraftPick::class, 'league_pokemon_id');
+    }
 }

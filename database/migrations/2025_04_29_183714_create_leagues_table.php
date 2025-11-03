@@ -20,7 +20,7 @@ return new class extends Migration
             $table->date('draft_date')->nullable();
             $table->date('set_start_date')->nullable();
             $table->integer('status')->default(1);
-            $table->integer('draft_points')->default(80); 
+            $table->integer('draft_points')->default(80);
             $table->foreignId('league_owner')->constrained('users')->onDelete('cascade');
             $table->timestamps();
         });

@@ -2,8 +2,8 @@
 
 namespace App\Modules\League\Actions;
 
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class LeagueLogoUploadAction
 {
@@ -11,9 +11,10 @@ class LeagueLogoUploadAction
     {
         $logo = $request->file('logo');
         $extension = $logo->getClientOriginalExtension();
-        $logoName = $request->name;
-        $filepath = str_replace(' ', '_', $logoName) . '.' . $extension;
+        $logoName = str_replace('\'', '', $request->name);
+        $filepath = str_replace(' ', '_', $logoName).'.'.$extension;
         Storage::disk('s3-league-logos')->putFileAs($logo, $filepath);
+
         return $filepath;
     }
 }

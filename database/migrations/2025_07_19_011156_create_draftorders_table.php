@@ -14,9 +14,10 @@ return new class extends Migration
         Schema::create('draft_order', function (Blueprint $table) {
             $table->id();
             $table->foreignId('league_id')->constrained('leagues');
-            $table->foreignId('user_id')->constrained('users');
+            $table->foreignId('team_id')->constrained('teams');
+            $table->string('team_name');
             $table->integer('pick_number');
-            $table->integer('status');
+            $table->integer('status')->default(1);
             $table->integer('is_last_pick')->default(0);
             $table->timestamps();
         });
@@ -27,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('draftorders');
+        Schema::dropIfExists('draft_order');
     }
 };

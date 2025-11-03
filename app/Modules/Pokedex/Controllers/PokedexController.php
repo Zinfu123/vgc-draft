@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Modules\Shared\Controllers;
+namespace App\Modules\Pokedex\Controllers;
 
-use App\Modules\Shared\Models\Pokedex;
 use App\Http\Controllers\Controller;
+use App\Modules\Pokedex\Models\Pokedex;
 use Inertia\Inertia;
 
 class PokedexController extends Controller
@@ -11,8 +11,9 @@ class PokedexController extends Controller
     public function index()
     {
         $pokedex = Pokedex::all();
+
         return Inertia::render('pokedex/PokedexIndex', [
-            'pokemon' => $pokedex
+            'pokemon' => $pokedex,
         ]);
     }
 }

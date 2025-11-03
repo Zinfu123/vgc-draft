@@ -3,8 +3,6 @@
 namespace App\Modules\Draft\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Modules\League\Models\League;
-use App\Models\User;
 
 class DraftPick extends Model
 {
@@ -17,4 +15,9 @@ class DraftPick extends Model
         'round_number',
         'pick_number',
     ];
+
+    public function leaguePokemon()
+    {
+        return $this->belongsTo(\App\Modules\League\Models\LeaguePokemon::class, 'league_pokemon_id');
+    }
 }

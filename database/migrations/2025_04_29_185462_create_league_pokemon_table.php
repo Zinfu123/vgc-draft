@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('name');
             $table->integer('cost');
             $table->boolean('is_drafted')->default(false);
-            $table->foreignId('drafted_by')->constrained('users')->nullable();
+            $table->foreignId('drafted_by')->nullable()->constrained('teams');
             $table->timestamps();
         });
     }

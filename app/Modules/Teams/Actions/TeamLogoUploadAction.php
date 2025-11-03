@@ -2,8 +2,8 @@
 
 namespace App\Modules\Teams\Actions;
 
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class TeamLogoUploadAction
 {
@@ -12,8 +12,9 @@ class TeamLogoUploadAction
         $logo = $request->file('logo');
         $extension = $logo->getClientOriginalExtension();
         $logoName = $request->name;
-        $filepath = str_replace(' ', '_', $logoName) . '.' . $extension;
+        $filepath = str_replace(' ', '_', $logoName).'.'.$extension;
         Storage::disk('s3-team-logos')->putFileAs($logo, $filepath);
+
         return $filepath;
     }
 }

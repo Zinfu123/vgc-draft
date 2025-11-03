@@ -48,6 +48,6 @@ class User extends Authenticatable
 
     public function teams()
     {
-        return $this->hasMany(Team::class);
+        return $this->hasMany(\App\Modules\Teams\Models\Team::class);
     }
 }

@@ -3,7 +3,6 @@
 namespace App\Modules\League\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Modules\Teams\Models\Team;
 
 class League extends Model
 {
@@ -24,9 +23,8 @@ class League extends Model
         'updated_at',
     ];
 
-
     public function teams()
     {
-        return $this->hasMany(Team::class);
+        return $this->hasMany(\App\Modules\Teams\Models\Team::class, 'league_id');
     }
 }

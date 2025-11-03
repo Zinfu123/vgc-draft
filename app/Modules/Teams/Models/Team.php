@@ -3,8 +3,6 @@
 namespace App\Modules\Teams\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Modules\League\Models\League;
-use App\Models\User;
 
 class Team extends Model
 {
@@ -27,14 +25,18 @@ class Team extends Model
         'updated_at',
     ];
 
-
     public function league()
     {
-        return $this->belongsTo(League::class);
+        return $this->belongsToMany(\App\Modules\League\Models\League::class, 'league_id');
     }
 
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(\App\Models\User::class, 'user_id');
+    }
+
+    public function draftPicks()
+    {
+        return $this->hasMany(\App\Modules\Draft\Models\DraftPick::class, 'team_id');
     }
 }

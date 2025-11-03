@@ -3,8 +3,6 @@
 namespace App\Modules\Draft\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Modules\League\Models\League;
-use App\Models\User;
 
 class DraftOrder extends Model
 {
@@ -15,6 +13,7 @@ class DraftOrder extends Model
         'user_id',
         'pick_number',
         'status',
+        'team_name',
         'is_last_pick',
     ];
 }
