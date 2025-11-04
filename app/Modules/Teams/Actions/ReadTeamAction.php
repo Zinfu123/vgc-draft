@@ -17,7 +17,7 @@ class ReadTeamAction
 
         $teams = $teams->map(function ($team) {
             if ($team->logo !== null) {
-                $team->logo = str_replace('\\', '/', Storage::disk('s3-team-logos')->url($team->league_id.'/'.$team->logo));
+                $team->logo = str_replace('\\', '/', Storage::disk('s3-team-logos')->url('/'.$team->league_id.'/'.$team->logo));
             }
 
             return $team;
