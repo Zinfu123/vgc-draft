@@ -10,9 +10,10 @@ class TeamLogoUploadAction
     public function upload(Request $request)
     {
         $logo = $request->file('logo');
+        $league_id = $request->league_id;
         $extension = $logo->getClientOriginalExtension();
         $logoName = $request->name;
-        $filepath = str_replace(' ', '_', $logoName).'.'.$extension;
+        $filepath = $league_id.'/'.str_replace(' ', '_', $logoName).'.'.$extension;
         Storage::disk('s3-team-logos')->putFileAs($logo, $filepath);
 
         return $filepath;
