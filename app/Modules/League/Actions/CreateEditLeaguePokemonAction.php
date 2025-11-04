@@ -4,7 +4,7 @@ namespace App\Modules\League\Actions;
 
 /* Define Models */
 use App\Modules\League\Models\LeaguePokemon;
-use App\Modules\Shared\Models\Pokedex;
+use App\Modules\Pokedex\Models\Pokedex;
 
 /* End Define Models */
 
