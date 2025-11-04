@@ -11,13 +11,13 @@ class ReadTeamAction
     public function __invoke($data)
     {
         $teams = Team::where('league_id', $data)
-            ->select('id', 'name', 'logo', 'user_id')
+            ->select('id', 'name', 'logo', 'user_id', 'league_id')
             ->with('user')
             ->get();
 
         $teams = $teams->map(function ($team) {
             if ($team->logo !== null) {
-                $team->logo = str_replace('\\', '/', Storage::disk('s3-team-logos')->url($team->logo));
+                $team->logo = str_replace('\\', '/', Storage::disk('s3-team-logos')->url($team->league_id.'/'.$team->logo));
             }
 
             return $team;
