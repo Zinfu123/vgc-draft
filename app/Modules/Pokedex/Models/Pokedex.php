@@ -17,7 +17,7 @@ class Pokedex extends Model
 
     public function league()
     {
-        return $this->belongsToMany(\App\Modules\League\Models\League::class, 'league_pokemon', 'pokedex_id')->withPivot('cost');
+        return $this->belongsToMany(\App\Modules\League\Models\League::class, 'league_pokemon', 'pokedex_id')->withPivot('cost', 'id');
     }
 
     public function leaguePokemon()

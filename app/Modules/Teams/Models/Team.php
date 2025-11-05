@@ -39,4 +39,5 @@ class Team extends Model
     {
         return $this->hasMany(\App\Modules\Draft\Models\DraftPick::class, 'team_id');
     }
+
 }

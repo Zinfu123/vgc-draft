@@ -16,8 +16,13 @@ interface Pokemon {
     }>;
 }
 
+interface cost {
+    cost: number;
+}
+
 interface props {
     pokemon: Pokemon;
+    cost: cost;
 }
 
 const props = defineProps<props>();
@@ -60,7 +65,7 @@ function typeoutput() {
             </div>
             <div class="flex flex-row justify-center w-full mt-4">
                 <span class="rounded bg-gray-800/85 dark:bg-muted/85 px-2 py-1 text-xs text-center">
-                    Cost: {{ props.pokemon?.league?.[0]?.pivot?.cost }}
+                    Cost: {{ props.pokemon?.league?.[0]?.pivot?.cost || props.cost.cost }}
                 </span>
             </div>
         </CardContent>

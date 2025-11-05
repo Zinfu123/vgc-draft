@@ -6,18 +6,13 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function shouldRun(): bool
-    {
-        return false; // Disable this migration
-    }
-
     /**
      * Run the migrations.
      */
     public function up(): void
     {
-        Schema::table('league_pokemon', function (Blueprint $table) {
-            $table->foreignId('team_id')->constrained('teams')->onDelete('cascade');
+        Schema::table('draft_order', function (Blueprint $table) {
+            $table->integer('pick_number')->default(1)->change();
         });
     }
 

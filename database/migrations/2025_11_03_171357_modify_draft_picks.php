@@ -6,6 +6,10 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    public function shouldRun(): bool
+    {
+        return false; // Disable this migration
+    }
     /**
      * Run the migrations.
      */

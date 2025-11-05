@@ -33,6 +33,7 @@ public function __invoke($data)
     $draft = DraftPick::create([
         'draft_id' => $data['draft_id'],
         'team_id' => $data['team_id'],
+        'league_id' => $data['league_id'],
         'league_pokemon_id' => $leaguePokemon->id,
         'round_number' => $data['round_number'],
         'pick_number' => $data['pick_number'],

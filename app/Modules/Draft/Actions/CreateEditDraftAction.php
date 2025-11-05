@@ -23,6 +23,10 @@ class CreateEditDraftAction
             $draft = Draft::where('league_id', $data['league_id'])->first();
             $draft->round_number++;
             $draft->save();
+
+            (new CreateEditDraftOrderAction)->__invoke([
+                'league_id' => $data['league_id'],
+            ]);
         }
         // End Draft
         elseif ($data['command'] == 'end_draft') {

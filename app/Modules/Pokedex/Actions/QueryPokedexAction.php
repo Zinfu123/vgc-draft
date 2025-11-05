@@ -22,9 +22,14 @@ class QueryPokedexAction
             ->select('pokedex.id', 'sprite_url', 'pokedex.name', 'type1', 'type2')
             ->with('league')
             ->join('league_pokemon', 'pokedex.id', '=', 'league_pokemon.pokedex_id')
+            ->when($data['command'] ?? null == 'draftedpokemon', function ($query) {
+                $query->where('league_pokemon.is_drafted', 0);
+            })
             ->orderBy('league_pokemon.cost', 'desc')
             ->orderBy('pokedex.name', 'asc')
             ->get();
+
+
 
         return $pokemon;
     }

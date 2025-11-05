@@ -10,8 +10,8 @@ class CreateEditDraftOrderAction
 {
     public function __invoke($data)
     {
-        $roundnumber = Draft::where('league_id', $data['league_id'])->first()->round_number;
-        $teams = ($roundnumber % 2 == 0) ? Team::where('league_id', $data['league_id'])->orderBy('pick_position')->get() : Team::where('league_id', $data['league_id'])->orderBy('pick_position')->get();
+        $roundnumber = Draft::where('league_id', $data['league_id'])->round_number;
+        $teams = ($roundnumber % 2 == 0) ? Team::where('league_id', $data['league_id'])->orderBy('pick_position', 'desc')->where('draft_points', '>', 0)->get() : Team::where('league_id', $data['league_id'])->orderBy('pick_position', 'asc')->where('draft_points', '>', 0)->get();
         $i = 1;
         foreach ($teams as $team) {
             DraftOrder::create([

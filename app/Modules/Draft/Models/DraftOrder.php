@@ -16,4 +16,9 @@ class DraftOrder extends Model
         'team_name',
         'is_last_pick',
     ];
+
+    public function team()
+    {
+        return $this->belongsTo(\App\Modules\Teams\Models\Team::class, 'team_id')->select('id', 'name', 'logo', 'draft_points');
+    }
 }

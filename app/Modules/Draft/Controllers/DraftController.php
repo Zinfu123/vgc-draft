@@ -20,19 +20,24 @@ use Inertia\Inertia;
 
 class DraftController extends Controller
 {
-    public function index(ReadCurrentDraftAction $readCurrentDraftAction, QueryPokedexAction $queryPokedexAction, SortPokemonAction $sortPokemonAction, $league_id)
+    public function index(ReadCurrentDraftAction $readCurrentDraftAction, QueryPokedexAction $queryPokedexAction, $league_id)
     {
-        $teams = $readCurrentDraftAction(['league_id' => $league_id]);
-        $pokemon = $queryPokedexAction(['league_id' => $league_id, 'headers' => true]);
+        // $draftedpokemon = $readCurrentDraftAction(['league_id' => $league_id, 'command' => 'draftedpokemon']);
+        $draftorder = $readCurrentDraftAction(['league_id' => $league_id, 'command' => 'draftorder']);
+        $currentpicker = $readCurrentDraftAction(['league_id' => $league_id, 'command' => 'currentpicker']);
+        $pokemon = $queryPokedexAction(['league_id' => $league_id, 'headers' => true, 'command' => 'draftedpokemon']);
         $league = League::find($league_id);
         $costHeaders = $pokemon->unique('league.0.pivot.cost')->pluck('league.0.pivot.cost');
-        $sortedPokemon = $sortPokemonAction(['pokemon' => $pokemon, 'costHeaders' => $costHeaders]);
-
+        $teams = $readCurrentDraftAction(['league_id' => $league_id, 'command' => 'teams']);
+        $userTeam = Team::where('user_id', Auth::user()->id)->select('id')->where('league_id', $league_id)->first();
         return Inertia::render('draft/DraftDetail', [
-            'teams' => $teams,
-            'league' => $league,
-            'pokemon' => $pokemon,
-            'costHeaders' => $costHeaders,
+            'league' => fn () => $league,
+            'pokemon' => fn () => $pokemon,
+            'costHeaders' => fn () => $costHeaders,
+            'draftOrders' => fn () => $draftorder,
+            'currentPicker' => fn () => $currentpicker,
+            'userTeam' => fn () => $userTeam,
+            'teams' => fn () => $teams,
         ]);
     }
 

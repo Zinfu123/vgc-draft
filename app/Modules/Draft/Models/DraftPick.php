@@ -20,4 +20,5 @@ class DraftPick extends Model
     {
         return $this->belongsTo(\App\Modules\League\Models\LeaguePokemon::class, 'league_pokemon_id');
     }
+    
 }

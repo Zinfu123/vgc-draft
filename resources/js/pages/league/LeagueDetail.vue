@@ -105,7 +105,7 @@ const breadcrumbs: BreadcrumbItem[] = [
             <LeaguePokemon :pokemon="props.pokemon" :league="props.league" />
         </TabsContent>
         <TabsContent value="draft">
-            <button @click="draftDetail">Draft Detail</button>
+            <button class="text-1xl font-bold border-2 border-indigo-600 rounded-md p-2 m-2 bg-gray-800/85 dark:bg-muted/85" @click="draftDetail">Draft Detail</button>
         </TabsContent>
     </Tabs>
     </AppLayout>
