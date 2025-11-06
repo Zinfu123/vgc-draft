@@ -14,6 +14,7 @@ class DraftPick extends Model
         'league_pokemon_id',
         'round_number',
         'pick_number',
+        'league_id',
     ];
 
     public function leaguePokemon()

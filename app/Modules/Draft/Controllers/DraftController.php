@@ -29,7 +29,7 @@ class DraftController extends Controller
         $league = League::find($league_id);
         $costHeaders = $pokemon->unique('league.0.pivot.cost')->pluck('league.0.pivot.cost');
         $teams = $readCurrentDraftAction(['league_id' => $league_id, 'command' => 'teams']);
-        $userTeam = Team::where('user_id', Auth::user()->id)->select('id')->where('league_id', $league_id)->first();
+        $userTeam = Team::where('user_id', Auth::user()->id)->select('id', 'admin_flag')->where('league_id', $league_id)->first();
         return Inertia::render('draft/DraftDetail', [
             'league' => fn () => $league,
             'pokemon' => fn () => $pokemon,
@@ -43,7 +43,6 @@ class DraftController extends Controller
 
     public function create(Request $request, CreateEditDraftAction $createEditDraftAction, CreateEditDraftOrderAction $createEditDraftOrderAction)
     {
-        Log::info($request->all());
         $createEditDraftAction($request->all());
         $createEditDraftOrderAction($request->all());
 
@@ -57,6 +56,18 @@ class DraftController extends Controller
         $draft = Draft::where('league_id', $request->league_id)->first();
         $draftOrder = DraftOrder::where('league_id', $request->league_id)->where('team_id', $team->id)->where('status', 1)->first();
         $draftPokemonAction(['league_id' => $request->league_id, 'team_id' => $team->id, 'pokemon_cost' => $request->pokemon_cost, 'pokemon_id' => $request->pokemon_id, 'is_last_pick' => $team->is_last_pick, 'draft_id' => $draft->id, 'round_number' => $draft->round_number, 'pick_number' => $draftOrder->pick_number]);
+        return redirect()->route('draft.detail', ['league_id' => $request->league_id]);
+    }
+
+    public function revertLastPick(Request $request, CreateEditDraftAction $createEditDraftAction)
+    {
+        $createEditDraftAction(['league_id' => $request->league_id, 'command' => 'revert_last_pick']);
+        return redirect()->route('draft.detail', ['league_id' => $request->league_id]);
+    }
+
+    public function abortDraft(Request $request, CreateEditDraftAction $createEditDraftAction)
+    {
+        $createEditDraftAction(['league_id' => $request->league_id, 'command' => 'abort_draft']);
         return redirect()->route('draft.detail', ['league_id' => $request->league_id]);
     }
 }

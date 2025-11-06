@@ -25,7 +25,7 @@ class ReadCurrentDraftAction
     elseif($data['command'] == 'draftorder') {
         $draftorder = DraftOrder::where('league_id', $data['league_id'])->with('team')->get();
         $draftorder = $draftorder->map(function ($draftorder) {
-            if ($draftorder->team->logo !== null) {
+            if ($draftorder->team->logo ?? null !== null) {
                 $draftorder->team->logo = str_replace('\\', '/', Storage::disk('s3-team-logos')->url($draftorder->team->logo));
             }
             return $draftorder;

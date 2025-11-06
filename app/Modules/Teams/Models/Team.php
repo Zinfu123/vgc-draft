@@ -17,6 +17,7 @@ class Team extends Model
         'trades',
         'draft_points',
         'victory_points',
+        'admin_flag',
         'set_wins',
         'set_losses',
         'game_wins',

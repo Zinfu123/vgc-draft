@@ -52,6 +52,10 @@ public function __invoke($data)
     $leaguePokemon->is_drafted = 1;
     $leaguePokemon->save();
 
+    $draftIncrement = Draft::where('league_id', $data['league_id'])->first();
+    $draftIncrement->pick_number++;
+    $draftIncrement->save();
+
     /* if is the last pick, update the draft order */
     if ($data['is_last_pick'] == 1) {
         /* increment the round number */

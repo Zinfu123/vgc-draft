@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { type BreadcrumbItem } from '@/types';
-import { usePage } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, usePoll } from '@inertiajs/vue3';
 import {Stepper, StepperItem, StepperTrigger, StepperDescription, StepperSeparator} from '@/components/ui/stepper';
 import SelectPokemonForm from '@/components/draft/SelectPokemonForm.vue';
 import PokemonCard from '@/components/pokemon/PokemonCard.vue';
 import {Tabs, TabsList, TabsTrigger, TabsContent} from '@/components/ui/tabs';
-import { Item } from '@/components/ui/item';
-
+import { Item, ItemHeader, ItemContent} from '@/components/ui/item';    
+import {Separator} from '@/components/ui/separator';
+import { ButtonGroup } from '@/components/ui/button-group';
+import { Button } from '@/components/ui/button';
+import { router } from '@inertiajs/vue3';
 
 
 interface League {
@@ -65,6 +67,7 @@ interface DraftOrder {
 
 interface UserTeam {
     id: number;
+    admin_flag: number;
 }
 interface CurrentPicker {
     team_id: number;
@@ -94,9 +97,19 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-usePoll(5000, {
-    only: ['draftOrders', 'currentPicker', 'userTeam'],
-});
+usePoll(10000);
+
+const revertLastPick = () => {
+    router.post(route('draft.revert-last-pick'), {
+        league_id: props.league.id,
+    });
+}
+
+const abortDraft = () => {
+    router.post(route('draft.abort-draft'), {
+        league_id: props.league.id,
+    });
+}
 </script>
 
 <template>
@@ -108,7 +121,16 @@ usePoll(5000, {
         <div class="flex flex-col mx-auto items-center mt-10 mb-10 gap-4">
             <h1 class="text-3xl font-bold">{{ props.league.name }} Draft</h1>
         </div>
-
+        <div class="flex flex-col gap-8 items-end">
+            <ButtonGroup v-if="props.userTeam.admin_flag == 1">
+                <Button variant="outline" @click="revertLastPick">
+                    Revert Last Pick
+                </Button>
+                <Button variant="destructive" @click="abortDraft">
+                    Abort Draft
+                </Button>
+        </ButtonGroup>
+        </div>
         <!-- Draft Order -->
         <div class="flex flex-col mx-auto items-center mt-10 mb-10">
         <Stepper class="w-full">
@@ -134,33 +156,37 @@ usePoll(5000, {
         </div>
 
         <!-- Pokemon Grid -->
-    <div class="flex flex-col mx-auto items-center mt-10 mb-10 w-full">
-            <Tabs defaultValue="pokemon" class="justify-center items-center w-full mt-8">
+    <div class="flex flex-col items-center w-full">
+            <Tabs defaultValue="pokemon" class="justify-center items-center w-full mt-4">
                 <TabsList>
                     <TabsTrigger value="pokemon" class="dark:data-[state=active]:bg-black/80 w-full">Pokemon</TabsTrigger>
                     <TabsTrigger value="teams" class="dark:data-[state=active]:bg-black/80 w-full">Teams</TabsTrigger>
                 </TabsList>
                 <TabsContent value="pokemon">
                     <div class="grid grid-cols-5 grid-flow-row gap-2 mt-10">
-                    <div v-for="costHeader in props.costHeaders" :key="costHeader">
+                    <div v-for="costHeader in props.costHeaders" :key="costHeader" class="gap-2">
                         <div class="grid grid-cols-subgrid gap-2">
                             <span class="bg-gray-800/85 dark:bg-muted/85 px-5 py-3 text-sm text-center rounded-md"> Cost: {{ costHeader }}</span>
                         </div>
-                            <PokemonCard v-for="pokemon in props.pokemon.filter(pokemon => pokemon.league[0].pivot.cost === costHeader)" :key="pokemon.id" :pokemon="pokemon" />
+                            <PokemonCard v-for="pokemon in props.pokemon.filter(pokemon => pokemon.league[0].pivot.cost === costHeader)" :key="pokemon.id" :pokemon="pokemon" class="gap-2 mt-2" />
                     </div>    
                     </div>
                 </TabsContent>
                 <TabsContent value="teams">
-                    <div class="grid grid-cols-5 grid-flow-row gap-2 mt-10">
+                    <div class="grid grid-cols-4 gap-2 mt-4">
                         <div v-for="team in props.teams" :key="team.id">
-                            <item>
-                                <img :src="team.logo" alt="Team Logo" class="w-15 h-15 rounded-full" v-if="team.logo !== null"/>
-                                <span class="bg-gray-800/85 dark:bg-muted/85 px-10 py-5 text-sm text-center rounded-md">{{ team.name }} 
-                                </span>
-                            </item>
-                            <div class="flex flex-col items-center mx-auto">
-                                <PokemonCard v-for="draft_pick in team.draft_picks" :key="draft_pick.id" :pokemon="draft_pick.league_pokemon.pokemon" :cost="{ cost: draft_pick.league_pokemon.cost }" />
-                            </div>
+                            <Item>
+                                <ItemHeader>
+                                    <div class="flex flex-row items-center justify-center">
+                                        <img :src="team.logo" alt="Team Logo" class="w-15 h-15 rounded-full" v-if="team.logo !== null"/>
+                                        <span class="bg-gray-800/85 dark:bg-muted/85 px-10 py-5 text-sm text-center rounded-md">{{ team.name }}</span>
+                                    </div>
+                                </ItemHeader>
+                                <ItemContent>
+                                <PokemonCard v-for="draft_pick in team.draft_picks" :key="draft_pick.id" :pokemon="draft_pick.league_pokemon.pokemon" :cost="{ cost: draft_pick.league_pokemon.cost }" class="ml-[60px]" />
+                            </ItemContent>
+                            </Item>
+                            <Separator orientation="vertical"/>
                         </div>
                     </div>
                 </TabsContent>
