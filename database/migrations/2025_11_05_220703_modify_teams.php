@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('teams', function (Blueprint $table) {
-            $table->boolean('admin_flag')->default(false);
+            $table->integer('admin_flag')->default(0);
         });
     }
 
