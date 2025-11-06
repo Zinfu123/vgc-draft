@@ -24,7 +24,7 @@ public function __invoke($data)
         throw new \Exception('Team does not have enough points to draft the pokemon');
     }
 
-    $leaguePokemon = LeaguePokemon::where('league_id', $data['league_id'])->where('pokedex_id', $data['pokemon_id'])->first();
+    $leaguePokemon = LeaguePokemon::where('id', $data['pokemon_id'])->first();
     if (!$leaguePokemon) {
         throw new \Exception('Pokemon not found');
     }

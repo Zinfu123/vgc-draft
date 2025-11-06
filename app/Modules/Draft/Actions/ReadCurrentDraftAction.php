@@ -50,7 +50,6 @@ class ReadCurrentDraftAction
         $teams = $teams->sortBy(function ($team) {  
             return $team->draftPicks->pluck('round_number', 'pick_number');
         });
-        Log::info($teams);
         return $teams;
     }
     }

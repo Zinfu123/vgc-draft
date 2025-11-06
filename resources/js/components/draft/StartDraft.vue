@@ -18,9 +18,6 @@ const props = defineProps<{
 const submit = () => {
     router.post(route('draft.create'), {
         league_id: props.league.id,
-        command: props.command.command,
-        round_number: 1,
-        status: 1,
     });
 }
 </script>

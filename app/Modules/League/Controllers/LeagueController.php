@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Modules\League\Actions\CreateEditLeagueAction;
 use App\Modules\League\Actions\ReadLeagueDraftAction;
 use App\Modules\League\Models\League;
-use App\Modules\Pokedex\Actions\QueryPokedexAction;
+use App\Modules\League\Actions\ReadLeaguePokemonAction;
 use App\Modules\Teams\Actions\ReadTeamAction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -30,16 +30,16 @@ class LeagueController extends Controller
         ]);
     }
 
-    public function show(League $league, ReadTeamAction $readTeamAction, QueryPokedexAction $queryPokedexAction, ReadLeagueDraftAction $readLeagueDraftAction)
+    public function show(League $league, ReadTeamAction $readTeamAction, ReadLeaguePokemonAction $readLeaguePokemonAction, ReadLeagueDraftAction $readLeagueDraftAction)
     {
-        $pokemon = $queryPokedexAction(['league_id' => $league->id]);
+        $pokemon = $readLeaguePokemonAction(['league_id' => $league->id]);
         $teams = $readTeamAction(['league_id' => $league->id]);
 
         return Inertia::render('league/LeagueDetail', [
             'league' => $league,
             'teams' => $teams,
             'pokemon' => $pokemon,
-            'costHeaders' => $pokemon->unique('league.0.pivot.cost')->pluck('league.0.pivot.cost'),
+            'costHeaders' => $pokemon->unique('cost')->pluck('cost'),
             'draft' => $readLeagueDraftAction(['league_id' => $league->id]),
         ]);
     }

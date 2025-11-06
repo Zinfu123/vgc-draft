@@ -19,7 +19,7 @@ class CreateEditDraftAction
             $draft = Draft::create([
                 'league_id' => $data['league_id'],
                 'round_number' => 1,
-                'status' => $data['status'],
+                'status' => 1,
                 'pick_number' => 1,
             ]);
             $draft->save();

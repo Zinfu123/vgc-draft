@@ -4,7 +4,7 @@ namespace App\Modules\League\Actions;
 
 /* Define Models */
 use App\Modules\League\Models\LeaguePokemon;
-
+use Illuminate\Support\Facades\Log;
 /* End Define Models */
 
 /* Define Dependencies */
@@ -12,20 +12,30 @@ use App\Modules\League\Models\LeaguePokemon;
 
 class ReadLeaguePokemonAction
 {
-    public function __invoke($league_id)
+    public function __invoke($data)
     {
-        $pokemon = LeaguePokemon::when($league_id, function ($query, $league_id) {
-            $query->where('league_id', $league_id);
-        })
-            ->select('pokedex_id', 'cost')
-            ->with([
-                'pokemon' => function ($query) {
-                    $query->select('id', 'sprite_url', 'name', 'type1', 'type2');
-                },
-            ])
-            ->orderBy('cost', 'desc')
+        if($data['command'] ?? null == 'draftedpokemon') {
+            $pokemon = LeaguePokemon::when($data['league_id'], function ($query) use ($data) {
+                $query->where('league_id', $data['league_id']);
+            })
+            ->where('is_drafted', '!=', 1)
+            ->join('pokedex', 'league_pokemon.pokedex_id', '=', 'pokedex.id')
+            ->select('league_pokemon.id', 'pokedex.sprite_url', 'pokedex.name', 'pokedex.type1', 'pokedex.type2', 'league_pokemon.cost')
+            ->orderBy('league_pokemon.cost', 'desc')
+            ->orderBy('pokedex.name', 'asc')
             ->get();
-
-        return $pokemon;
+            return $pokemon;
+        }
+        else {
+        $pokemon = LeaguePokemon::when($data['league_id'], function ($query) use ($data) {
+            $query->where('league_id', $data['league_id']);
+        })
+        ->join('pokedex', 'league_pokemon.pokedex_id', '=', 'pokedex.id')
+        ->select('league_pokemon.id', 'pokedex.sprite_url', 'pokedex.name', 'pokedex.type1', 'pokedex.type2', 'league_pokemon.cost')
+        ->orderBy('league_pokemon.cost', 'desc')
+        ->orderBy('pokedex.name', 'asc')
+        ->get();
+            return $pokemon;
+        }
     }
 }

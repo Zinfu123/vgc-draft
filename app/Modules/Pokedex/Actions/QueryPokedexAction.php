@@ -3,8 +3,8 @@
 namespace App\Modules\Pokedex\Actions;
 
 /* Define Models */
-use App\Modules\Pokedex\Models\Pokedex;
-
+use App\Modules\Pokedex\Models\Pokedex; 
+use Illuminate\Support\Facades\Log;
 /* End Define Models */
 
 /* Define Dependencies */
@@ -28,8 +28,6 @@ class QueryPokedexAction
             ->orderBy('league_pokemon.cost', 'desc')
             ->orderBy('pokedex.name', 'asc')
             ->get();
-
-
 
         return $pokemon;
     }

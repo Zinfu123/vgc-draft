@@ -36,11 +36,7 @@ interface Pokemon {
     sprite_url: string;
     type1: string;
     type2: string;
-    league: Array<{
-        pivot: {
-            cost: number;
-        };
-    }>;
+    cost: number;
 }
 
 interface CostHeaders {
@@ -168,25 +164,24 @@ const abortDraft = () => {
                         <div class="grid grid-cols-subgrid gap-2">
                             <span class="bg-gray-800/85 dark:bg-muted/85 px-5 py-3 text-sm text-center rounded-md"> Cost: {{ costHeader }}</span>
                         </div>
-                            <PokemonCard v-for="pokemon in props.pokemon.filter(pokemon => pokemon.league[0].pivot.cost === costHeader)" :key="pokemon.id" :pokemon="pokemon" class="gap-2 mt-2" />
+                            <PokemonCard v-for="pokemon in props.pokemon.filter(pokemon => pokemon.cost === costHeader)" :key="pokemon.id" :pokemon="pokemon" class="gap-2 mt-2" />
                     </div>    
                     </div>
                 </TabsContent>
-                <TabsContent value="teams">
-                    <div class="grid grid-cols-4 gap-2 mt-4">
-                        <div v-for="team in props.teams" :key="team.id">
-                            <Item>
-                                <ItemHeader>
+                <TabsContent value="teams" class="ml-4 mr-4">
+                    <div class="outline-1 outline-gray-200 mx-auto grid grid-cols-6 grid-flow-row">
+                            <div v-for="team in props.teams" :key="team.id" class="outline-1 outline-blue-500 center">
+                                <Item>
+                                <ItemHeader class="justify-center">
                                     <div class="flex flex-row items-center justify-center">
                                         <img :src="team.logo" alt="Team Logo" class="w-15 h-15 rounded-full" v-if="team.logo !== null"/>
                                         <span class="bg-gray-800/85 dark:bg-muted/85 px-10 py-5 text-sm text-center rounded-md">{{ team.name }}</span>
                                     </div>
                                 </ItemHeader>
-                                <ItemContent>
-                                <PokemonCard v-for="draft_pick in team.draft_picks" :key="draft_pick.id" :pokemon="draft_pick.league_pokemon.pokemon" :cost="{ cost: draft_pick.league_pokemon.cost }" class="ml-[60px]" />
+                                <ItemContent class="justify-center items-center">
+                                <PokemonCard v-for="draft_pick in team.draft_picks" :key="draft_pick.id" :pokemon="draft_pick.league_pokemon.pokemon" :cost="{ cost: draft_pick.league_pokemon.cost }"/>
                             </ItemContent>
                             </Item>
-                            <Separator orientation="vertical"/>
                         </div>
                     </div>
                 </TabsContent>
