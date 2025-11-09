@@ -37,6 +37,7 @@ const props = defineProps<{
 }>();
 
 
+
 const submit = () => {
     router.post(route('draft.pick'), {
         pokemon_id: selectedPokemon.value?.id,
@@ -46,6 +47,7 @@ const submit = () => {
     }, {
         onSuccess: () => {
             selectedPokemon.value = null;
+            router.reload();
         }
     });
 }

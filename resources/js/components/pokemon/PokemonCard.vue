@@ -48,7 +48,7 @@ function typeoutput() {
             </CardTitle>
         </CardHeader>
         <CardContent class="col-start-1 row-start-1 col-span-6 row-span-8 grid grid-cols-6 grid-rows-8 subgrid">
-                <img :src="props.pokemon.sprite_url" :alt="props.pokemon.name" class="col-start-1 row-start-3 col-span-4"/>
+                <img :src="'https://raw.githubusercontent.com/Autumnchi/coloured-home-sprites/main/'+props.pokemon.name+'.png'" :alt="props.pokemon.name" class="col-start-1 row-start-3 col-span-4"/>
                     <span class="col-start-5 row-start-4 col-span-2 rounded bg-gray-800/85 dark:bg-muted/85 text-sm text-center self-center capitalize">
                         {{ props.pokemon.type1 }}
                     </span>

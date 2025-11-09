@@ -5,8 +5,11 @@ namespace App\Modules\Teams\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Teams\Actions\CreateEditTeamAction;
 use App\Modules\Teams\Models\Team;
+use App\Modules\League\Models\League;
+use App\Modules\Teams\Actions\ReadTeamAction;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Log;
 
 class TeamController extends Controller
 {
@@ -26,5 +29,16 @@ class TeamController extends Controller
         $team = (new CreateEditTeamAction)->create($request);
 
         return redirect()->route('teams.index', ['league_id' => $request->league_id, 'team_id' => $team->id]);
+    }
+
+    public function show(Request $request, ReadTeamAction $readTeamAction)
+    {
+        $team = $readTeamAction(['team_id' => $request->team_id, 'command' => 'team']);
+        Log::info("team: ".$team);
+        $league = League::find($team->league_id);
+        return Inertia::render('teams/TeamDetail', [
+            'league' => $league,
+            'team' => $team,
+        ]);
     }
 }

@@ -9,9 +9,11 @@ use App\Modules\Draft\Actions\DraftPokemonAction;
 use App\Modules\Draft\Actions\ReadCurrentDraftAction;
 use App\Modules\Draft\Models\DraftOrder;
 use App\Modules\League\Actions\ReadLeaguePokemonAction;
+use App\Modules\League\Actions\ReadLeagueDraftAction;
 use App\Modules\League\Models\League;
 use App\Modules\Teams\Models\Team;
 use App\Modules\Draft\Models\Draft;
+use App\Events\DraftPickEvent;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -21,8 +23,7 @@ class DraftController extends Controller
 {
     public function index(ReadCurrentDraftAction $readCurrentDraftAction, ReadLeaguePokemonAction $readLeaguePokemonAction, $league_id)
     {
-        log::info($league_id);
-        // $draftedpokemon = $readCurrentDraftAction(['league_id' => $league_id, 'command' => 'draftedpokemon']);
+        $draft = Draft::where('league_id', $league_id)->first();
         $draftorder = $readCurrentDraftAction(['league_id' => $league_id, 'command' => 'draftorder']);
         $currentpicker = $readCurrentDraftAction(['league_id' => $league_id, 'command' => 'currentpicker']);
         $pokemon = $readLeaguePokemonAction(['league_id' => $league_id, 'command' => 'draftedpokemon']);
@@ -38,38 +39,42 @@ class DraftController extends Controller
             'currentPicker' => fn () => $currentpicker,
             'userTeam' => fn () => $userTeam,
             'teams' => fn () => $teams,
+            'draft' => fn () => $draft,
         ]);
     }
 
     public function create(Request $request, CreateEditDraftAction $createEditDraftAction, CreateEditDraftOrderAction $createEditDraftOrderAction)
     {
-        $league = request('league_id');
-        $createEditDraftAction(['league_id' => $league, 'command' => 'create']);
-        $createEditDraftOrderAction(['league_id' => $league]);
+        $leagueid = $request->league_id;
+        $createEditDraftAction(['league_id' => $leagueid, 'command' => 'create']);
+        $createEditDraftOrderAction(['league_id' => $leagueid]);
 
         return redirect()->route('draft.detail', ['league_id' => $request->league_id]);
     }
 
-    public function pick(Request $request, DraftPokemonAction $draftPokemonAction)
+    public function pick(Request $request, DraftPokemonAction $draftPokemonAction, ReadLeagueDraftAction $readLeagueDraftAction)
     {
+        $leagueId = $request->league_id;
         $user = Auth::user();
-        $team = Team::where('user_id', $user->id)->where('league_id', $request->league_id)->first();
-        $draft = Draft::where('league_id', $request->league_id)->first();
-        $draftOrder = DraftOrder::where('league_id', $request->league_id)->where('team_id', $team->id)->where('status', 1)->first();
-        log::info($draftOrder->is_last_pick);
-        $draftPokemonAction(['league_id' => $request->league_id, 'team_id' => $team->id, 'pokemon_cost' => $request->pokemon_cost, 'pokemon_id' => $request->pokemon_id, 'is_last_pick' => $draftOrder->is_last_pick, 'draft_id' => $draft->id, 'round_number' => $draft->round_number, 'pick_number' => $draftOrder->pick_number]);
-        return redirect()->route('draft.detail', ['league_id' => $request->league_id]);
+        $team = Team::where('user_id', $user->id)->where('league_id', $leagueId)->first();
+        $draft = Draft::where('league_id', $leagueId)->first();
+        $draftOrder = DraftOrder::where('league_id', $leagueId)->where('team_id', $team->id)->where('status', 1)->first();
+        $draftPokemonAction(['league_id' => $leagueId, 'team_id' => $team->id, 'pokemon_cost' => $request->pokemon_cost, 'pokemon_id' => $request->pokemon_id, 'is_last_pick' => $draftOrder->is_last_pick, 'draft_id' => $draft->id, 'round_number' => $draft->round_number, 'pick_number' => $draftOrder->pick_number]);
+        $broadcast = $readLeagueDraftAction(['league_id' => $leagueId, 'command' => 'broadcastdraft', 'end_draft' => 0]);
+        return redirect()->route('draft.detail', ['league_id' => $leagueId]);
     }
 
-    public function revertLastPick(Request $request, CreateEditDraftAction $createEditDraftAction)
+    public function revertLastPick(Request $request, CreateEditDraftAction $createEditDraftAction, ReadLeagueDraftAction $readLeagueDraftAction)
     {
         $createEditDraftAction(['league_id' => $request->league_id, 'command' => 'revert_last_pick']);
+        $broadcast = $readLeagueDraftAction(['league_id' => $request->league_id, 'command' => 'broadcastdraft', 'end_draft' => 0]);
         return redirect()->route('draft.detail', ['league_id' => $request->league_id]);
     }
 
-    public function abortDraft(Request $request, CreateEditDraftAction $createEditDraftAction)
+    public function abortDraft(Request $request, CreateEditDraftAction $createEditDraftAction, ReadLeagueDraftAction $readLeagueDraftAction)
     {
         $createEditDraftAction(['league_id' => $request->league_id, 'command' => 'abort_draft']);
-        return redirect()->route('draft.detail', ['league_id' => $request->league_id]);
+        $broadcast = $readLeagueDraftAction(['league_id' => $request->league_id, 'command' => 'broadcastdraft', 'end_draft' => 1]);
+        return redirect()->route('leagues.detail', ['league' => $request->league_id]);
     }
 }

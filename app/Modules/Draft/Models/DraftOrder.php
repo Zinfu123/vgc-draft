@@ -16,6 +16,7 @@ class DraftOrder extends Model
         'team_name',
         'is_last_pick',
         'team_id',
+        'round_number',
     ];
 
     public function team()

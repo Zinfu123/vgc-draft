@@ -5,11 +5,13 @@ import TeamCard from './TeamCard.vue';
 
 interface Teams {
     id: number
+    league_id: number;
     name: string;
     logo: string;
     set_wins: number;
     set_losses: number;
     victory_points: number;
+    coach: string;
 }
 
 interface props {

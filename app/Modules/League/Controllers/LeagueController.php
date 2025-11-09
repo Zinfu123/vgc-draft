@@ -33,8 +33,7 @@ class LeagueController extends Controller
     public function show(League $league, ReadTeamAction $readTeamAction, ReadLeaguePokemonAction $readLeaguePokemonAction, ReadLeagueDraftAction $readLeagueDraftAction)
     {
         $pokemon = $readLeaguePokemonAction(['league_id' => $league->id]);
-        $teams = $readTeamAction(['league_id' => $league->id]);
-
+        $teams = $readTeamAction(['league_id' => $league->id, 'command' => 'league']);
         return Inertia::render('league/LeagueDetail', [
             'league' => $league,
             'teams' => $teams,

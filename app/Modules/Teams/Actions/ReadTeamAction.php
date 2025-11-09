@@ -10,7 +10,8 @@ class ReadTeamAction
 {
     public function __invoke($data)
     {
-        $teams = Team::where('league_id', $data)
+        if($data['command'] == 'league') {
+        $teams = Team::where('league_id', $data['league_id'])
             ->select('id', 'name', 'logo', 'user_id',)
             ->with('user')
             ->get();
@@ -29,6 +30,13 @@ class ReadTeamAction
         });
 
         return $teams;
-
+        }
+        elseif($data['command'] == 'team') {
+            $team = Team::where('id', $data['team_id'])->with('draftPicks.leaguePokemon.pokemon')->first();
+            if ($team->logo !== null) {
+                $team->logo = str_replace('\\', '/', Storage::disk('s3-team-logos')->url($team->logo));
+            }
+            return $team;
+        }
     }
 }

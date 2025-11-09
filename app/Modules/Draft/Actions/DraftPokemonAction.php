@@ -9,6 +9,8 @@ use App\Modules\Teams\Models\Team;
 use App\Modules\Draft\Models\DraftOrder;
 use App\Modules\Draft\Actions\CreateEditDraftOrderAction;
 use App\Modules\League\Models\LeaguePokemon;
+use App\Modules\League\Actions\ReadLeaguePokemonAction;
+use App\Events\DraftPickEvent;
 use Illuminate\Support\Facades\Log;
 /* End Define Models */
 
@@ -16,9 +18,7 @@ class DraftPokemonAction
 {
 
 public function __invoke($data)
-{
-    Log::info($data);
-    /* check if the team has enough points to draft the pokemon */
+{    /* check if the team has enough points to draft the pokemon */
     $team = Team::find($data['team_id']);
     if ($team->draft_points < $data['pokemon_cost']) {
         throw new \Exception('Team does not have enough points to draft the pokemon');
@@ -44,7 +44,7 @@ public function __invoke($data)
     $team->save();
 
     /* update active draft order */
-    $draftOrder = DraftOrder::where('team_id', $data['team_id'])->where('pick_number', $data['pick_number'])->first();
+    $draftOrder = DraftOrder::where('team_id', $data['team_id'])->where('pick_number', $data['pick_number'])->where('status', 1)->first();
     $draftOrder->status = 0;
     $draftOrder->save();
 
@@ -53,14 +53,16 @@ public function __invoke($data)
     $leaguePokemon->save();
 
     $draftIncrement = Draft::where('league_id', $data['league_id'])->first();
-    $draftIncrement->pick_number++;
+    $draftIncrement->pick_number = $draftIncrement->pick_number + 1;
     $draftIncrement->save();
 
     /* if is the last pick, update the draft order */
     if ($data['is_last_pick'] == 1) {
         /* increment the round number */
-        $roundNumber = Draft::where('league_id', $data['league_id'])->first()->round_number;
-        $roundNumber++;
+        $roundNumber = Draft::where('league_id', $data['league_id'])->first();
+        $roundNumber->round_number = $roundNumber->round_number + 1;
+        $roundNumber->pick_number = 1;
+        $roundNumber->save();
         /*create new draft order */
         (new CreateEditDraftOrderAction)->__invoke(['league_id' => $data['league_id']]);
     }

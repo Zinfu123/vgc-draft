@@ -30,7 +30,7 @@ const props = defineProps<{
                 </DropdownMenuTrigger>
                 <DropdownMenuContent class="flex flex-col items-end justify-end">
                     <ImportLeaguePokemon :league="props.league" />
-                    <StartDraft :league="props.league" :command="{ command: 'create' }" v-if="props.draft === undefined" />
+                    <StartDraft :league="props.league" :command="{ command: 'create' }" v-if="props.draft === null" />
                 </DropdownMenuContent>
             </DropdownMenu>
         </div>

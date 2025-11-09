@@ -45,11 +45,12 @@ class CreateEditDraftAction
 
         elseif ($data['command'] == 'revert_last_pick') {
             /* Revert the last picked pokemon */
+            $lastPickedPokemonID = DraftPick::where('league_id', $data['league_id'])->orderBy('round_number', 'desc')->orderBy('pick_number', 'desc')->first()->league_pokemon_id;
             $lastPick = DraftPick::where('league_id', $data['league_id'])->orderBy('round_number', 'desc')->orderBy('pick_number', 'desc')->first();
-            $lastPickedPokemon = $lastPick->pluck('league_pokemon_id');
             $lastPick->delete();
+            log::info($lastPickedPokemonID);
             /* Revert the league pokemon is_drafted */
-            $pokemonReversion = LeaguePokemon::where('id', $lastPickedPokemon)->first();
+            $pokemonReversion = LeaguePokemon::where('id', $lastPickedPokemonID)->first();
             $pokemonReversion->is_drafted = 0;
             $pokemonReversion->drafted_by = null;
             $pokemonReversion->save();
@@ -58,7 +59,7 @@ class CreateEditDraftAction
             $team->draft_points = $team->draft_points + $pokemonReversion->cost;
             $team->save();
             /* Revert the draft order status */
-            $draftOrder = DraftOrder::where('league_id', $data['league_id'])->where('team_id', $lastPick->team_id)->where('pick_number', $lastPick->pick_number)->first();
+            $draftOrder = DraftOrder::where('league_id', $data['league_id'])->where('team_id', $lastPick->team_id)->orderBy('round_number', 'desc')->orderBy('pick_number', 'desc')->where('status', 0)->first();
             $draftOrder->status = 1;
             $draftOrder->save();
             /* Revert the draft pick number */
@@ -69,21 +70,22 @@ class CreateEditDraftAction
             $draft->save();
         }
     }
-
+    // Abort Draft
     elseif ($data['command'] == 'abort_draft') {
-        $draft = Draft::where('league_id', $data['league_id'])->first();
-        $draft->delete();
+        $draft = Draft::where('league_id', $data['league_id'])->get();
+        foreach ($draft as $draft) {
+            $draft->delete();
+        }
 
         $draftPicks = DraftPick::where('league_id', $data['league_id'])->get();
-        $leaguePokemonIDs = $draftPicks->pluck('league_pokemon_id');
-        $leaguePokemon = LeaguePokemon::whereIn('id', $leaguePokemonIDs)->get();
+        foreach ($draftPicks as $draftPick) {
+            $draftPick->delete();
+        }
+        $leaguePokemon = LeaguePokemon::where('is_drafted', 1)->where('league_id', $data['league_id'])->get();  //get all the pokemon that were drafted
         foreach ($leaguePokemon as $pokemon) {
             $pokemon->is_drafted = 0;
             $pokemon->drafted_by = null;
             $pokemon->save();
-        }
-        foreach ($draftPicks as $draftPick) {
-            $draftPick->delete();
         }
         $draftOrder = DraftOrder::where('league_id', $data['league_id'])->get();
         foreach ($draftOrder as $order) {

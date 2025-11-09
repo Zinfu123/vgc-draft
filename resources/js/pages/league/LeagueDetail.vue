@@ -43,11 +43,18 @@ interface CostHeaders {
     costHeaders: number;
 }
 
+interface Draft {
+    id: number;
+    round_number: number;
+    pick_number: number;
+}
+
 interface props {
     league: League;
     teams: Teams[];
     pokemon: Pokemon[];
     costHeaders: CostHeaders[];
+    draft: Draft;
 }
 
 
