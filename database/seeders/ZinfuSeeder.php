@@ -14,11 +14,11 @@ class ZinfuSeeder extends Seeder
      */
     public function run(): void
     {
-        // Create Zinfu user account
+        if (!User::where('email', 'Ninfu1@gmail.com')->doesntExist()) {
         $user = User::create([
             'name' => 'Zinfu',
             'email' => 'Ninfu1@gmail.com',
             'password' => Hash::make('Nimiety1'),
         ]);
-    }
+    }}
 }
