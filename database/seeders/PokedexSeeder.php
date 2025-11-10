@@ -19,7 +19,7 @@ class PokedexSeeder extends Seeder
         // Clear the table
         DB::table('pokedex')->delete();
         
-        $csvFile = fopen(Storage::disk('s3')->url('Pokedex.csv'), 'r');
+        $csvFile = fopen(Storage::disk('s3')->url('pokedex.csv'), 'r');
         $firstline = true;
         while (($data = fgetcsv($csvFile, 2000, ',')) !== false) {
             if (!$firstline) {
