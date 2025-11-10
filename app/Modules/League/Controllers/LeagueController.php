@@ -11,6 +11,9 @@ use App\Modules\Teams\Actions\ReadTeamAction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
+use App\Modules\Teams\Models\Team;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class LeagueController extends Controller
 {
@@ -34,12 +37,20 @@ class LeagueController extends Controller
     {
         $pokemon = $readLeaguePokemonAction(['league_id' => $league->id]);
         $teams = $readTeamAction(['league_id' => $league->id, 'command' => 'league']);
+        $adminflag = Team::where('league_id', $league->id)->where('user_id', Auth::user()->id)->first();
+        if ($adminflag) {
+            $adminflag = $adminflag->admin_flag;
+        } else {
+            $adminflag = 0;
+        }
+        Log::info("adminflag: ".$adminflag);
         return Inertia::render('league/LeagueDetail', [
             'league' => $league,
             'teams' => $teams,
             'pokemon' => $pokemon,
             'costHeaders' => $pokemon->unique('cost')->pluck('cost'),
             'draft' => $readLeagueDraftAction(['league_id' => $league->id]),
+            'adminFlag' => $adminflag,
         ]);
     }
 

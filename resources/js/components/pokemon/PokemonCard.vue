@@ -26,7 +26,7 @@ const props = defineProps<props>();
 
 function typeoutput() {
     const type1 = props.pokemon.type1.toLowerCase();
-    const type2 = props.pokemon.type2.toLowerCase();
+    const type2 = props.pokemon.type2?.toLowerCase();
     if (type2 !== '-' && type2 !== undefined && type2 !== null && type2 !== '') {
         const pokemontypestyle = `background-image: linear-gradient(60deg, var(--${type1}type) 50%, var(--${type2}type) 50%)`
         return pokemontypestyle

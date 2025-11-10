@@ -32,7 +32,11 @@ class CreateEditTeamAction
             'pick_position' => $request->pick_position,
             'draft_points' => $draftPoints,
         ]);
-
+        $teamcount = Team::where('league_id', $request->league_id)->count();
+        if ($teamcount == 1) {
+            $team->admin_flag = 1;
+            $team->save();
+        }
         return $team;
     }
 }

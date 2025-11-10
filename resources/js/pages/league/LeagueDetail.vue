@@ -49,12 +49,17 @@ interface Draft {
     pick_number: number;
 }
 
+interface AdminFlag {
+    adminFlag: number;
+}
+
 interface props {
     league: League;
     teams: Teams[];
     pokemon: Pokemon[];
     costHeaders: CostHeaders[];
     draft: Draft;
+    adminFlag: AdminFlag;
 }
 
 
@@ -83,7 +88,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     <Head :title="`${props.league.name}`" />
         <div class="flex flex-row justify-end items-end w-full mr-14 mt-4">
             <TeamForm :league_id="props.league.id" :user_id="usePage().props.auth.user.id" v-if="coachexists === false" />
-            <AdminPanel :league="props.league" :draft="props.draft" v-if="props.league.league_owner === usePage().props.auth.user.id"/>
+            <AdminPanel :league="props.league" :draft="props.draft" v-if="props.adminFlag === 1"/>
         </div>
         <div class="flex flex-col max-w-4xl mx-auto items-center mt-10">
             <h1 class="text-3xl font-bold">{{ props.league.name }}</h1>
