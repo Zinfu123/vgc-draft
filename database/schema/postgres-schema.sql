@@ -113,66 +113,6 @@ CREATE TABLE IF NOT EXISTS "leagues" (
   foreign key ("league_owner") references "users" ("id") on delete cascade
 );
 
-CREATE TABLE IF NOT EXISTS "telescope_entries" (
-  "sequence" serial primary key,
-  "uuid" varchar not null,
-  "batch_id" varchar not null,
-  "family_hash" varchar,
-  "should_display_on_index" boolean not null default true,
-  "type" varchar not null,
-  "content" text not null,
-  "created_at" timestamp
-);
-
-CREATE UNIQUE INDEX "telescope_entries_uuid_unique" ON "telescope_entries" ("uuid");
-CREATE INDEX "telescope_entries_batch_id_index" ON "telescope_entries" ("batch_id");
-CREATE INDEX "telescope_entries_family_hash_index" ON "telescope_entries" ("family_hash");
-CREATE INDEX "telescope_entries_created_at_index" ON "telescope_entries" ("created_at");
-CREATE INDEX "telescope_entries_type_should_display_on_index_index" ON "telescope_entries" ("type", "should_display_on_index");
-
-CREATE TABLE IF NOT EXISTS "telescope_entries_tags" (
-  "entry_uuid" varchar not null,
-  "tag" varchar not null,
-  foreign key ("entry_uuid") references "telescope_entries" ("uuid") on delete cascade,
-  primary key ("entry_uuid", "tag")
-);
-
-CREATE INDEX "telescope_entries_tags_tag_index" ON "telescope_entries_tags" ("tag");
-
-CREATE TABLE IF NOT EXISTS "telescope_monitoring" (
-  "tag" varchar primary key
-);
-
-CREATE TABLE IF NOT EXISTS "league_pokemon" (
-  "id" serial primary key,
-  "league_id" integer not null,
-  "pokedex_id" integer not null,
-  "name" varchar not null,
-  "cost" integer not null,
-  "is_drafted" boolean not null default false,
-  "created_at" timestamp,
-  "updated_at" timestamp,
-  "drafted_by" integer,
-  foreign key ("league_id") references "leagues" ("id") on delete cascade,
-  foreign key ("pokedex_id") references "pokedex" ("id") on delete cascade,
-  foreign key ("drafted_by") references "teams" ("id")
-);
-
-CREATE TABLE IF NOT EXISTS "draft_picks" (
-  "id" serial primary key,
-  "draft_id" integer not null,
-  "team_id" integer not null,
-  "league_pokemon_id" integer not null,
-  "round_number" integer not null,
-  "pick_number" integer not null,
-  "created_at" timestamp,
-  "updated_at" timestamp,
-  "league_id" integer,
-  foreign key ("league_pokemon_id") references "league_pokemon" ("id") on delete cascade,
-  foreign key ("team_id") references "teams" ("id") on delete cascade,
-  foreign key ("draft_id") references "drafts" ("id") on delete cascade,
-  foreign key ("league_id") references "leagues" ("id") on delete cascade
-);
 
 CREATE TABLE IF NOT EXISTS "teams" (
   "id" serial primary key,
@@ -195,6 +135,22 @@ CREATE TABLE IF NOT EXISTS "teams" (
   foreign key ("league_id") references "leagues" ("id") on delete cascade
 );
 
+CREATE TABLE IF NOT EXISTS "league_pokemon" (
+  "id" serial primary key,
+  "league_id" integer not null,
+  "pokedex_id" integer not null,
+  "name" varchar not null,
+  "cost" integer not null,
+  "is_drafted" boolean not null default false,
+  "created_at" timestamp,
+  "updated_at" timestamp,
+  "drafted_by" integer,
+  foreign key ("league_id") references "leagues" ("id") on delete cascade,
+  foreign key ("pokedex_id") references "pokedex" ("id") on delete cascade,
+  foreign key ("drafted_by") references "teams" ("id")
+);
+
+
 CREATE TABLE IF NOT EXISTS "drafts" (
   "id" serial primary key,
   "league_id" integer not null,
@@ -203,6 +159,22 @@ CREATE TABLE IF NOT EXISTS "drafts" (
   "created_at" timestamp,
   "updated_at" timestamp,
   "pick_number" integer default 0,
+  foreign key ("league_id") references "leagues" ("id") on delete cascade
+);
+
+CREATE TABLE IF NOT EXISTS "draft_picks" (
+  "id" serial primary key,
+  "draft_id" integer not null,
+  "team_id" integer not null,
+  "league_pokemon_id" integer not null,
+  "round_number" integer not null,
+  "pick_number" integer not null,
+  "created_at" timestamp,
+  "updated_at" timestamp,
+  "league_id" integer,
+  foreign key ("league_pokemon_id") references "league_pokemon" ("id") on delete cascade,
+  foreign key ("team_id") references "teams" ("id") on delete cascade,
+  foreign key ("draft_id") references "drafts" ("id") on delete cascade,
   foreign key ("league_id") references "leagues" ("id") on delete cascade
 );
 
