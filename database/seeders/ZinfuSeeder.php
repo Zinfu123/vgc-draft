@@ -14,7 +14,7 @@ class ZinfuSeeder extends Seeder
      */
     public function run(): void
     {
-        if (!User::where('email', 'Ninfu1@gmail.com')->doesntExist()) {
+        if (User::where('email', 'Ninfu1@gmail.com')->doesntExist()) {
         $user = User::create([
             'name' => 'Zinfu',
             'email' => 'Ninfu1@gmail.com',
