@@ -43,7 +43,7 @@ class LeagueController extends Controller
         $adminflag = $user_team ? $user_team->admin_flag : 0;
         $match_config = MatchConfig::where('league_id', $league->id)->first();
         $sets = $showSetsAction(['league_id' => $league->id, 'command' => 'all']);
-        $team_next = $showSetsAction(['league_id' => $league->id, 'command' => 'team_next', 'team_id' => $user_team->id ?? null]);
+        $team_next = $showSetsAction(['league_id' => $league->id, 'command' => 'team_next', 'team_id' => $user_team?->id]);
         if ($match_config === null) {
             $match_config = (object) [
                 'id' => 0,
