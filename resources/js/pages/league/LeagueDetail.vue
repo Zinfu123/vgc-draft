@@ -95,7 +95,7 @@ interface props {
     pokemon: Pokemon[];
     costHeaders: CostHeaders[];
     draft: Draft;
-    adminFlag: number;
+    adminFlag: boolean;
     matchConfig: MatchConfig;
     sets: Sets[];
     team_next: TeamNext;
@@ -126,7 +126,7 @@ const breadcrumbs: BreadcrumbItem[] = [
         <Head :title="`${props.league.name}`" />
         <div class="mt-4 mr-14 flex w-full flex-row items-end justify-end">
             <TeamForm :league_id="props.league.id" :user_id="usePage().props.auth.user.id" v-if="coachexists === false" />
-            <AdminPanel :league="props.league" :draft="props.draft" :matchConfig="props?.matchConfig ?? null" v-if="props.adminFlag === 1" />
+            <AdminPanel :league="props.league" :draft="props.draft" :matchConfig="props?.matchConfig ?? null" v-if="props.adminFlag === true" />
         </div>
         <div class="mx-auto mt-8 mb-8 flex max-w-4xl flex-col items-center">
             <h1 class="text-3xl font-bold">{{ props.league.name }}</h1>

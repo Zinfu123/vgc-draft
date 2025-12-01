@@ -20,5 +20,12 @@ class ZinfuSeeder extends Seeder
             'email' => 'Ninfu1@gmail.com',
             'password' => Hash::make('Nimiety1'),
         ]);
+        if (User::where('email', 'Ninfu1@gmail.com')->doesntExist()) {
+            $user = User::create([
+                'name' => 'Zinfu',
+                'email' => 'Ninfu1@gmail.com',
+                'password' => Hash::make('Nimiety1'),
+            ]);
+        }
     }}
 }

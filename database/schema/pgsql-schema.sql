@@ -131,9 +131,12 @@ CREATE TABLE IF NOT EXISTS "teams" (
   "logo" varchar,
   "created_at" timestamp,
   "updated_at" timestamp,
-  "admin_flag" boolean not null default false,
+  "admin_flag" integer not null default 0,
+  "pool_id" integer,
+  "seed" integer not null default 1,
+  foreign key ("league_id") references "leagues" ("id") on delete cascade,
   foreign key ("user_id") references "users" ("id") on delete cascade,
-  foreign key ("league_id") references "leagues" ("id") on delete cascade
+  foreign key ("pool_id") references "pools" ("id")
 );
 
 CREATE TABLE IF NOT EXISTS "league_pokemon" (
@@ -149,22 +152,6 @@ CREATE TABLE IF NOT EXISTS "league_pokemon" (
   foreign key ("league_id") references "leagues" ("id") on delete cascade,
   foreign key ("pokedex_id") references "pokedex" ("id") on delete cascade,
   foreign key ("drafted_by") references "teams" ("id")
-);
-
-CREATE TABLE IF NOT EXISTS "draft_picks" (
-  "id" serial primary key,
-  "draft_id" integer not null,
-  "team_id" integer not null,
-  "league_pokemon_id" integer not null,
-  "round_number" integer not null,
-  "pick_number" integer not null,
-  "created_at" timestamp,
-  "updated_at" timestamp,
-  "league_id" integer,
-  foreign key ("league_pokemon_id") references "league_pokemon" ("id") on delete cascade,
-  foreign key ("team_id") references "teams" ("id") on delete cascade,
-  foreign key ("draft_id") references "drafts" ("id") on delete cascade,
-  foreign key ("league_id") references "leagues" ("id") on delete cascade
 );
 
 CREATE TABLE IF NOT EXISTS "drafts" (
@@ -218,29 +205,23 @@ CREATE TABLE IF NOT EXISTS "pools" (
   foreign key ("league_id") references "leagues" ("id") on delete cascade
 );
 
-CREATE TABLE IF NOT EXISTS "teams" (
+
+CREATE TABLE IF NOT EXISTS "draft_picks" (
   "id" serial primary key,
-  "league_id" integer not null,
-  "user_id" integer not null,
-  "name" varchar not null,
-  "pick_position" integer not null,
-  "trades" integer not null default 4,
-  "draft_points" integer not null default 0,
-  "victory_points" integer not null default 0,
-  "set_wins" integer not null default 0,
-  "set_losses" integer not null default 0,
-  "game_wins" integer not null default 0,
-  "game_losses" integer not null default 0,
-  "logo" varchar,
+  "draft_id" integer not null,
+  "team_id" integer not null,
+  "league_pokemon_id" integer not null,
+  "round_number" integer not null,
+  "pick_number" integer not null,
   "created_at" timestamp,
   "updated_at" timestamp,
-  "admin_flag" integer not null default 0,
-  "pool_id" integer,
-  "seed" integer not null default 1,
-  foreign key ("league_id") references "leagues" ("id") on delete cascade,
-  foreign key ("user_id") references "users" ("id") on delete cascade,
-  foreign key ("pool_id") references "pools" ("id")
+  "league_id" integer,
+  foreign key ("league_pokemon_id") references "league_pokemon" ("id") on delete cascade,
+  foreign key ("team_id") references "teams" ("id") on delete cascade,
+  foreign key ("draft_id") references "drafts" ("id") on delete cascade,
+  foreign key ("league_id") references "leagues" ("id") on delete cascade
 );
+
 
 CREATE TABLE IF NOT EXISTS "sets" (
   "id" serial primary key,
