@@ -103,100 +103,16 @@ CREATE TABLE IF NOT EXISTS "leagues"(
   FOREIGN KEY("winner") REFERENCES "users"("id") ON DELETE CASCADE,
   FOREIGN KEY("league_owner") REFERENCES "users"("id") ON DELETE CASCADE
 );
-CREATE TABLE IF NOT EXISTS "telescope_entries"(
-  "sequence" SERIAL PRIMARY KEY NOT NULL,
-  "uuid" VARCHAR NOT NULL,
-  "batch_id" VARCHAR NOT NULL,
-  "family_hash" VARCHAR,
-  "should_display_on_index" BOOLEAN NOT NULL DEFAULT TRUE,
-  "type" VARCHAR NOT NULL,
-  "content" TEXT NOT NULL,
-  "created_at" TIMESTAMP
-);
-CREATE UNIQUE INDEX "telescope_entries_uuid_unique" on "telescope_entries"(
-  "uuid"
-);
-CREATE INDEX "telescope_entries_batch_id_index" on "telescope_entries"(
-  "batch_id"
-);
-CREATE INDEX "telescope_entries_family_hash_index" on "telescope_entries"(
-  "family_hash"
-);
-CREATE INDEX "telescope_entries_created_at_index" on "telescope_entries"(
-  "created_at"
-);
-CREATE INDEX "telescope_entries_type_should_display_on_index_index" on "telescope_entries"(
-  "type",
-  "should_display_on_index"
-);
-CREATE TABLE IF NOT EXISTS "telescope_entries_tags"(
-  "entry_uuid" VARCHAR NOT NULL,
-  "tag" VARCHAR NOT NULL,
-  FOREIGN KEY("entry_uuid") REFERENCES "telescope_entries"("uuid") ON DELETE CASCADE,
-  PRIMARY KEY("entry_uuid", "tag")
-);
-CREATE INDEX "telescope_entries_tags_tag_index" on "telescope_entries_tags"(
-  "tag"
-);
-CREATE TABLE IF NOT EXISTS "telescope_monitoring"(
-  "tag" VARCHAR NOT NULL,
-  PRIMARY KEY("tag")
-);
-CREATE TABLE IF NOT EXISTS "league_pokemon"(
+CREATE TABLE IF NOT EXISTS "match_configs"(
   "id" SERIAL PRIMARY KEY NOT NULL,
   "league_id" INTEGER NOT NULL,
-  "pokedex_id" INTEGER NOT NULL,
-  "name" VARCHAR NOT NULL,
-  "cost" INTEGER NOT NULL,
-  "is_drafted" BOOLEAN NOT NULL DEFAULT FALSE,
-  "created_at" TIMESTAMP,
-  "updated_at" TIMESTAMP,
-  "drafted_by" INTEGER,
-  "kos" INTEGER NOT NULL DEFAULT 0,
-  FOREIGN KEY("league_id") REFERENCES "leagues"("id") ON DELETE CASCADE,
-  FOREIGN KEY("pokedex_id") REFERENCES "pokedex"("id") ON DELETE CASCADE,
-  FOREIGN KEY("drafted_by") REFERENCES "teams"("id")
-);
-CREATE TABLE IF NOT EXISTS "draft_picks"(
-  "id" SERIAL PRIMARY KEY NOT NULL,
-  "draft_id" INTEGER NOT NULL,
-  "team_id" INTEGER NOT NULL,
-  "league_pokemon_id" INTEGER NOT NULL,
-  "round_number" INTEGER NOT NULL,
-  "pick_number" INTEGER NOT NULL,
-  "created_at" TIMESTAMP,
-  "updated_at" TIMESTAMP,
-  "league_id" INTEGER,
-  FOREIGN KEY("league_pokemon_id") REFERENCES "league_pokemon"("id") ON DELETE CASCADE,
-  FOREIGN KEY("team_id") REFERENCES "teams"("id") ON DELETE CASCADE,
-  FOREIGN KEY("draft_id") REFERENCES "drafts"("id") ON DELETE CASCADE,
-  FOREIGN KEY("league_id") REFERENCES "leagues"("id") ON DELETE CASCADE
-);
-CREATE TABLE IF NOT EXISTS "drafts"(
-  "id" SERIAL PRIMARY KEY NOT NULL,
-  "league_id" INTEGER NOT NULL,
-  "round_number" INTEGER NOT NULL,
+  "number_of_pools" INTEGER NOT NULL DEFAULT 1,
+  "frequency_type" INTEGER NOT NULL DEFAULT 1,
+  "frequency_value" INTEGER DEFAULT 0,
   "status" INTEGER NOT NULL DEFAULT 1,
   "created_at" TIMESTAMP,
   "updated_at" TIMESTAMP,
-  "pick_number" INTEGER DEFAULT 0,
   FOREIGN KEY("league_id") REFERENCES "leagues"("id") ON DELETE CASCADE
-);
-CREATE TABLE IF NOT EXISTS "draft_order"(
-  "id" SERIAL PRIMARY KEY NOT NULL,
-  "league_id" INTEGER NOT NULL,
-  "user_id" INTEGER NOT NULL,
-  "pick_number" INTEGER NOT NULL DEFAULT 1,
-  "status" INTEGER NOT NULL DEFAULT 1,
-  "is_last_pick" INTEGER NOT NULL DEFAULT 0,
-  "created_at" TIMESTAMP,
-  "updated_at" TIMESTAMP,
-  "team_name" VARCHAR NOT NULL,
-  "team_id" INTEGER,
-  "round_number" INTEGER NOT NULL,
-  FOREIGN KEY("user_id") REFERENCES "users"("id") ON DELETE NO ACTION,
-  FOREIGN KEY("league_id") REFERENCES "leagues"("id") ON DELETE NO ACTION,
-  FOREIGN KEY("team_id") REFERENCES "teams"("id") ON DELETE NO ACTION
 );
 CREATE TABLE IF NOT EXISTS "pools"(
   "id" SERIAL PRIMARY KEY NOT NULL,
@@ -231,15 +147,60 @@ CREATE TABLE IF NOT EXISTS "teams"(
   FOREIGN KEY("user_id") REFERENCES "users"("id") ON DELETE CASCADE,
   FOREIGN KEY("pool_id") REFERENCES "pools"("id")
 );
-CREATE TABLE IF NOT EXISTS "match_configs"(
+CREATE TABLE IF NOT EXISTS "league_pokemon"(
   "id" SERIAL PRIMARY KEY NOT NULL,
   "league_id" INTEGER NOT NULL,
-  "number_of_pools" INTEGER NOT NULL DEFAULT 1,
-  "frequency_type" INTEGER NOT NULL DEFAULT 1,
-  "frequency_value" INTEGER DEFAULT 0,
+  "pokedex_id" INTEGER NOT NULL,
+  "name" VARCHAR NOT NULL,
+  "cost" INTEGER NOT NULL,
+  "is_drafted" BOOLEAN NOT NULL DEFAULT FALSE,
+  "created_at" TIMESTAMP,
+  "updated_at" TIMESTAMP,
+  "drafted_by" INTEGER,
+  "kos" INTEGER NOT NULL DEFAULT 0,
+  FOREIGN KEY("league_id") REFERENCES "leagues"("id") ON DELETE CASCADE,
+  FOREIGN KEY("pokedex_id") REFERENCES "pokedex"("id") ON DELETE CASCADE,
+  FOREIGN KEY("drafted_by") REFERENCES "teams"("id")
+);
+CREATE TABLE IF NOT EXISTS "drafts"(
+  "id" SERIAL PRIMARY KEY NOT NULL,
+  "league_id" INTEGER NOT NULL,
+  "round_number" INTEGER NOT NULL,
   "status" INTEGER NOT NULL DEFAULT 1,
   "created_at" TIMESTAMP,
   "updated_at" TIMESTAMP,
+  "pick_number" INTEGER DEFAULT 0,
+  FOREIGN KEY("league_id") REFERENCES "leagues"("id") ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS "draft_order"(
+  "id" SERIAL PRIMARY KEY NOT NULL,
+  "league_id" INTEGER NOT NULL,
+  "user_id" INTEGER NOT NULL,
+  "pick_number" INTEGER NOT NULL DEFAULT 1,
+  "status" INTEGER NOT NULL DEFAULT 1,
+  "is_last_pick" INTEGER NOT NULL DEFAULT 0,
+  "created_at" TIMESTAMP,
+  "updated_at" TIMESTAMP,
+  "team_name" VARCHAR NOT NULL,
+  "team_id" INTEGER,
+  "round_number" INTEGER NOT NULL,
+  FOREIGN KEY("user_id") REFERENCES "users"("id") ON DELETE NO ACTION,
+  FOREIGN KEY("league_id") REFERENCES "leagues"("id") ON DELETE NO ACTION,
+  FOREIGN KEY("team_id") REFERENCES "teams"("id") ON DELETE NO ACTION
+);
+CREATE TABLE IF NOT EXISTS "draft_picks"(
+  "id" SERIAL PRIMARY KEY NOT NULL,
+  "draft_id" INTEGER NOT NULL,
+  "team_id" INTEGER NOT NULL,
+  "league_pokemon_id" INTEGER NOT NULL,
+  "round_number" INTEGER NOT NULL,
+  "pick_number" INTEGER NOT NULL,
+  "created_at" TIMESTAMP,
+  "updated_at" TIMESTAMP,
+  "league_id" INTEGER,
+  FOREIGN KEY("league_pokemon_id") REFERENCES "league_pokemon"("id") ON DELETE CASCADE,
+  FOREIGN KEY("team_id") REFERENCES "teams"("id") ON DELETE CASCADE,
+  FOREIGN KEY("draft_id") REFERENCES "drafts"("id") ON DELETE CASCADE,
   FOREIGN KEY("league_id") REFERENCES "leagues"("id") ON DELETE CASCADE
 );
 CREATE TABLE IF NOT EXISTS "sets"(
