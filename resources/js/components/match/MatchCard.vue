@@ -11,12 +11,18 @@ interface Team1 {
     id: number;
     name: string;
     logo: string;
+    coach: {
+        name: string;
+    };
 }
 
 interface Team2 {
     id: number;
     name: string;
     logo: string;
+    coach: {
+        name: string;
+    };
 }
 
 interface props {
@@ -30,20 +36,27 @@ const props = defineProps<props>();
 <template>
     <Card class="flex aspect-square cursor-pointer items-center hover:bg-black/50">
         <CardContent>
-            <div class="flex flex-col items-center text-2xl font-bold">
+                <img :src="team1.logo" alt="team logo" class="h-20 w-20" />
                 <div class="flex flex-row items-center gap-4">
-                    <div class="flex flex-row items-center gap-4">
+                    <div class="flex flex-col items-start gap-4">
                         {{ team1.name }}
-                        <img :src="team1.logo" alt="team logo" class="h-45 w-45" />
+                    </div>
+                    <div class="flex flex-col items-start gap-4">
+                        Coach:{{ team1.coach.name }}
                     </div>
                 </div>
-                <div class="flex flex-row items-center gap-4">
-                    <div class="flex flex-row items-center gap-4">
-                        {{ team2.name }}
-                        <img :src="team2.logo" alt="team logo" class="h-45 w-45" />
+                <div class="flex flex-col items-center text-2xl font-bold mt-1">
+                    VS:
+                </div>
+                <div class="flex flex-row items-center gap-4 mt-4">
+                    <img :src="team2.logo" alt="team logo" class="h-20 w-20" />
+                    <div class="flex flex-col items-start gap-4">
+                        {{ team2.name }} 
+                    <div class="flex flex-col items-end gap-4">
+                        Coach: {{ team2.coach.name }}
+                    </div>
                     </div>
                 </div>
-            </div>
         </CardContent>
     </Card>
 </template>

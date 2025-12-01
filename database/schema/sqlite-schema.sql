@@ -98,6 +98,8 @@ CREATE TABLE IF NOT EXISTS "leagues"(
   "league_owner" integer not null,
   "created_at" datetime,
   "updated_at" datetime,
+  "format" integer,
+  "round_number" integer not null default '0',
   foreign key("winner") references "users"("id") on delete cascade,
   foreign key("league_owner") references "users"("id") on delete cascade
 );
@@ -169,26 +171,6 @@ CREATE TABLE IF NOT EXISTS "draft_picks"(
   foreign key("draft_id") references drafts("id") on delete cascade on update no action,
   foreign key("league_id") references "leagues"("id") on delete cascade
 );
-CREATE TABLE IF NOT EXISTS "teams"(
-  "id" integer primary key autoincrement not null,
-  "league_id" integer not null,
-  "user_id" integer not null,
-  "name" varchar not null,
-  "pick_position" integer not null,
-  "trades" integer not null default('4'),
-  "draft_points" integer not null default('0'),
-  "victory_points" integer not null default('0'),
-  "set_wins" integer not null default('0'),
-  "set_losses" integer not null default('0'),
-  "game_wins" integer not null default('0'),
-  "game_losses" integer not null default('0'),
-  "logo" varchar,
-  "created_at" datetime,
-  "updated_at" datetime,
-  "admin_flag" integer not null default '0',
-  foreign key("user_id") references users("id") on delete cascade on update no action,
-  foreign key("league_id") references leagues("id") on delete cascade on update no action
-);
 CREATE TABLE IF NOT EXISTS "drafts"(
   "id" integer primary key autoincrement not null,
   "league_id" integer not null,
@@ -214,6 +196,70 @@ CREATE TABLE IF NOT EXISTS "draft_order"(
   foreign key("user_id") references users("id") on delete no action on update no action,
   foreign key("league_id") references leagues("id") on delete no action on update no action,
   foreign key("team_id") references teams("id") on delete no action on update no action
+);
+CREATE TABLE IF NOT EXISTS "pools"(
+  "id" integer primary key autoincrement not null,
+  "match_config_id" integer not null,
+  "league_id" integer not null,
+  "status" integer not null default '1',
+  "created_at" datetime not null,
+  "updated_at" datetime not null,
+  foreign key("match_config_id") references "match_configs"("id") on delete cascade,
+  foreign key("league_id") references "leagues"("id") on delete cascade
+);
+CREATE TABLE IF NOT EXISTS "teams"(
+  "id" integer primary key autoincrement not null,
+  "league_id" integer not null,
+  "user_id" integer not null,
+  "name" varchar not null,
+  "pick_position" integer not null,
+  "trades" integer not null default('4'),
+  "draft_points" integer not null default('0'),
+  "victory_points" integer not null default('0'),
+  "set_wins" integer not null default('0'),
+  "set_losses" integer not null default('0'),
+  "game_wins" integer not null default('0'),
+  "game_losses" integer not null default('0'),
+  "logo" varchar,
+  "created_at" datetime,
+  "updated_at" datetime,
+  "admin_flag" integer not null default('0'),
+  "pool_id" integer,
+  "seed" integer not null default '1',
+  foreign key("league_id") references leagues("id") on delete cascade on update no action,
+  foreign key("user_id") references users("id") on delete cascade on update no action,
+  foreign key("pool_id") references "pools"("id")
+);
+CREATE TABLE IF NOT EXISTS "match_configs"(
+  "id" integer primary key autoincrement not null,
+  "league_id" integer not null,
+  "number_of_pools" integer not null default '1',
+  "frequency_type" integer not null default '1',
+  "frequency_value" integer default '0',
+  "status" integer not null default '1',
+  "created_at" datetime,
+  "updated_at" datetime,
+  foreign key("league_id") references "leagues"("id") on delete cascade
+);
+CREATE TABLE IF NOT EXISTS "sets"(
+  "id" integer primary key autoincrement not null,
+  "league_id" integer not null,
+  "pool_id" integer not null,
+  "round" integer not null default '1',
+  "team1_id" integer not null,
+  "team2_id" integer not null,
+  "team1_score" integer,
+  "team2_score" integer,
+  "team1_pokepaste" varchar,
+  "team2_pokepaste" varchar,
+  "winner_id" integer,
+  "status" integer not null default '1',
+  "created_at" datetime,
+  "updated_at" datetime,
+  foreign key("league_id") references "leagues"("id") on delete cascade,
+  foreign key("pool_id") references "pools"("id") on delete cascade,
+  foreign key("team1_id") references "teams"("id") on delete cascade,
+  foreign key("team2_id") references "teams"("id") on delete cascade
 );
 
 INSERT INTO migrations VALUES(1,'0001_01_01_000000_create_users_table',1);
@@ -244,3 +290,15 @@ INSERT INTO migrations VALUES(29,'2025_11_05_221351_modify_teams_again',16);
 INSERT INTO migrations VALUES(30,'2025_11_05_232058_modify_draft_picks',17);
 INSERT INTO migrations VALUES(31,'2025_11_06_183547_modify_draft_order2',18);
 INSERT INTO migrations VALUES(32,'2025_11_06_183711_modify_draft_order3',19);
+INSERT INTO migrations VALUES(39,'2025_11_12_191209_modify_leagues',20);
+INSERT INTO migrations VALUES(40,'2025_11_12_191555_match_config',20);
+INSERT INTO migrations VALUES(41,'2025_11_12_212031_pools',20);
+INSERT INTO migrations VALUES(42,'2025_11_12_212159_teams_pools',20);
+INSERT INTO migrations VALUES(46,'2025_11_14_013845_match_config_delete',21);
+INSERT INTO migrations VALUES(47,'2025_11_14_151210_create_match_configs_table',22);
+INSERT INTO migrations VALUES(48,'2025_11_14_152238_league_delete_column',22);
+INSERT INTO migrations VALUES(49,'2025_11_20_182106_match_config_delete_column',23);
+INSERT INTO migrations VALUES(50,'2025_11_24_152547_match_config_delete_wins_required',24);
+INSERT INTO migrations VALUES(51,'2025_11_24_153123_match_config_delete_duration',25);
+INSERT INTO migrations VALUES(54,'2025_11_24_180653_sets',26);
+INSERT INTO migrations VALUES(55,'2025_11_24_214305_leagues_rounds',27);

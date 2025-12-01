@@ -39,10 +39,11 @@ class LeagueController extends Controller
     {
         $pokemon = $readLeaguePokemonAction(['league_id' => $league->id]);
         $teams = $readTeamAction(['league_id' => $league->id, 'command' => 'league']);
-        $adminflag = Team::where('league_id', $league->id)->where('user_id', Auth::user()->id)->select('admin_flag')->first();
-        $adminflag = $adminflag ? $adminflag->admin_flag : 0;
+        $user_team = Team::where('user_id', Auth::user()->id)->where('league_id', $league->id)->select('id', 'admin_flag')->first();
+        $adminflag = $user_team ? $user_team->admin_flag : 0;
         $match_config = MatchConfig::where('league_id', $league->id)->first();
         $sets = $showSetsAction(['league_id' => $league->id, 'command' => 'all']);
+        $team_next = $showSetsAction(['league_id' => $league->id, 'command' => 'team_next', 'team_id' => $user_team->id ?? null]);
         if ($match_config === null) {
             $match_config = (object) [
                 'id' => 0,
@@ -64,6 +65,7 @@ class LeagueController extends Controller
             'adminFlag' => $adminflag,
             'matchConfig' => $match_config,
             'sets' => $sets,
+            'team_next' => $team_next,
         ]);
     }
 
