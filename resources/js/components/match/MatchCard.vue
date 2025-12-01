@@ -36,27 +36,21 @@ const props = defineProps<props>();
 <template>
     <Card class="flex aspect-square cursor-pointer items-center hover:bg-black/50">
         <CardContent>
-                <img :src="team1.logo" alt="team logo" class="h-20 w-20" />
-                <div class="flex flex-row items-center gap-4">
-                    <div class="flex flex-col items-start gap-4">
-                        {{ team1.name }}
-                    </div>
-                    <div class="flex flex-col items-start gap-4">
-                        Coach:{{ team1.coach.name }}
-                    </div>
+            <img :src="team1.logo" alt="team logo" class="h-20 w-20" />
+            <div class="flex flex-row items-center gap-4">
+                <div class="flex flex-col items-start gap-4">
+                    {{ team1.name }}
                 </div>
-                <div class="flex flex-col items-center text-2xl font-bold mt-1">
-                    VS:
+                <div class="flex flex-col items-start gap-4">Coach:{{ team1.coach.name }}</div>
+            </div>
+            <div class="mt-1 flex flex-col items-center text-2xl font-bold">VS:</div>
+            <div class="mt-4 flex flex-row items-center gap-4">
+                <img :src="team2.logo" alt="team logo" class="h-20 w-20" />
+                <div class="flex flex-col items-start gap-4">
+                    {{ team2.name }}
+                    <div class="flex flex-col items-end gap-4">Coach: {{ team2.coach.name }}</div>
                 </div>
-                <div class="flex flex-row items-center gap-4 mt-4">
-                    <img :src="team2.logo" alt="team logo" class="h-20 w-20" />
-                    <div class="flex flex-col items-start gap-4">
-                        {{ team2.name }} 
-                    <div class="flex flex-col items-end gap-4">
-                        Coach: {{ team2.coach.name }}
-                    </div>
-                    </div>
-                </div>
+            </div>
         </CardContent>
     </Card>
 </template>
