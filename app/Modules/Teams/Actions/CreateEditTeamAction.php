@@ -22,6 +22,10 @@ class CreateEditTeamAction
         } else {
             $logo = null;
         }
+        if (team::where('league_id', $request->league_id)->where('user_id', $request->user_id)->exists()) {
+            throw new \Exception('Team already exists');
+        }
+        else {
         $draftPoints = League::where('id', $request->league_id)->select('draft_points')->first();
         $draftPoints = $draftPoints->draft_points;
         $team = Team::create([
@@ -35,7 +39,8 @@ class CreateEditTeamAction
         $teamcount = Team::where('league_id', $request->league_id)->count();
         if ($teamcount == 1) {
             $team->admin_flag = 1;
-            $team->save();
+                $team->save();
+            }
         }
         return $team;
     }

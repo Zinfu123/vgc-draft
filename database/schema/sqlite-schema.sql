@@ -152,6 +152,7 @@ CREATE TABLE IF NOT EXISTS "league_pokemon"(
   "created_at" datetime,
   "updated_at" datetime,
   "drafted_by" integer,
+  "kos" integer not null default '0',
   foreign key("league_id") references leagues("id") on delete cascade on update no action,
   foreign key("pokedex_id") references pokedex("id") on delete cascade on update no action,
   foreign key("drafted_by") references "teams"("id")
@@ -197,17 +198,6 @@ CREATE TABLE IF NOT EXISTS "draft_order"(
   foreign key("league_id") references leagues("id") on delete no action on update no action,
   foreign key("team_id") references teams("id") on delete no action on update no action
 );
-CREATE TABLE IF NOT EXISTS "match_configs"(
-  "id" integer primary key autoincrement not null,
-  "league_id" integer not null,
-  "number_of_pools" integer not null default '1',
-  "frequency_type" integer not null default '1',
-  "frequency_value" integer default '0',
-  "status" integer not null default '1',
-  "created_at" datetime,
-  "updated_at" datetime,
-  foreign key("league_id") references "leagues"("id") on delete cascade
-);
 CREATE TABLE IF NOT EXISTS "pools"(
   "id" integer primary key autoincrement not null,
   "match_config_id" integer not null,
@@ -240,6 +230,17 @@ CREATE TABLE IF NOT EXISTS "teams"(
   foreign key("league_id") references leagues("id") on delete cascade on update no action,
   foreign key("user_id") references users("id") on delete cascade on update no action,
   foreign key("pool_id") references "pools"("id")
+);
+CREATE TABLE IF NOT EXISTS "match_configs"(
+  "id" integer primary key autoincrement not null,
+  "league_id" integer not null,
+  "number_of_pools" integer not null default '1',
+  "frequency_type" integer not null default '1',
+  "frequency_value" integer default '0',
+  "status" integer not null default '1',
+  "created_at" datetime,
+  "updated_at" datetime,
+  foreign key("league_id") references "leagues"("id") on delete cascade
 );
 CREATE TABLE IF NOT EXISTS "sets"(
   "id" integer primary key autoincrement not null,
@@ -302,3 +303,4 @@ INSERT INTO migrations VALUES(50,'2025_11_24_152547_match_config_delete_wins_req
 INSERT INTO migrations VALUES(51,'2025_11_24_153123_match_config_delete_duration',25);
 INSERT INTO migrations VALUES(54,'2025_11_24_180653_sets',26);
 INSERT INTO migrations VALUES(55,'2025_11_24_214305_leagues_rounds',27);
+INSERT INTO migrations VALUES(56,'2025_12_01_225622_league_pokemon__k_os',28);
