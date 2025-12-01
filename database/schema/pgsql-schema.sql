@@ -195,6 +195,18 @@ CREATE TABLE IF NOT EXISTS "draft_order" (
   foreign key ("team_id") references "teams" ("id") on delete no action
 );
 
+CREATE TABLE IF NOT EXISTS "match_configs" (
+  "id" serial primary key,
+  "league_id" integer not null,
+  "number_of_pools" integer not null default 1,
+  "frequency_type" integer not null default 1,
+  "frequency_value" integer default 0,
+  "status" integer not null default 1,
+  "created_at" timestamp,
+  "updated_at" timestamp,
+  foreign key ("league_id") references "leagues" ("id") on delete cascade
+);
+
 CREATE TABLE IF NOT EXISTS "pools" (
   "id" serial primary key,
   "match_config_id" integer not null,
@@ -228,18 +240,6 @@ CREATE TABLE IF NOT EXISTS "teams" (
   foreign key ("league_id") references "leagues" ("id") on delete cascade,
   foreign key ("user_id") references "users" ("id") on delete cascade,
   foreign key ("pool_id") references "pools" ("id")
-);
-
-CREATE TABLE IF NOT EXISTS "match_configs" (
-  "id" serial primary key,
-  "league_id" integer not null,
-  "number_of_pools" integer not null default 1,
-  "frequency_type" integer not null default 1,
-  "frequency_value" integer default 0,
-  "status" integer not null default 1,
-  "created_at" timestamp,
-  "updated_at" timestamp,
-  foreign key ("league_id") references "leagues" ("id") on delete cascade
 );
 
 CREATE TABLE IF NOT EXISTS "sets" (
