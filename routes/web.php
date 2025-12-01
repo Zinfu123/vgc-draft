@@ -6,6 +6,9 @@ use App\Modules\League\Controllers\LeagueController;
 use App\Modules\League\Controllers\LeaguePokemonController;
 use App\Modules\Pokedex\Controllers\PokedexController;
 use App\Modules\Teams\Controllers\TeamController;
+use App\Modules\Matches\Controllers\PoolController;
+use App\Modules\Matches\Controllers\MatchConfigController;
+use App\Modules\Matches\Controllers\SetController;
 /* End Define Controllers */
 
 /* Dependencies */
@@ -33,6 +36,9 @@ Route::prefix('leagues')->group(function () {
     Route::post('/', [LeagueController::class, 'create'])->middleware(['auth', 'verified'])->name('leagues.create');
     Route::get('/{league}/pokemon', [LeaguePokemonController::class, 'read'])->middleware(['auth', 'verified'])->name('leagues.pokemon');
     Route::post('/pokemon', [LeaguePokemonController::class, 'create'])->middleware(['auth', 'verified'])->name('leagues.pokemon.create');
+    Route::get('/{league}/pools', [PoolController::class, 'index'])->middleware(['auth', 'verified'])->name('leagues.pools');
+    Route::get('/{league}/match-config', [MatchConfigController::class, 'createEditShow'])->middleware(['auth', 'verified'])->name('leagues.match-config.show');
+    Route::post('/{league}/match-config/create-edit-show', [MatchConfigController::class, 'createEditShow'])->middleware(['auth', 'verified'])->name('leagues.match-config.create-edit-show');
 });
 
 // Team Routes
@@ -49,6 +55,18 @@ Route::prefix('draft')->group(function () {
     Route::post('/', [DraftController::class, 'pick'])->middleware(['auth', 'verified'])->name('draft.pick');
     Route::post('/revert-last-pick', [DraftController::class, 'revertLastPick'])->middleware(['auth', 'verified'])->name('draft.revert-last-pick');
     Route::post('/abort-draft', [DraftController::class, 'abortDraft'])->middleware(['auth', 'verified'])->name('draft.abort-draft');
+});
+
+// Match Routes
+Route::prefix('matches')->group(function () {
+    Route::get('/{league}', [SetController::class, 'index'])->middleware(['auth', 'verified'])->name('sets.index');
+    Route::post('/{league}/create', [SetController::class, 'create'])->middleware(['auth', 'verified'])->name('sets.create');
+});
+
+Route::prefix('pools')->group(function () {
+    Route::post('/create', [PoolController::class, 'create'])->middleware(['auth', 'verified'])->name('pools.create');
+    Route::get('/{pool_id}', [PoolController::class, 'show'])->middleware(['auth', 'verified'])->name('pools.detail');
+    Route::post('/assign-teams-to-pools', [PoolController::class, 'assignTeamsToPools'])->middleware(['auth', 'verified'])->name('pools.assign-teams-to-pools');
 });
 
 require __DIR__.'/settings.php';

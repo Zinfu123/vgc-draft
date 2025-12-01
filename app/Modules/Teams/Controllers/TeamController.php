@@ -34,7 +34,6 @@ class TeamController extends Controller
     public function show(Request $request, ReadTeamAction $readTeamAction)
     {
         $team = $readTeamAction(['team_id' => $request->team_id, 'command' => 'team']);
-        Log::info("team: ".$team);
         $league = League::find($team->league_id);
         return Inertia::render('teams/TeamDetail', [
             'league' => $league,

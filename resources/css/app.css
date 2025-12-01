@@ -75,7 +75,7 @@
     --color-darktype: var(--darktype);
     --color-steeltype: var(--steeltype);
     --color-fairytype: var(--fairytype);
-    --radius-xl: calc(var(--radius) + 4px); 
+    --radius-xl: calc(var(--radius) + 4px);
 }
 
 /*

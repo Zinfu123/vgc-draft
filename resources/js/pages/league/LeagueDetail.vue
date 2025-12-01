@@ -1,14 +1,13 @@
 <script setup lang="ts">
-import { type BreadcrumbItem } from '@/types';
-import TeamForm from '@/components/team/TeamForm.vue';
-import TeamCarousel from '@/components/team/TeamCarousel.vue';
-import { usePage } from '@inertiajs/vue3';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { Head } from '@inertiajs/vue3';
-import { Tabs, TabsList, TabsTrigger, TabsContent} from '@/components/ui/tabs';
-import LeaguePokemon from '@/components/league/LeaguePokemon.vue';
 import AdminPanel from '@/components/league/AdminPanel.vue';
-import { router } from '@inertiajs/vue3';
+import LeaguePokemon from '@/components/league/LeaguePokemon.vue';
+import MatchCard from '@/components/match/MatchCard.vue';
+import TeamCarousel from '@/components/team/TeamCarousel.vue';
+import TeamForm from '@/components/team/TeamForm.vue';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { type BreadcrumbItem } from '@/types';
+import { Head, router, usePage } from '@inertiajs/vue3';
 
 interface League {
     id: number;
@@ -49,8 +48,22 @@ interface Draft {
     pick_number: number;
 }
 
-interface AdminFlag {
-    adminFlag: number;
+interface MatchConfig {
+    id: number;
+    league_id: number;
+    number_of_pools: number;
+    frequency_type: number;
+    frequency_value: number;
+    status: number;
+}
+
+interface Sets {
+    id: number;
+    league_id: number;
+    pool_id: number;
+    round: number;
+    team1: object;
+    team2: object;
 }
 
 interface props {
@@ -59,18 +72,19 @@ interface props {
     pokemon: Pokemon[];
     costHeaders: CostHeaders[];
     draft: Draft;
-    adminFlag: AdminFlag;
+    adminFlag: number;
+    matchConfig: MatchConfig;
+    sets: Sets[];
 }
-
 
 const props = defineProps<props>();
 
 const user = usePage().props.auth.user;
-const coachexists = props.teams.some(team => team.coach === user.name);
+const coachexists = props.teams.some((team) => team.coach === user.name);
 
 const draftDetail = () => {
     router.get(route('draft.detail', { league_id: props.league.id }));
-}
+};
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -85,40 +99,59 @@ const breadcrumbs: BreadcrumbItem[] = [
 </script>
 <template>
     <AppLayout :breadcrumbs="breadcrumbs">
-    <Head :title="`${props.league.name}`" />
-        <div class="flex flex-row justify-end items-end w-full mr-14 mt-4">
+        <Head :title="`${props.league.name}`" />
+        <div class="mt-4 mr-14 flex w-full flex-row items-end justify-end">
             <TeamForm :league_id="props.league.id" :user_id="usePage().props.auth.user.id" v-if="coachexists === false" />
-            <AdminPanel :league="props.league" :draft="props.draft" v-if="props.adminFlag === 1"/>
+            <AdminPanel :league="props.league" :draft="props.draft" :matchConfig="props?.matchConfig ?? null" v-if="props.adminFlag === 1" />
         </div>
-        <div class="flex flex-col max-w-4xl mx-auto items-center mt-10">
+        <div class="mx-auto mt-10 flex max-w-4xl flex-col items-center">
             <h1 class="text-3xl font-bold">{{ props.league.name }}</h1>
         </div>
-        <Tabs defaultValue="teams" class="justify-center items-center w-[full] mt-8 mr-8 ml-8">
-        <TabsList class="w-full grid grid-flow-col">
-            <TabsTrigger value="teams" class="dark:data-[state=active]:bg-black/80">Teams</TabsTrigger>
-            <TabsTrigger value="matches" class="dark:data-[state=active]:bg-black/80">Matches</TabsTrigger>
-            <TabsTrigger value="standings" class="dark:data-[state=active]:bg-black/80">Standings</TabsTrigger>
-            <TabsTrigger value="trades" class="dark:data-[state=active]:bg-black/80">Trades</TabsTrigger>
-            <TabsTrigger value="draft" class="dark:data-[state=active]:bg-black/80" v-if="props.draft !== null">Draft</TabsTrigger>
-            <TabsTrigger value="pokemon" class="dark:data-[state=active]:bg-black/80" :href="route('leagues.pokemon', { league: props.league.id })">Pokemon</TabsTrigger>
-        </TabsList>
-        <TabsContent value="teams">
+        <Tabs defaultValue="teams" class="w-[full] items-center justify-center">
+            <TabsList class="grid w-full grid-flow-col">
+                <TabsTrigger value="teams" class="dark:data-[state=active]:bg-black/80">Teams</TabsTrigger>
+                <TabsTrigger value="pools" class="dark:data-[state=active]:bg-black/80">Pools</TabsTrigger>
+                <TabsTrigger value="matches" class="dark:data-[state=active]:bg-black/80">Matches</TabsTrigger>
+                <TabsTrigger value="standings" class="dark:data-[state=active]:bg-black/80">Standings</TabsTrigger>
+                <TabsTrigger value="trades" class="dark:data-[state=active]:bg-black/80">Trades</TabsTrigger>
+                <TabsTrigger value="draft" class="dark:data-[state=active]:bg-black/80" v-if="props.draft !== null">Draft</TabsTrigger>
+                <TabsTrigger
+                    value="pokemon"
+                    class="dark:data-[state=active]:bg-black/80"
+                    :href="route('leagues.pokemon', { league: props.league.id })"
+                    >Pokemon</TabsTrigger
+                >
+            </TabsList>
+            <TabsContent value="teams">
                 <TeamCarousel :leagueteams="props.teams" />
-        </TabsContent>
-        <TabsContent value="matches">
-            <div class="flex flex-col max-w-4xl mx-auto items-center mt-10">
-                <div class=" grid grid-cols-2">
-                <h1 class="text-3xl font-bold justify-start">Your Next Match</h1>
-                <h1 class="text-3xl font-bold justify-end">This Weeks Matches</h1>
+            </TabsContent>
+            <TabsContent value="pools"> </TabsContent>
+            <TabsContent value="matches">
+                <div class="mx-auto mt-10 flex w-[full] flex-col items-center">
+                    <div class="flex flex-row gap-12 justify-center">
+                        <div class="flex flex-col items-center">
+                        <h1 class="text-3xl font-bold">Your Next Match</h1>
+                        <div class="flex flex-wrap gap-4">
+
+                        </div>
+                        </div>
+                        <div class="flex flex-wrap gap-4 justify-center">
+                            <h1 class="text-3xl font-bold">Previous Matches</h1>
+                            <div class="flex flex-wrap gap-4">
+                                <MatchCard v-for="set in props.sets" :key="set.id"  :sets="set" :team1="set.team1" :team2="set.team2" />
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-        </TabsContent>
-        <TabsContent value="pokemon">
-            <LeaguePokemon :pokemon="props.pokemon" :league="props.league" />
-        </TabsContent>
-        <TabsContent value="draft">
-            <button class="text-1xl font-bold border-2 border-indigo-600 rounded-md p-2 m-2 bg-gray-800/85 dark:bg-muted/85" @click="draftDetail">Draft Detail</button>
-        </TabsContent>
-    </Tabs>
+            </TabsContent>
+            <TabsContent value="pokemon">
+                <LeaguePokemon :pokemon="props.pokemon" :league="props.league" />
+            </TabsContent>
+            <TabsContent value="draft">
+                <button class="text-1xl m-2 rounded-md border-2 border-indigo-600 bg-gray-800/85 p-2 font-bold dark:bg-muted/85" @click="draftDetail">
+                    Draft Detail
+                </button>
+            </TabsContent>
+        </Tabs>
     </AppLayout>
 </template>

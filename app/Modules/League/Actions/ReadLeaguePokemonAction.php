@@ -45,7 +45,6 @@ class ReadLeaguePokemonAction
         ->orderBy('league_pokemon.cost', 'desc')
         ->orderBy('pokedex.name', 'asc')
         ->get();
-        Log::info("pokemon: ".$pokemon);
             return $pokemon;
         }
     }

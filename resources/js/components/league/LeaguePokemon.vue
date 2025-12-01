@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import PokemonCard from '@/components/pokemon/PokemonCard.vue';
 
-interface Pokemon{
+interface Pokemon {
     id: number;
     cost: number;
     name: string;
@@ -10,7 +10,7 @@ interface Pokemon{
     type2?: string;
 }
 
-interface League{
+interface League {
     id: number;
 }
 

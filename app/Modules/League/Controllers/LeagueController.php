@@ -8,11 +8,13 @@ use App\Modules\League\Actions\ReadLeagueDraftAction;
 use App\Modules\League\Models\League;
 use App\Modules\League\Actions\ReadLeaguePokemonAction;
 use App\Modules\Teams\Actions\ReadTeamAction;
+use App\Modules\Matches\Actions\ShowSetsAction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use App\Modules\Teams\Models\Team;
 use Illuminate\Support\Facades\Auth;
+use App\Modules\Matches\Models\MatchConfig;
 use Illuminate\Support\Facades\Log;
 
 class LeagueController extends Controller
@@ -33,17 +35,26 @@ class LeagueController extends Controller
         ]);
     }
 
-    public function show(League $league, ReadTeamAction $readTeamAction, ReadLeaguePokemonAction $readLeaguePokemonAction, ReadLeagueDraftAction $readLeagueDraftAction)
+    public function show(League $league, ReadTeamAction $readTeamAction, ReadLeaguePokemonAction $readLeaguePokemonAction, ReadLeagueDraftAction $readLeagueDraftAction, ShowSetsAction $showSetsAction)
     {
         $pokemon = $readLeaguePokemonAction(['league_id' => $league->id]);
         $teams = $readTeamAction(['league_id' => $league->id, 'command' => 'league']);
-        $adminflag = Team::where('league_id', $league->id)->where('user_id', Auth::user()->id)->first();
-        if ($adminflag) {
-            $adminflag = $adminflag->admin_flag;
-        } else {
-            $adminflag = 0;
+        $adminflag = Team::where('league_id', $league->id)->where('user_id', Auth::user()->id)->select('admin_flag')->first();
+        $adminflag = $adminflag ? $adminflag->admin_flag : 0;
+        $match_config = MatchConfig::where('league_id', $league->id)->first();
+        $sets = $showSetsAction(['league_id' => $league->id, 'command' => 'all']);
+        if ($match_config === null) {
+            $match_config = (object) [
+                'id' => 0,
+                'league_id' => $league->id,
+                'number_of_pools' => 0,
+                'wins_required' => 0,
+                'frequency_type' => 0,
+                'frequency_value' => 0,
+                'duration' => 0,
+                'status' => 0,
+            ];
         }
-        Log::info("adminflag: ".$adminflag);
         return Inertia::render('league/LeagueDetail', [
             'league' => $league,
             'teams' => $teams,
@@ -51,6 +62,8 @@ class LeagueController extends Controller
             'costHeaders' => $pokemon->unique('cost')->pluck('cost'),
             'draft' => $readLeagueDraftAction(['league_id' => $league->id]),
             'adminFlag' => $adminflag,
+            'matchConfig' => $match_config,
+            'sets' => $sets,
         ]);
     }
 

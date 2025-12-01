@@ -1,5 +1,4 @@
 <script setup lang="ts">
-
 interface CostHeaders {
     cost: number;
 }
@@ -7,13 +6,11 @@ interface CostHeaders {
 const props = defineProps<{
     costHeaders: CostHeaders;
 }>();
-
 </script>
 
 <template>
-
-    <div class="flex flex-row justify-center w-full mt-4">
-        <span v-for="cost in props.costHeaders" :key="cost" class="rounded bg-gray-800/85 dark:bg-muted/85 px-10 py-5 text-xs text-center">
+    <div class="mt-4 flex w-full flex-row justify-center">
+        <span v-for="cost in props.costHeaders" :key="cost" class="rounded bg-gray-800/85 px-10 py-5 text-center text-xs dark:bg-muted/85">
             {{ cost }}
         </span>
     </div>
