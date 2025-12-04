@@ -21,6 +21,10 @@ class CreateEditSetsAction
             $pools = Pool::where('league_id', $data['league_id'])->where('status', 1)->get();
             foreach ($pools as $pool) {
                 $teams = Team::where('pool_id', $pool->id)->orderBy('seed', 'asc')->get();
+                $oddCheck = $teams->count() % 2 !== 0;
+                if ($oddCheck === true) {
+                    $teams->push(null);
+                }
                 $schedule = $this->scheduleSets($teams);
                 $schedule = $this->cleanSchedule($schedule);
                 foreach ($schedule as $round => $matchups) {
@@ -47,13 +51,16 @@ class CreateEditSetsAction
         $teamsCount = $teams->count();
         $rounds = $teamsCount - 1;
         $matchesPerRound = floor($teamsCount / 2);
-        for ($i = 1; $i <= $rounds; $i++) {
-        $schedule[$i] = collect();
-        $teams->each(function ($team, $index) use ($matchesPerRound, $i, $teams, $schedule) {
+        for ($round = 1; $round <= $rounds; $round += 1) {
+        $schedule[$round] = collect();
+        $teams->each(function ($team, $index) use ($matchesPerRound, $round, $teams, $schedule) {
+            if ($index >= $matchesPerRound) {
+                return;
+            }
             $team1 = $team;
-            $team2 = $teams->get($index + $matchesPerRound);
-            $matchup = $i % 2 === 0 ? collect(['round' => $i, 'team1' => $team1, 'team2' => $team2]) : collect(['round' => $i, 'team1' => $team2, 'team2' => $team1]);
-            $schedule[$i]->push($matchup);
+            $team2 = $teams[$index + $matchesPerRound];
+            $matchup = $round % 2 === 0 ? collect(['round' => $round, 'team1' => $team1, 'team2' => $team2]) : collect(['round' => $round, 'team1' => $team2, 'team2' => $team1]);
+            $schedule[$round]->push($matchup);
         });
         $teams = $this->rotate($teams);
         }
@@ -73,19 +80,16 @@ class CreateEditSetsAction
     protected function rotate($teams)
     {
         $teamsCount = $teams->count();
-        if ($teamsCount < 3) {
-            return $teams;
-        }
         $lastIndex = $teamsCount - 1;
-        $factor = (int) ($teamsCount % 2 === 0 ? $teamsCount/2 : ($teamsCount/2) + 1);
+        $factor = (int) ($teamsCount % 2 === 0 ? $teamsCount/2 : ceil($teamsCount/2));
         $topRightIndex = $factor - 1;
         $topRightItem = $teams[$topRightIndex];
         $bottomLeftIndex = $factor;
         $bottomLeftItem = $teams[$bottomLeftIndex];
-        for ($i = $topRightIndex; $i > 0; $i--) {
+        for ($i = $topRightIndex; $i > 0; $i -= 1) {
             $teams[$i] = $teams[$i - 1];
         }
-        for ($i = $bottomLeftIndex; $i < $lastIndex; $i++) {
+        for ($i = $bottomLeftIndex; $i < $lastIndex; $i += 1) {
             $teams[$i] = $teams[$i + 1];
         }
         $teams[1] = $topRightItem;

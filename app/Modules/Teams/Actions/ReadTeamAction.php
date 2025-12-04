@@ -4,7 +4,7 @@ namespace App\Modules\Teams\Actions;
 
 use App\Models\User;
 use App\Modules\Teams\Models\Team;
-use Illuminate\Support\Facades\Storage;
+use App\Modules\Shared\Actions\LogoToUrlAction;
 
 class ReadTeamAction
 {
@@ -18,7 +18,8 @@ class ReadTeamAction
 
         $teams = $teams->map(function ($team) {
             if ($team->logo !== null) {
-                $team->logo = str_replace('\\', '/', Storage::disk('s3-team-logos')->url($team->logo));
+                $action = new LogoToUrlAction();
+                $team->logo = $action->logoToUrl($team->logo);
             }
 
             return $team;
@@ -34,7 +35,8 @@ class ReadTeamAction
         elseif($data['command'] == 'team') {
             $team = Team::where('id', $data['team_id'])->with('draftPicks.leaguePokemon.pokemon')->first();
             if ($team->logo !== null) {
-                $team->logo = str_replace('\\', '/', Storage::disk('s3-team-logos')->url($team->logo));
+                $action = new LogoToUrlAction();
+                $team->logo = $action->logoToUrl($team->logo);
             }
             return $team;
         }

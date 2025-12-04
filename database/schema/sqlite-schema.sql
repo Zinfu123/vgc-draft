@@ -103,6 +103,50 @@ CREATE TABLE IF NOT EXISTS "leagues"(
   foreign key("winner") references "users"("id") on delete cascade,
   foreign key("league_owner") references "users"("id") on delete cascade
 );
+CREATE TABLE IF NOT EXISTS "match_configs"(
+  "id" integer primary key autoincrement not null,
+  "league_id" integer not null,
+  "number_of_pools" integer not null default '1',
+  "frequency_type" integer not null default '1',
+  "frequency_value" integer default '0',
+  "status" integer not null default '1',
+  "created_at" datetime,
+  "updated_at" datetime,
+  foreign key("league_id") references "leagues"("id") on delete cascade
+);
+CREATE TABLE IF NOT EXISTS "pools"(
+  "id" integer primary key autoincrement not null,
+  "match_config_id" integer not null,
+  "league_id" integer not null,
+  "status" integer not null default '1',
+  "created_at" datetime not null,
+  "updated_at" datetime not null,
+  foreign key("match_config_id") references "match_configs"("id") on delete cascade,
+  foreign key("league_id") references "leagues"("id") on delete cascade
+);
+CREATE TABLE IF NOT EXISTS "teams"(
+  "id" integer primary key autoincrement not null,
+  "league_id" integer not null,
+  "user_id" integer not null,
+  "name" varchar not null,
+  "pick_position" integer not null,
+  "trades" integer not null default('4'),
+  "draft_points" integer not null default('0'),
+  "victory_points" integer not null default('0'),
+  "set_wins" integer not null default('0'),
+  "set_losses" integer not null default('0'),
+  "game_wins" integer not null default('0'),
+  "game_losses" integer not null default('0'),
+  "logo" varchar,
+  "created_at" datetime,
+  "updated_at" datetime,
+  "admin_flag" integer not null default('0'),
+  "pool_id" integer,
+  "seed" integer not null default '1',
+  foreign key("league_id") references leagues("id") on delete cascade on update no action,
+  foreign key("user_id") references users("id") on delete cascade on update no action,
+  foreign key("pool_id") references "pools"("id")
+);
 CREATE TABLE IF NOT EXISTS "telescope_entries"(
   "sequence" integer primary key autoincrement not null,
   "uuid" varchar not null,
@@ -157,6 +201,16 @@ CREATE TABLE IF NOT EXISTS "league_pokemon"(
   foreign key("pokedex_id") references pokedex("id") on delete cascade on update no action,
   foreign key("drafted_by") references "teams"("id")
 );
+CREATE TABLE IF NOT EXISTS "drafts"(
+  "id" integer primary key autoincrement not null,
+  "league_id" integer not null,
+  "round_number" integer not null,
+  "status" integer not null default '1',
+  "created_at" datetime,
+  "updated_at" datetime,
+  "pick_number" integer default('0'),
+  foreign key("league_id") references leagues("id") on delete cascade on update no action
+);
 CREATE TABLE IF NOT EXISTS "draft_picks"(
   "id" integer primary key autoincrement not null,
   "draft_id" integer not null,
@@ -171,16 +225,6 @@ CREATE TABLE IF NOT EXISTS "draft_picks"(
   foreign key("team_id") references teams("id") on delete cascade on update no action,
   foreign key("draft_id") references drafts("id") on delete cascade on update no action,
   foreign key("league_id") references "leagues"("id") on delete cascade
-);
-CREATE TABLE IF NOT EXISTS "drafts"(
-  "id" integer primary key autoincrement not null,
-  "league_id" integer not null,
-  "round_number" integer not null,
-  "status" integer not null default '1',
-  "created_at" datetime,
-  "updated_at" datetime,
-  "pick_number" integer default('0'),
-  foreign key("league_id") references leagues("id") on delete cascade on update no action
 );
 CREATE TABLE IF NOT EXISTS "draft_order"(
   "id" integer primary key autoincrement not null,
@@ -197,50 +241,6 @@ CREATE TABLE IF NOT EXISTS "draft_order"(
   foreign key("user_id") references users("id") on delete no action on update no action,
   foreign key("league_id") references leagues("id") on delete no action on update no action,
   foreign key("team_id") references teams("id") on delete no action on update no action
-);
-CREATE TABLE IF NOT EXISTS "pools"(
-  "id" integer primary key autoincrement not null,
-  "match_config_id" integer not null,
-  "league_id" integer not null,
-  "status" integer not null default '1',
-  "created_at" datetime not null,
-  "updated_at" datetime not null,
-  foreign key("match_config_id") references "match_configs"("id") on delete cascade,
-  foreign key("league_id") references "leagues"("id") on delete cascade
-);
-CREATE TABLE IF NOT EXISTS "teams"(
-  "id" integer primary key autoincrement not null,
-  "league_id" integer not null,
-  "user_id" integer not null,
-  "name" varchar not null,
-  "pick_position" integer not null,
-  "trades" integer not null default('4'),
-  "draft_points" integer not null default('0'),
-  "victory_points" integer not null default('0'),
-  "set_wins" integer not null default('0'),
-  "set_losses" integer not null default('0'),
-  "game_wins" integer not null default('0'),
-  "game_losses" integer not null default('0'),
-  "logo" varchar,
-  "created_at" datetime,
-  "updated_at" datetime,
-  "admin_flag" integer not null default('0'),
-  "pool_id" integer,
-  "seed" integer not null default '1',
-  foreign key("league_id") references leagues("id") on delete cascade on update no action,
-  foreign key("user_id") references users("id") on delete cascade on update no action,
-  foreign key("pool_id") references "pools"("id")
-);
-CREATE TABLE IF NOT EXISTS "match_configs"(
-  "id" integer primary key autoincrement not null,
-  "league_id" integer not null,
-  "number_of_pools" integer not null default '1',
-  "frequency_type" integer not null default '1',
-  "frequency_value" integer default '0',
-  "status" integer not null default '1',
-  "created_at" datetime,
-  "updated_at" datetime,
-  foreign key("league_id") references "leagues"("id") on delete cascade
 );
 CREATE TABLE IF NOT EXISTS "sets"(
   "id" integer primary key autoincrement not null,

@@ -3,6 +3,9 @@
 namespace App\Modules\Matches\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
+use App\Modules\Teams\Models\Team;
+use App\Modules\Matches\Resources\SetsResource;
 
 class Set extends Model
 {
@@ -21,4 +24,14 @@ class Set extends Model
         'round',
         'status',
     ];
+
+    public function team1()
+    {
+        return $this->belongsTo(Team::class, 'team1_id', 'id')->select('id', 'name', 'logo', 'user_id')->with('user:id,name');
+    }
+
+    public function team2()
+    {
+        return $this->belongsTo(Team::class, 'team2_id', 'id')->select('id', 'name', 'logo', 'user_id')->with('user:id,name');
+    }
 }

@@ -30,7 +30,7 @@ class Team extends Model
 
     public function league()
     {
-        return $this->belongsToMany(\App\Modules\League\Models\League::class, 'league_id');
+        return $this->belongsTo(\App\Modules\League\Models\League::class, 'league_id');
     }
 
     public function user()

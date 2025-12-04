@@ -9,6 +9,7 @@ use App\Modules\League\Models\League;
 use App\Modules\League\Actions\ReadLeaguePokemonAction;
 use App\Modules\Teams\Actions\ReadTeamAction;
 use App\Modules\Matches\Actions\ShowSetsAction;
+use App\Modules\Matches\Resources\SetsResource;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -16,6 +17,7 @@ use App\Modules\Teams\Models\Team;
 use Illuminate\Support\Facades\Auth;
 use App\Modules\Matches\Models\MatchConfig;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Pagination\Paginator;
 
 class LeagueController extends Controller
 {
@@ -42,8 +44,11 @@ class LeagueController extends Controller
         $user_team = Team::where('user_id', Auth::user()->id)->where('league_id', $league->id)->select('id', 'admin_flag')->first();
         $adminflag = $user_team ? $user_team->admin_flag : 0;
         $match_config = MatchConfig::where('league_id', $league->id)->first();
-        $sets = $showSetsAction(['league_id' => $league->id, 'command' => 'all']);
+        $played_sets = $showSetsAction(['league_id' => $league->id, 'command' => 'played']);
+        $upcoming_sets = $showSetsAction(['league_id' => $league->id, 'command' => 'upcoming']);
         $team_next = $showSetsAction(['league_id' => $league->id, 'command' => 'team_next', 'team_id' => $user_team?->id]);
+        Log::info(json_encode($upcoming_sets));
+        Log::info(json_encode($played_sets));
         if ($match_config === null) {
             $match_config = (object) [
                 'id' => 0,
@@ -57,15 +62,16 @@ class LeagueController extends Controller
             ];
         }
         return Inertia::render('league/LeagueDetail', [
-            'league' => $league,
-            'teams' => $teams,
-            'pokemon' => $pokemon,
-            'costHeaders' => $pokemon->unique('cost')->pluck('cost'),
-            'draft' => $readLeagueDraftAction(['league_id' => $league->id]),
-            'adminFlag' => $adminflag,
-            'matchConfig' => $match_config,
-            'sets' => $sets,
-            'team_next' => $team_next,
+            'league' => fn () => $league,
+            'teams' => fn () => $teams,
+            'pokemon' => fn () => $pokemon,
+            'costHeaders' => fn () => $pokemon->unique('cost')->pluck('cost'),
+            'draft' => fn () => $readLeagueDraftAction(['league_id' => $league->id]),
+            'adminFlag' => fn () => $adminflag,
+            'matchConfig' => fn () => $match_config,
+            'played_sets' => fn () => $played_sets,
+            'upcoming_sets' => fn () => $upcoming_sets,
+            'team_next' => fn () => $team_next,
         ]);
     }
 

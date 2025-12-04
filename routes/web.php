@@ -61,6 +61,7 @@ Route::prefix('draft')->group(function () {
 Route::prefix('matches')->group(function () {
     Route::get('/{league}', [SetController::class, 'index'])->middleware(['auth', 'verified'])->name('sets.index');
     Route::post('/{league}/create', [SetController::class, 'create'])->middleware(['auth', 'verified'])->name('sets.create');
+    Route::get('/{match_id}', [SetController::class, 'show'])->middleware(['auth', 'verified'])->name('sets.detail');
 });
 
 Route::prefix('pools')->group(function () {

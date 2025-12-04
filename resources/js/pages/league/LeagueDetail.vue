@@ -57,13 +57,54 @@ interface MatchConfig {
     status: number;
 }
 
-interface Sets {
-    id: number;
-    league_id: number;
-    pool_id: number;
-    round: number;
-    team1: object;
-    team2: object;
+interface PlayedSets {
+    [key: number]: {
+        id: number;
+        league_id: number;
+        pool_id: number;
+        round: number;
+        team1: {
+            id: number;
+            name: string;
+            logo: string;
+            user: {
+                name: string;
+            };
+        };
+        team2: {
+            id: number;
+            name: string;
+            logo: string;
+            user: {
+                name: string;
+            };
+        };
+    };
+}
+
+interface UpcomingSets {
+    [key: number]: {
+        id: number;
+        league_id: number;
+        pool_id: number;
+        round: number;
+        team1: {
+            id: number;
+            name: string;
+            logo: string;
+            user: {
+                name: string;
+            };
+        };
+        team2: {
+            id: number;
+            name: string;
+            logo: string;
+            user: {
+                name: string;
+            };
+        };
+    };
 }
 
 interface TeamNext {
@@ -75,7 +116,7 @@ interface TeamNext {
         id: number;
         name: string;
         logo: string;
-        coach: {
+        user: {
             name: string;
         };
     };
@@ -83,7 +124,7 @@ interface TeamNext {
         id: number;
         name: string;
         logo: string;
-        coach: {
+        user: {
             name: string;
         };
     };
@@ -97,7 +138,8 @@ interface props {
     draft: Draft;
     adminFlag: boolean | number;
     matchConfig: MatchConfig;
-    sets: Sets[];
+    played_sets: PlayedSets;
+    upcoming_sets: UpcomingSets;
     team_next: TeamNext;
 }
 
@@ -126,12 +168,17 @@ const breadcrumbs: BreadcrumbItem[] = [
         <Head :title="`${props.league.name}`" />
         <div class="mt-4 mr-14 flex w-full flex-row items-end justify-end">
             <TeamForm :league_id="props.league.id" :user_id="usePage().props.auth.user.id" v-if="coachexists === false" />
-            <AdminPanel :league="props.league" :draft="props.draft" :matchConfig="props?.matchConfig ?? null" v-if="props.adminFlag === true || props.adminFlag === 1" />
+            <AdminPanel
+                :league="props.league"
+                :draft="props.draft"
+                :matchConfig="props?.matchConfig ?? null"
+                v-if="props.adminFlag === true || props.adminFlag === 1"
+            />
         </div>
         <div class="mx-auto mt-8 mb-8 flex max-w-4xl flex-col items-center">
             <h1 class="text-3xl font-bold">{{ props.league.name }}</h1>
         </div>
-        <Tabs defaultValue="teams">
+        <Tabs defaultValue="matches">
             <TabsList class="mb-4 self-center">
                 <TabsTrigger value="teams" class="dark:data-[state=active]:bg-black/80">Teams</TabsTrigger>
                 <TabsTrigger value="pools" class="dark:data-[state=active]:bg-black/80">Pools</TabsTrigger>
@@ -151,25 +198,11 @@ const breadcrumbs: BreadcrumbItem[] = [
             </TabsContent>
             <TabsContent value="pools"> </TabsContent>
             <TabsContent value="matches">
-                <LeagueMatches :team_next="props.team_next" :sets="props.sets" />
-                <!-- <div class="mx-auto mt-10 flex w-[full] flex-col items-center">
-                    <div class="flex flex-row gap-12">
-                        <div class="flex flex-col items-center w-1/2">
-                        <h1 class="text-3xl font-bold">Your Next Match</h1>
-                        <div class="basis-64">
-                            <MatchCard v-if="props.team_next" :sets="props.team_next" :team1="props.team_next.team1" :team2="props.team_next.team2"/>
-                            </div>
-                        </div>
-                        <div class="flex flex-col items-center w-1/2">
-                        <h1 class="text-3xl font-bold">Previous Matches</h1>
-                        <div class="flex flex-row items-center flex-wrap gap-4">
-                            <div class="flex-none w-64">
-                                <MatchCard v-for="set in props.sets" :key="set.id"  :sets="set" :team1="set.team1" :team2="set.team2"/>
-                            </div>
-                                </div>
-                            </div>
-                    </div>
-                </div> -->
+                <LeagueMatches
+                    :team_next="props.team_next"
+                    :played_sets="props.played_sets"
+                    :upcoming_sets="props.upcoming_sets"
+                />
             </TabsContent>
             <TabsContent value="pokemon">
                 <LeaguePokemon :pokemon="props.pokemon" :league="props.league" />

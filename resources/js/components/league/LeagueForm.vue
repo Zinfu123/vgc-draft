@@ -13,6 +13,12 @@ const form = useForm({
     logo: null as File | null,
 });
 
+const frequencyOptions = [
+    { label: 'Daily', value: 1 },
+    { label: 'Twice Weekly', value: 2 },
+    { label: 'Weekly', value: 3 },
+    { label: 'Custom Frequency', value: 4 },
+];
 const submit = () => {
     form.post(route('leagues.create'), {
         forceFormData: true,
@@ -42,7 +48,9 @@ const submit = () => {
                             <Input type="date" name="set_start_date" v-model="form.set_start_date" class="w-[150px]" />
                         </div>
                         <label for="set_frequency">Set Frequency</label>
-                        <Input type="number" name="set_frequency" v-model="form.set_frequency" />
+                        <select name="set_frequency" v-model="form.set_frequency" class="bg-background">
+                            <option v-for="option in frequencyOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
+                        </select>
                         <label for="logo">Logo</label>
                         <div class="grid w-full max-w-sm items-center gap-3">
                             <Input type="file" name="logo" @input="form.logo = ($event.target as HTMLInputElement)?.files?.[0] || null" />
