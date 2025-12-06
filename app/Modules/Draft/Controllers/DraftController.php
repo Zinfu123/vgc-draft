@@ -33,12 +33,14 @@ class DraftController extends Controller
         $costHeaders = $pokemon->unique('cost')->pluck('cost');
         $teams = $readCurrentDraftAction(['league_id' => $league_id, 'command' => 'teams']);
         $userTeam = Team::where('user_id', Auth::user()->id)->select('id', 'admin_flag')->where('league_id', $league_id)->first();
+        $lastPick = $readCurrentDraftAction(['league_id' => $league_id, 'command' => 'lastpick']);
         return Inertia::render('draft/DraftDetail', [
             'league' => fn () => $league,
             'pokemon' => fn () => $pokemon,
             'costHeaders' => fn () => $costHeaders,
             'draftOrders' => fn () => $draftorder,
             'currentPicker' => fn () => $currentpicker,
+            'lastPick' => fn () => $lastPick,
             'userTeam' => fn () => $userTeam,
             'teams' => fn () => $teams,
             'draft' => fn () => $draft,

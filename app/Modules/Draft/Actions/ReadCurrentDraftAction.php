@@ -7,6 +7,7 @@ use App\Modules\Teams\Models\Team;
 use App\Modules\Draft\Models\DraftPick;
 use App\Modules\Draft\Models\DraftOrder;
 use App\Modules\Draft\Models\Draft;
+use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 /* End Define Models */
@@ -40,12 +41,13 @@ class ReadCurrentDraftAction
 
     /* Current Picker */
     elseif($data['command'] == 'currentpicker') {
-        $currentpicker = DraftOrder::where('league_id', $data['league_id'])->with('team')->select('team_id', 'team_name')->where('status', 1)->first();
+        $currentpicker = DraftOrder::where('league_id', $data['league_id'])->with('team')->where('status', 1)->first();
         if ($currentpicker->team ?? null !== null) {
             if ($currentpicker->team->logo ?? null !== null) {
                 $currentpicker->team->logo = str_replace('\\', '/', Storage::disk('s3-team-logos')->url($currentpicker->team->logo));
             }
         }
+        log::info("currentpicker: ".$currentpicker);
         return $currentpicker;
     }
 
@@ -66,5 +68,17 @@ class ReadCurrentDraftAction
         });
         return $teams;
     }
+    elseif($data['command'] == 'lastpick') {
+        $lastpick = DraftPick::Where('league_id', $data['league_id'])->orderBy('round_number', 'desc')->with('leaguePokemon.pokemon')->orderBy('pick_number', 'desc')->first();
+        if($lastpick !== null) {
+            $lastpick->team = Team::where('id', $lastpick->team_id)->where('league_id', $lastpick->league_id)->first();
+            if($lastpick->team->logo !== null) {
+                $lastpick->team->logo = str_replace('\\', '/', Storage::disk('s3-team-logos')->url($lastpick->team->logo));
+            }
+            $lastpick->team->coach = User::where('id', $lastpick->team->user_id)->select('name')->first();
+        }
+        log::info("lastpick: ".$lastpick);
+    return $lastpick;
     }
+}
 }

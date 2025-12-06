@@ -26,7 +26,7 @@ interface Teams {
         set_wins: number;
         set_losses: number;
         victory_points: number;
-    }
+    };
 }
 
 interface Pokemon {
@@ -37,7 +37,6 @@ interface Pokemon {
     type2: string;
     cost: number;
 }
-
 
 interface Draft {
     id: number | null;
@@ -62,10 +61,36 @@ interface UserTeam {
     admin_flag: number;
 }
 interface CurrentPicker {
-    team_id: number;
-    team_name: string;
-    logo: string;
-    draft_points: number;
+    id: number;
+    round_number: number;
+    pick_number: number;
+    team: {
+        id: number;
+        name: string;
+        logo: string;
+        draft_points: number;
+    };
+}
+
+interface LastPick {
+    id: number;
+    round_number: number;
+    pick_number: number;
+    team: {
+        id: number;
+        name: string;
+        draft_points: number;
+        logo: string;
+        coach: string;
+    };
+    league_pokemon: {
+        id: number;
+        name: string;
+        sprite_url: string;
+        type1: string;
+        type2: string;
+        cost: number;
+    };
 }
 
 interface props {
@@ -77,6 +102,7 @@ interface props {
     draftOrders: DraftOrder[];
     currentPicker: CurrentPicker;
     userTeam: UserTeam;
+    lastPick: LastPick;
 }
 
 const props = defineProps<props>();
@@ -94,9 +120,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 // usePoll(10000);
 
-useEchoPublic(`draft.detail.${props.league.id}`, 'DraftDetailEvent', (e) => {
-    console.log(e);
-    if (e.end_draft === 1) {
+useEchoPublic(`draft.detail.${props.league.id}`, 'DraftDetailEvent', (e: any) => {
+    if (e && e.end_draft === 1) {
         router.get(route('leagues.detail', { league: props.league.id }));
     } else {
         router.visit(route('draft.detail', { league_id: props.league.id }), {
@@ -146,65 +171,75 @@ const abortDraft = () => {
             </ButtonGroup>
         </div>
         <div class="flex flex-col items-center justify-center">
+            <div class="flex flex-row items-center justify-center gap-20">
             <div
                 class="mb-4 overflow-hidden rounded-lg bg-white shadow-sm dark:bg-gray-800/50 dark:shadow-none dark:outline dark:-outline-offset-1 dark:outline-white/10"
             >
-                <div class="px-4 py-5 sm:p-6">
+                <div class="px-4 py-5 sm:p-6 flex flex-col items-center justify-center">
                     <h1>Current Picker</h1>
                     <img
-                        :src="props.currentPicker.logo"
+                        :src="props.currentPicker.team.logo"
                         alt="Team Logo"
                         class="mx-auto size-32 shrink-0 rounded-full bg-gray-300 outline -outline-offset-1 outline-black/5 dark:bg-gray-700 dark:outline-white/10"
-                        v-if="props.currentPicker.logo !== null"
+                        v-if="props.currentPicker.team.logo !== null"
                     />
-                    <p>Name: {{ props.currentPicker.team_name }}</p>
-                    <p>Draft Points: {{ props.currentPicker.draft_points }}</p>
+                    <p>Name: {{ props.currentPicker.team.name }}</p>
+                    <p>Draft Points: {{ props.currentPicker.team.draft_points }}</p>
                 </div>
             </div>
-                <!-- Select Pokemon -->
-        <div class="subgrid row-span-1 row-start-3 mt-2 flex grid-cols-6 grid-rows-2 flex-col items-center outline-1 outline-blue-500">
-                <SelectPokemonForm :pokemon="props.pokemon" :league="props.league" v-if="props.currentPicker.team_id === props.userTeam.id" />
+            
+            <div v-if="props.lastPick !== null" class="flex flex-col items-center justify-center mb-4 overflow-hidden rounded-lg bg-white shadow-sm dark:bg-gray-800/50 dark:shadow-none dark:outline dark:-outline-offset-1 dark:outline-white/10">
+                <div class="px-4 py-5 sm:p-6 flex flex-col items-center justify-center">
+                <h1>Last Pick</h1>
+                    <img
+                        :src="props.lastPick.team.logo"
+                        alt="Team Logo"
+                        class="mx-auto size-32 shrink-0 rounded-full bg-gray-300 outline -outline-offset-1 outline-black/5 dark:bg-gray-700 dark:outline-white/10"
+                        v-if="props.lastPick.team.logo !== null"
+                    />
+                    <p>Name: {{ props.lastPick.team.name }}</p>
+                    <p>Draft Points: {{ props.lastPick.team.draft_points }}</p>
+                    </div>
+                </div>
+                <PokemonCard :pokemon="props.lastPick.league_pokemon.pokemon" />
+            </div>
+
+            <!-- Select Pokemon -->
+            <div class="flex flex-col items-center justify-center">
+                <SelectPokemonForm :pokemon="props.pokemon" :league="props.league" v-if="props.currentPicker.team.id === props.userTeam.id" />
                 <div v-else class="col-span-2 row-span-1 flex flex-col items-center outline-1 outline-blue-500">
                     <p>Current Picker:</p>
-                    {{ props.currentPicker.team_name }}
-                    <img
-                        :src="props.currentPicker.logo"
-                        alt="Team Logo"
-                        class="h-15 w-15 justify-center rounded-full"
-                        v-if="props.currentPicker.logo !== null"
-                    />
+                    {{ props.currentPicker.team.name }}
                 </div>
             </div>
-        <!-- Draft Order -->
-        <div
-                    class="mx-auto max-w-7xl sm:px-6 lg:px-8"
-                >
-        <div class="flex flex-col items-center">
-            <div
-                class="mb-2 overflow-hidden rounded-lg bg-white shadow-sm dark:bg-gray-800/50 dark:shadow-none dark:outline dark:-outline-offset-1 dark:outline-white/10"
-            >
-                    <h1 class="mb-2 text-center text-2xl font-bold">Draft Order</h1>
-                    <ul role="list" class="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
-                        <li
-                            v-for="draftOrderItem in props.draftOrders"
-                            :key="draftOrderItem.id"
-                            class="col-span-1 flex flex-col divide-y divide-gray-200 rounded-lg bg-white text-center shadow-sm dark:divide-white/10 dark:bg-gray-800/50 dark:shadow-none dark:outline dark:-outline-offset-1 dark:outline-white/10"
-                        >
-                            <div class="flex flex-1 flex-col p-8">
-                                <img
-                                    class="mx-auto size-32 shrink-0 rounded-full bg-gray-300 outline -outline-offset-1 outline-black/5 dark:bg-gray-700 dark:outline-white/10"
-                                    :src="draftOrderItem.team.logo"
-                                    alt=""
-                                />
-                                <h3 class="mt-6 text-sm font-medium text-gray-900 dark:text-white">{{ draftOrderItem.team.name }}</h3>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">Draft Points: {{ draftOrderItem.team.draft_points }}</p>
-                            </div>
-                        </li>
-                    </ul>
+            <!-- Draft Order -->
+            <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
+                <div class="flex flex-col items-center">
+                    <div
+                        class="mb-2 overflow-hidden rounded-lg bg-white shadow-sm dark:bg-gray-800/50 dark:shadow-none dark:outline dark:-outline-offset-1 dark:outline-white/10"
+                    >
+                        <h1 class="mb-2 text-center text-2xl font-bold">Draft Order</h1>
+                        <ul role="list" class="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+                            <li
+                                v-for="draftOrderItem in props.draftOrders"
+                                :key="draftOrderItem.id"
+                                class="col-span-1 flex flex-col divide-y divide-gray-200 rounded-lg bg-white text-center shadow-sm dark:divide-white/10 dark:bg-gray-800/50 dark:shadow-none dark:outline dark:-outline-offset-1 dark:outline-white/10"
+                            >
+                                <div class="flex flex-1 flex-col p-8">
+                                    <img
+                                        class="mx-auto size-32 shrink-0 rounded-full bg-gray-300 outline -outline-offset-1 outline-black/5 dark:bg-gray-700 dark:outline-white/10"
+                                        :src="draftOrderItem.team.logo"
+                                        alt=""
+                                    />
+                                    <h3 class="mt-6 text-sm font-medium text-gray-900 dark:text-white">{{ draftOrderItem.team.name }}</h3>
+                                    <p class="text-sm text-gray-500 dark:text-gray-400">Draft Points: {{ draftOrderItem.team.draft_points }}</p>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
         </div>
-        </div>
-    </div>
-</div>
         <!-- Pokemon Grid -->
         <Tabs defaultValue="pokemon" class="mt-4 w-full items-center justify-center">
             <TabsList>
@@ -232,7 +267,11 @@ const abortDraft = () => {
             </div>
             <TabsContent value="teams" class="mr-4 ml-4">
                 <div v-for="key in Object.keys(props.teams)" :key="key" class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-                    <div v-for="team in props.teams[key]" :key="team.id" class="col-span-1 divide-y divide-gray-200 rounded-lg bg-white shadow-sm dark:divide-white/10 dark:bg-gray-800/50 dark:shadow-none dark:outline dark:-outline-offset-1 dark:outline-white/10">
+                    <div
+                        v-for="team in props.teams[key]"
+                        :key="team.id"
+                        class="col-span-1 divide-y divide-gray-200 rounded-lg bg-white shadow-sm dark:divide-white/10 dark:bg-gray-800/50 dark:shadow-none dark:outline dark:-outline-offset-1 dark:outline-white/10"
+                    >
                         <Item class="w-max">
                             <ItemHeader class="justify-center">
                                 <div class="col-span-6 row-span-1 flex flex-row items-center justify-center outline-1 outline-blue-500">
@@ -255,9 +294,9 @@ const abortDraft = () => {
                                 />
                             </ItemContent>
                         </Item>
-                        </div>  
                     </div>
-        </TabsContent>
-    </Tabs>
-</AppLayout>
+                </div>
+            </TabsContent>
+        </Tabs>
+    </AppLayout>
 </template>
