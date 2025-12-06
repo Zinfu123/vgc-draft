@@ -11,6 +11,8 @@ const form = useForm({
     set_start_date: '',
     set_frequency: '',
     logo: null as File | null,
+    draft_points: 80 as number,
+    minimum_drafts: 10 as number,
 });
 
 const frequencyOptions = [
@@ -51,6 +53,10 @@ const submit = () => {
                         <select name="set_frequency" v-model="form.set_frequency" class="bg-background">
                             <option v-for="option in frequencyOptions" :key="option.value" :value="option.value">{{ option.label }}</option>
                         </select>
+                        <label for="draft_points">Draft Points</label>
+                        <Input type="number" name="draft_points" v-model="form.draft_points" class="w-[150px]" />
+                        <label for="minimum_drafts">Minimum Drafts</label>
+                        <Input type="number" name="minimum_drafts" v-model="form.minimum_drafts" class="w-[150px]" />
                         <label for="logo">Logo</label>
                         <div class="grid w-full max-w-sm items-center gap-3">
                             <Input type="file" name="logo" @input="form.logo = ($event.target as HTMLInputElement)?.files?.[0] || null" />

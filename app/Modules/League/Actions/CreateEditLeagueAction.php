@@ -16,6 +16,7 @@ class CreateEditLeagueAction
             'set_start_date' => 'required|date',
             'set_frequency' => 'required|integer',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'draft_points' => 'required|integer',
         ]);
         if ($request->hasFile('logo')) {
             $logo = (new LeagueLogoUploadAction)->upload($request);
@@ -29,6 +30,7 @@ class CreateEditLeagueAction
             'set_frequency' => $request->set_frequency,
             'logo' => $logo,
             'league_owner' => Auth::user()->id,
+            'draft_points' => $request->draft_points,
         ]);
 
         return $league;

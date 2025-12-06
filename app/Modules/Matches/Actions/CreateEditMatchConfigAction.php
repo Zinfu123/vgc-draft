@@ -19,6 +19,7 @@ class CreateEditMatchConfigAction
                 'league_id' => $data['league_id'],
                 'number_of_pools' => $data['number_of_pools'], 
                 'frequency_type' => $data['frequency_type'],
+                'minimum_drafts' => $data['minimum_drafts'],
             ]);
             return $matchConfig;
         }
