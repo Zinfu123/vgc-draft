@@ -157,7 +157,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 useEchoPublic(`draft.detail.${props.league.id}`, 'DraftDetailEvent', () => {
     {
         router.visit(route('draft.detail', { league_id: props.league.id }), {
-            only: ['draftOrders', 'pokemon', 'teams', 'currentPicker'],
+            only: ['draftOrders', 'pokemon', 'teams', 'currentPicker', 'lastPick'],
             preserveState: true,
             preserveScroll: true,
         });
