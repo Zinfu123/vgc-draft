@@ -4,19 +4,10 @@ namespace App\Modules\Matches\Actions;
 
 /* Define Models */
 use App\Modules\Matches\Models\Set;
-use App\Modules\Matches\Models\Pool;
-use App\Modules\Teams\Models\Team;
 use App\Modules\Shared\Actions\LogoToUrlAction;
-use App\Models\User;
-use App\Modules\Matches\Resources\SetsResource;
 /* End Define Models */
 
 /* Define Dependencies */
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Pagination\Paginator;
-use Illuminate\Support\Collection;
 /* End Define Dependencies */
 
 class ShowSetsAction
@@ -29,7 +20,26 @@ class ShowSetsAction
             return $sets;
         }
         elseif ($data['command'] == 'detail') {
-            $set = Set::where('id', $data['match_id'])->with('team1', 'team2')->first();
+            $set = Set::where('id', $data['set_id'])->with('team1', 'team2')->first();
+            if (!$set) {
+                return null;
+            }
+            if ($set->team1 && $set->team1->logo !== null) {
+                $action = new LogoToUrlAction();
+                $set->team1->logo = $action->logoToUrl($set->team1->logo);
+            }
+            if ($set->team2 && $set->team2->logo !== null) {
+                $action = new LogoToUrlAction();
+                $set->team2->logo = $action->logoToUrl($set->team2->logo);
+            }
+            
+            $set->team1->pokemon = $set->team1->draftPicks->map(function ($draftPick) {
+                return $draftPick->leaguePokemon->pokemon;
+            });
+            $set->team2->pokemon = $set->team2->draftPicks->map(function ($draftPick) {
+                return $draftPick->leaguePokemon->pokemon;
+            });
+
             return $set;
         }
         elseif ($data['command'] == 'round') {

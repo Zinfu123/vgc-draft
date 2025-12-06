@@ -47,8 +47,6 @@ class LeagueController extends Controller
         $played_sets = $showSetsAction(['league_id' => $league->id, 'command' => 'played']);
         $upcoming_sets = $showSetsAction(['league_id' => $league->id, 'command' => 'upcoming']);
         $team_next = $showSetsAction(['league_id' => $league->id, 'command' => 'team_next', 'team_id' => $user_team?->id]);
-        Log::info(json_encode($upcoming_sets));
-        Log::info(json_encode($played_sets));
         if ($match_config === null) {
             $match_config = (object) [
                 'id' => 0,

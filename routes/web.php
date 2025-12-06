@@ -13,6 +13,7 @@ use App\Modules\Matches\Controllers\SetController;
 
 /* Dependencies */
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Broadcast;
 use Inertia\Inertia;
 
 /* End Dependencies */
@@ -22,9 +23,8 @@ Route::get('/', function () {
     return Inertia::render('Welcome');
 })->name('home');
 
-Route::get('dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('dashboard', [LeagueController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
+
 
 // Pokemon Routes
 Route::get('pokedex', [PokedexController::class, 'index'])->middleware(['auth', 'verified'])->name('pokedex.index');
@@ -58,10 +58,10 @@ Route::prefix('draft')->group(function () {
 });
 
 // Match Routes
-Route::prefix('matches')->group(function () {
-    Route::get('/{league}', [SetController::class, 'index'])->middleware(['auth', 'verified'])->name('sets.index');
+Route::prefix('match')->group(function () {
     Route::post('/{league}/create', [SetController::class, 'create'])->middleware(['auth', 'verified'])->name('sets.create');
-    Route::get('/{match_id}', [SetController::class, 'show'])->middleware(['auth', 'verified'])->name('sets.detail');
+    Route::get('/set/{set_id}', [SetController::class, 'show'])->middleware(['auth', 'verified'])->name('sets.show');
+    Route::put('/', [SetController::class, 'update'])->middleware(['auth', 'verified'])->name('sets.update');
 });
 
 Route::prefix('pools')->group(function () {
@@ -69,6 +69,8 @@ Route::prefix('pools')->group(function () {
     Route::get('/{pool_id}', [PoolController::class, 'show'])->middleware(['auth', 'verified'])->name('pools.detail');
     Route::post('/assign-teams-to-pools', [PoolController::class, 'assignTeamsToPools'])->middleware(['auth', 'verified'])->name('pools.assign-teams-to-pools');
 });
+
+Broadcast::routes();
 
 require __DIR__.'/settings.php';
 require __DIR__.'/auth.php';

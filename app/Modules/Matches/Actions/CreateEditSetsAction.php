@@ -6,6 +6,7 @@ namespace App\Modules\Matches\Actions;
 use App\Modules\Matches\Models\Set;
 use App\Modules\Matches\Models\Pool;
 use App\Modules\Teams\Models\Team;
+use App\Events\SetUpdatedEvent;
 /* End Define Models */
 
 /* Define Dependencies */
@@ -42,7 +43,60 @@ class CreateEditSetsAction
                 }
             }
         }
+        elseif ($data['command'] == 'update') {
+            $setid = $data['set_id'];
+            $set = Set::where('id', $setid)->first();
+            if (!$set) {
+                return;
+            }
+            if ($set->status == 0) {
+                return;
+            } else {
+            $winner = $this->CalculateWinner($data);
+            $team1points = $this->calculatePoints($data['team1_score'], $data['team2_score']);
+            $team2points = $this->calculatePoints($data['team2_score'], $data['team1_score']);
+            $set->team1_score = $data['team1_score'];
+            $set->team2_score = $data['team2_score'];
+            $set->team1_pokepaste = $data['team1_pokepaste'] || null;
+            $set->team2_pokepaste = $data['team2_pokepaste'] || null;
+            $set->winner_id = $winner;
+            $set->status = 0;
+            $set->save();
+
+            $team1 = Team::where('id', $set->team1_id)->first();
+            $team1->victory_points += $team1points;
+            $team1->save();
+            $team2 = Team::where('id', $set->team2_id)->first();
+            $team2->victory_points += $team2points;
+            $team2->save();
+            SetUpdatedEvent::dispatch(['set_id' => $set->id, 'status' => $set->status]);
+            return true;
+            }
+        }
     }
+
+    protected function CalculateWinner($data)
+    {
+        if ($data['team1_score'] > $data['team2_score']) {
+            return $data['team1_id'];
+        } else {
+            return $data['team2_id'];
+        }
+    }
+
+    protected function calculatePoints($playerscore, $opponentscore)
+    {
+            if ($playerscore == 2 && $opponentscore == 0) {
+                return 3;
+            } else if ($playerscore == 2 && $opponentscore == 1) {
+                return 2;
+            } else if ($playerscore == 1 && $opponentscore == 2) {
+                return 1;
+            } else {
+                return 0;
+            }
+    }
+
 
 
     protected function scheduleSets($teams)

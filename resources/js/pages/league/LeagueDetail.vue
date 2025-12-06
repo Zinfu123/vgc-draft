@@ -43,9 +43,10 @@ interface CostHeaders {
 }
 
 interface Draft {
-    id: number;
+    id: number | null;
     round_number: number;
     pick_number: number;
+    status: number;
 }
 
 interface MatchConfig {
@@ -198,11 +199,7 @@ const breadcrumbs: BreadcrumbItem[] = [
             </TabsContent>
             <TabsContent value="pools"> </TabsContent>
             <TabsContent value="matches">
-                <LeagueMatches
-                    :team_next="props.team_next"
-                    :played_sets="props.played_sets"
-                    :upcoming_sets="props.upcoming_sets"
-                />
+                <LeagueMatches :team_next="props.team_next" :played_sets="props.played_sets" :upcoming_sets="props.upcoming_sets" />
             </TabsContent>
             <TabsContent value="pokemon">
                 <LeaguePokemon :pokemon="props.pokemon" :league="props.league" />
@@ -210,6 +207,7 @@ const breadcrumbs: BreadcrumbItem[] = [
             <TabsContent value="draft">
                 <div class="flex flex-row items-center justify-center">
                     <button
+                        v-if="props.draft?.status === 1"
                         class="text-1xl m-2 rounded-md border-2 border-indigo-600 bg-gray-800/85 p-2 font-bold dark:bg-muted/85"
                         @click="draftDetail"
                     >

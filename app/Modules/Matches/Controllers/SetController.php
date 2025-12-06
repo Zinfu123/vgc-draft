@@ -7,14 +7,12 @@ use App\Modules\Matches\Models\Set;
 use App\Modules\Matches\Actions\CreateEditSetsAction;
 use App\Modules\Matches\Actions\ShowSetsAction;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
 
 class SetController extends Controller
 {
-    public function index(Request $request)
-    {
-    }
 
     public function create(Request $request, CreateEditSetsAction $createEditSetsAction)
     {
@@ -24,15 +22,22 @@ class SetController extends Controller
 
     public function show($match_id, ShowSetsAction $showSetsAction)
     {
-        $set = $showSetsAction(['match_id' => $match_id, 'command' => 'detail']);
-        
+        $set = $showSetsAction(['set_id' => $match_id, 'command' => 'detail']);
         if (!$set) {
-            abort(404, 'Match not found');
+            abort(404, 'Set not found');
         }
-        
-        return Inertia::render('match/SetDetail', [
-            'set' => $set,
+        return Inertia::render('match/MatchDetail', [
+            'set' => fn () => $set,
         ]);
+    }
+
+    public function update(Request $request, CreateEditSetsAction $createEditSetsAction)
+    {
+        $data=collect($request);
+        $set=Set::where('id', $request->set_id)->first();
+        $result = $createEditSetsAction($data->toArray());
+        // ProcessSet::dispatch($data->toArray());
+        return redirect()->route('sets.show', ['set_id' => $request->set_id]);
     }
 
 }

@@ -26,6 +26,7 @@ class DraftController extends Controller
         $draft = Draft::where('league_id', $league_id)->first();
         $draftorder = $readCurrentDraftAction(['league_id' => $league_id, 'command' => 'draftorder']);
         $currentpicker = $readCurrentDraftAction(['league_id' => $league_id, 'command' => 'currentpicker']);
+        $draftorder = $draftorder->where('team_id', '!=', $currentpicker->team_id);
         $pokemon = $readLeaguePokemonAction(['league_id' => $league_id, 'command' => 'draftedpokemon']);
         $league = League::find($league_id);
         $costHeaders = $pokemon->unique('cost')->pluck('cost');

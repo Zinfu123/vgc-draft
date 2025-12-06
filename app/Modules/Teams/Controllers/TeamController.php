@@ -28,7 +28,7 @@ class TeamController extends Controller
         $request->merge(['pick_position' => $pick_position]);
         $team = (new CreateEditTeamAction)->create($request);
 
-        return redirect()->route('teams.index', ['league_id' => $request->league_id, 'team_id' => $team->id]);
+        return redirect()->route('teams.detail', ['team_id' => $team->id]);
     }
 
     public function show(Request $request, ReadTeamAction $readTeamAction)

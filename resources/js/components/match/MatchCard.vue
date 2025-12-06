@@ -34,7 +34,7 @@ interface props {
 const props = defineProps<props>();
 </script>
 <template>
-    <Link :href="`/matches/${sets.id}`">
+    <Link :href="`/match/set/${props.sets.id}`">
         <div class="flex min-w-0 gap-x-4">
             <img
                 class="size-12 flex-none rounded-full bg-gray-50 dark:bg-gray-800 dark:outline dark:-outline-offset-1 dark:outline-white/10"

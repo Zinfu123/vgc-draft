@@ -25,9 +25,8 @@ class ReadCurrentDraftAction
     /* Draft Order */
     elseif($data['command'] == 'draftorder') {
         $roundnumber = Draft::where('league_id', $data['league_id'])->first();
-        Log::info("roundnumber: ".$roundnumber->round_number);
         $roundnumber = $roundnumber->round_number;
-        $draftorder = DraftOrder::where('league_id', $data['league_id'])->with('team')
+        $draftorder = DraftOrder::where('league_id', $data['league_id'])->with('team')->where('status', 1)
         ->where('round_number', $roundnumber)
         ->get();
         $draftorder = $draftorder->map(function ($draftorder) {
@@ -60,6 +59,10 @@ class ReadCurrentDraftAction
         });
         $teams = $teams->sortBy(function ($team) {  
             return $team->draftPicks->pluck('round_number', 'pick_number');
+        });
+        $teams = $teams->chunk(6)
+        ->map(function ($chunk) {
+            return $chunk->values();
         });
         return $teams;
     }
