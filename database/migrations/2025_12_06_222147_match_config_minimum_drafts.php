@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         //
-        Schema::table('Leagues', function (Blueprint $table) {
+        Schema::table('leagues', function (Blueprint $table) {
             $table->integer('minimum_drafts')->default(0)->after('draft_points');
         });
     }
