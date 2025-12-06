@@ -68,9 +68,9 @@ interface DraftOrder {
     team: {
         id: number;
         name: string;
-        logo: string;
+        logo: string | null;
         draft_points: number;
-    };
+    } | null;
 }
 
 interface UserTeam {
@@ -84,9 +84,9 @@ interface CurrentPicker {
     team: {
         id: number;
         name: string;
-        logo: string;
+        logo: string | null;
         draft_points: number;
-    };
+    } | null;
 }
 
 interface LastPick {
@@ -119,7 +119,7 @@ interface props {
     draftOrders: DraftOrder[];
     currentPicker: CurrentPicker;
     userTeam: UserTeam;
-    lastPick: LastPick;
+    lastPick: LastPick | null;
 }
 
 const props = defineProps<props>();
@@ -186,7 +186,7 @@ const abortDraft = () => {
 
 const openPokemonDialog = (pokemon: Pokemon) => {
     if (isSubmitting.value) return;
-    if (props.currentPicker.team.id === props.userTeam.id) {
+    if (props.currentPicker.team?.id === props.userTeam.id) {
         selectedPokemon.value = pokemon;
         isDialogOpen.value = true;
     }
@@ -209,7 +209,11 @@ const submitPokemonPick = () => {
                 selectedPokemon.value = null;
                 isDialogOpen.value = false;
                 isSubmitting.value = false;
-                router.reload();
+                router.visit(route('draft.detail', { league_id: props.league.id }), {
+                    only: ['draftOrders', 'pokemon', 'teams', 'currentPicker', 'lastPick'],
+                    preserveState: true,
+                    preserveScroll: true,
+                });
             },
             onError: () => {
                 isSubmitting.value = false;
@@ -237,77 +241,85 @@ const submitPokemonPick = () => {
                 <Button variant="destructive" @click="abortDraft"> Abort Draft </Button>
             </ButtonGroup>
         </div>
-        <div class="flex flex-col items-center justify-center">
-            <div class="flex flex-row items-center justify-center gap-20">
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-center justify-center">
+            <!-- Current Picker - Larger (2 columns) -->
             <div
-                class="mb-4 overflow-hidden rounded-lg bg-white shadow-sm dark:bg-gray-800/50 dark:shadow-none dark:outline dark:-outline-offset-1 dark:outline-white/10"
+                class="lg:col-span-2 overflow-hidden rounded-lg bg-white shadow-sm dark:bg-gray-800/50 dark:shadow-none dark:outline dark:-outline-offset-1 dark:outline-white/10"
             >
-                <div class="px-4 py-5 sm:p-6 flex flex-col items-center justify-center">
-                    <h1>Current Picker</h1>
+                <div class="px-6 py-8 flex flex-col items-center justify-center">
+                    <h1 class="text-2xl font-semibold mb-6">Current Picker</h1>
                     <img
-                        :src="props.currentPicker.team.logo"
+                        :src="props.currentPicker.team?.logo ?? ''"
                         alt="Team Logo"
-                        class="mx-auto size-32 shrink-0 rounded-full bg-gray-300 outline -outline-offset-1 outline-black/5 dark:bg-gray-700 dark:outline-white/10"
-                        v-if="props.currentPicker.team.logo !== null"
+                        class="mx-auto size-40 shrink-0 rounded-full bg-gray-300 outline -outline-offset-1 outline-black/5 dark:bg-gray-700 dark:outline-white/10"
+                        v-if="props.currentPicker.team?.logo !== null"
                     />
-                    <p>Name: {{ props.currentPicker.team.name }}</p>
-                    <p>Draft Points: {{ props.currentPicker.team.draft_points }}</p>
+                    <p class="mt-4 text-lg font-medium">Name: {{ props.currentPicker.team?.name ?? 'N/A' }}</p>
+                    <p class="mt-1 text-base text-gray-500 dark:text-gray-400">Draft Points: {{ props.currentPicker.team?.draft_points ?? 'N/A' }}</p>
                 </div>
             </div>
             
-            <div v-if="props.lastPick !== null" class="flex flex-col items-center justify-center mb-4 overflow-hidden rounded-lg bg-white shadow-sm dark:bg-gray-800/50 dark:shadow-none dark:outline dark:-outline-offset-1 dark:outline-white/10">
-                <div class="px-4 py-5 sm:p-6 flex flex-col items-center justify-center">
-                <h1>Last Pick</h1>
-                    <img
-                        :src="props.lastPick.team.logo"
-                        alt="Team Logo"
-                        class="mx-auto size-32 shrink-0 rounded-full bg-gray-300 outline -outline-offset-1 outline-black/5 dark:bg-gray-700 dark:outline-white/10"
-                        v-if="props.lastPick.team.logo !== null"
-                    />
-                    <p>Name: {{ props.lastPick.team.name }}</p>
-                    <p>Draft Points: {{ props.lastPick.team.draft_points }}</p>
+            <!-- Last Pick - Smaller (1 column) -->
+            <div v-if="props.lastPick !== null" class="lg:col-span-1 overflow-hidden rounded-lg bg-white shadow-sm dark:bg-gray-800/50 dark:shadow-none dark:outline dark:-outline-offset-1 dark:outline-white/10">
+                <div class="px-4 py-4">
+                    <h1 class="text-lg font-semibold mb-3 text-center">Last Pick</h1>
+                    <div class="flex flex-row items-center justify-center gap-3">
+                        <!-- Team Info -->
+                        <div class="flex flex-col items-center justify-center flex-shrink-0">
+                            <img
+                                :src="props.lastPick.team.logo"
+                                alt="Team Logo"
+                                class="mx-auto size-16 shrink-0 rounded-full bg-gray-300 outline -outline-offset-1 outline-black/5 dark:bg-gray-700 dark:outline-white/10"
+                                v-if="props.lastPick.team.logo !== null"
+                            />
+                            <p class="mt-1 text-md font-medium text-center">Name: {{ props.lastPick.team.name }}</p>
+                        </div>
+                        <!-- Pokemon Card -->
+                        <div v-if="props?.lastPick?.league_pokemon?.pokemon" class="flex items-center justify-center scale-75 flex-shrink-0">
+                            <PokemonCard :pokemon="props?.lastPick?.league_pokemon?.pokemon" />
+                        </div>
                     </div>
                 </div>
-                <PokemonCard v-if="props?.lastPick?.league_pokemon?.pokemon" :pokemon="props?.lastPick?.league_pokemon?.pokemon" />
             </div>
+        </div>
 
-            <!-- Select Pokemon -->
-            <div class="flex flex-col items-center justify-center">
-                <SelectPokemonForm :pokemon="props.pokemon" :league="props.league" v-if="props.currentPicker.team.id === props.userTeam.id" />
-                <div v-else class="col-span-2 row-span-1 flex flex-col items-center outline-1 outline-blue-500">
-                    <p>Current Picker:</p>
-                    {{ props.currentPicker.team.name }}
-                </div>
+        <!-- Select Pokemon -->
+        <div class="flex flex-col items-center justify-center">
+            <SelectPokemonForm :pokemon="props.pokemon" :league="props.league" v-if="props.currentPicker.team?.id === props.userTeam.id" />
+            <div v-else class="col-span-2 row-span-1 flex flex-col items-center outline-1 outline-blue-500">
+                <p>Current Picker:</p>
+                {{ props.currentPicker.team?.name ?? 'N/A' }}
             </div>
-            <!-- Draft Order -->
-            <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
+        </div>
+        <!-- Draft Order -->
+        <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
                 <ScrollArea class="h-[600px] w-full">
                 <div class="flex flex-col items-center">
                     <div
                         class="mb-2 overflow-hidden rounded-lg bg-white shadow-sm dark:bg-gray-800/50 dark:shadow-none dark:outline dark:-outline-offset-1 dark:outline-white/10"
                     >
                         <h1 class="mb-2 text-center text-2xl font-bold">Draft Order</h1>
-                        <ul role="list" class="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
+                        <ul role="list" class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 justify-items-center">
                             <li
                                 v-for="draftOrderItem in props.draftOrders"
                                 :key="draftOrderItem.id"
-                                class="col-span-1 flex flex-col divide-y divide-gray-200 rounded-lg bg-white text-center shadow-sm dark:divide-white/10 dark:bg-gray-800/50 dark:shadow-none dark:outline dark:-outline-offset-1 dark:outline-white/10"
+                                class="w-full max-w-[200px] flex flex-col divide-y divide-gray-200 rounded-lg bg-white text-center shadow-sm dark:divide-white/10 dark:bg-gray-800/50 dark:shadow-none dark:outline dark:-outline-offset-1 dark:outline-white/10"
                             >
-                                <div class="flex flex-1 flex-col p-8">
+                                <div class="flex flex-col p-4 sm:p-6">
                                     <img
-                                        class="mx-auto size-32 shrink-0 rounded-full bg-gray-300 outline -outline-offset-1 outline-black/5 dark:bg-gray-700 dark:outline-white/10"
+                                        v-if="draftOrderItem.team && draftOrderItem.team.logo !== null"
+                                        class="mx-auto size-20 sm:size-24 md:size-28 shrink-0 rounded-full bg-gray-300 outline -outline-offset-1 outline-black/5 dark:bg-gray-700 dark:outline-white/10"
                                         :src="draftOrderItem.team.logo"
                                         alt=""
                                     />
-                                    <h3 class="mt-6 text-sm font-medium text-gray-900 dark:text-white">{{ draftOrderItem.team.name }}</h3>
-                                    <p class="text-sm text-gray-500 dark:text-gray-400">Draft Points: {{ draftOrderItem.team.draft_points }}</p>
+                                    <h3 class="mt-3 sm:mt-4 text-sm font-medium text-gray-900 dark:text-white">{{ draftOrderItem.team?.name ?? 'N/A' }}</h3>
+                                    <p class="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">Draft Points: {{ draftOrderItem.team?.draft_points ?? 'N/A' }}</p>
                                 </div>
                             </li>
                         </ul>
                     </div>
                 </div>
             </ScrollArea>
-            </div>
         </div>
         <!-- Pokemon Grid -->
         <Tabs defaultValue="pokemon" class="mt-4 w-full items-center justify-center">
@@ -356,7 +368,7 @@ const submitPokemonPick = () => {
                                     :key="pokemon.id"
                                     @click="openPokemonDialog(pokemon)"
                                     :class="[
-                                        props.currentPicker.team.id === props.userTeam.id && !isSubmitting 
+                                        props.currentPicker.team?.id === props.userTeam.id && !isSubmitting 
                                             ? 'cursor-pointer transition-transform hover:scale-105' 
                                             : '',
                                         isSubmitting ? 'pointer-events-none opacity-50' : ''
