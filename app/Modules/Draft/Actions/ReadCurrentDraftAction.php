@@ -47,7 +47,6 @@ class ReadCurrentDraftAction
                 $currentpicker->team->logo = str_replace('\\', '/', Storage::disk('s3-team-logos')->url($currentpicker->team->logo));
             }
         }
-        log::info("currentpicker: ".$currentpicker);
         return $currentpicker;
     }
 
@@ -58,13 +57,6 @@ class ReadCurrentDraftAction
                 $team->logo = str_replace('\\', '/', Storage::disk('s3-team-logos')->url($team->logo));
             }
             return $team;
-        });
-        $teams = $teams->sortBy(function ($team) {  
-            return $team->draftPicks->pluck('round_number', 'pick_number');
-        });
-        $teams = $teams->chunk(6)
-        ->map(function ($chunk) {
-            return $chunk->values();
         });
         return $teams;
     }
@@ -77,7 +69,6 @@ class ReadCurrentDraftAction
             }
             $lastpick->team->coach = User::where('id', $lastpick->team->user_id)->select('name')->first();
         }
-        log::info("lastpick: ".$lastpick);
     return $lastpick;
     }
 }

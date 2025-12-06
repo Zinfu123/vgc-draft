@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { router } from '@inertiajs/vue3';
-import { ChevronsUpDownIcon } from 'lucide-vue-next';
+import { ChevronsUpDownIcon, LoaderCircle } from 'lucide-vue-next';
 import { ref } from 'vue';
 
 interface Pokemon {
@@ -18,6 +18,7 @@ interface League {
 }
 const isOpen = ref(false);
 const selectedPokemon = ref<Pokemon | null>(null);
+const isSubmitting = ref(false);
 
 const props = defineProps<{
     pokemon: Pokemon[];
@@ -25,6 +26,9 @@ const props = defineProps<{
 }>();
 
 const submit = () => {
+    if (isSubmitting.value || !selectedPokemon.value) return;
+    
+    isSubmitting.value = true;
     router.post(
         route('draft.pick'),
         {
@@ -36,7 +40,14 @@ const submit = () => {
         {
             onSuccess: () => {
                 selectedPokemon.value = null;
+                isSubmitting.value = false;
                 router.reload();
+            },
+            onError: () => {
+                isSubmitting.value = false;
+            },
+            onFinish: () => {
+                isSubmitting.value = false;
             },
         },
     );
@@ -86,6 +97,9 @@ function onSelect(pokemon: Pokemon) {
         </Popover>
     </div>
     <div class="mt-5 flex justify-center">
-        <Button type="submit" @click="submit" v-if="selectedPokemon">Submit</Button>
+        <Button type="submit" @click="submit" v-if="selectedPokemon" :disabled="isSubmitting">
+            <LoaderCircle v-if="isSubmitting" class="mr-2 h-4 w-4 animate-spin" />
+            Submit
+        </Button>
     </div>
 </template>

@@ -27,7 +27,7 @@ class LeaguePokemon extends Model
 
     public function draftedBy()
     {
-        return $this->belongsTo(\App\Modules\Teams\Models\Team::class);
+        return $this->belongsTo(\App\Modules\Teams\Models\Team::class, 'drafted_by');
     }
 
     public function draftPicks()

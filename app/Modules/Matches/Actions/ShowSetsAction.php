@@ -5,9 +5,11 @@ namespace App\Modules\Matches\Actions;
 /* Define Models */
 use App\Modules\Matches\Models\Set;
 use App\Modules\Shared\Actions\LogoToUrlAction;
+use App\Modules\League\Models\LeaguePokemon;
 /* End Define Models */
 
 /* Define Dependencies */
+use Illuminate\Support\Facades\Log;
 /* End Define Dependencies */
 
 class ShowSetsAction
@@ -33,13 +35,10 @@ class ShowSetsAction
                 $set->team2->logo = $action->logoToUrl($set->team2->logo);
             }
             
-            $set->team1->pokemon = $set->team1->draftPicks->map(function ($draftPick) {
-                return $draftPick->leaguePokemon->pokemon;
-            });
-            $set->team2->pokemon = $set->team2->draftPicks->map(function ($draftPick) {
-                return $draftPick->leaguePokemon->pokemon;
-            });
-
+            $set->team1->pokemon = LeaguePokemon::where('drafted_by', $set->team1->id)->with('pokemon')->get();
+            $set->team2->pokemon = LeaguePokemon::where('drafted_by', $set->team2->id)->with('pokemon')->get();
+            Log::info($set);
+            Log::info($set);
             return $set;
         }
         elseif ($data['command'] == 'round') {

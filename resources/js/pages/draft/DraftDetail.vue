@@ -3,12 +3,19 @@ import SelectPokemonForm from '@/components/draft/SelectPokemonForm.vue';
 import PokemonCard from '@/components/pokemon/PokemonCard.vue';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
-import { Item, ItemContent, ItemHeader } from '@/components/ui/item';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/vue3';
 import { useEchoPublic } from '@laravel/echo-vue';
+import { ref, computed } from 'vue';
+import { LoaderCircle } from 'lucide-vue-next';
+
+
 
 interface League {
     id: number;
@@ -16,19 +23,29 @@ interface League {
 }
 
 interface Teams {
-    [key: number]: {
+    id: number;
+    name: string;
+    coach: string;
+    draft_points: number;
+    draft_picks: [{
         id: number;
-        name: string;
-        coach: string;
-        draft_points: number;
-        draft_picks: [];
-        logo: string;
-        set_wins: number;
-        set_losses: number;
-        victory_points: number;
-    };
+        league_pokemon: {
+            id: number;
+            pokemon: {
+                id: number;
+                name: string;
+                sprite_url: string;
+                type1: string;
+                type2?: string;
+            };
+            cost: number;
+        };
+    }];
+    logo: string;
+    set_wins: number;
+    set_losses: number;
+    victory_points: number;
 }
-
 interface Pokemon {
     id: number;
     name: string;
@@ -107,6 +124,23 @@ interface props {
 
 const props = defineProps<props>();
 
+const minCost = ref<string | number | undefined>(undefined);
+const maxCost = ref<string | number | undefined>(undefined);
+const selectedPokemon = ref<Pokemon | null>(null);
+const isDialogOpen = ref(false);
+const isSubmitting = ref(false);
+
+const filteredCostHeaders = computed(() => {
+    return props.costHeaders.filter((cost) => {
+        const min = minCost.value !== undefined && minCost.value !== '' ? Number(minCost.value) : null;
+        const max = maxCost.value !== undefined && maxCost.value !== '' ? Number(maxCost.value) : null;
+        
+        if (min !== null && cost < min) return false;
+        if (max !== null && cost > max) return false;
+        return true;
+    });
+});
+
 const breadcrumbs: BreadcrumbItem[] = [
     {
         title: props.league.name,
@@ -120,10 +154,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 // usePoll(10000);
 
-useEchoPublic(`draft.detail.${props.league.id}`, 'DraftDetailEvent', (e: any) => {
-    if (e && e.end_draft === 1) {
-        router.get(route('leagues.detail', { league: props.league.id }));
-    } else {
+useEchoPublic(`draft.detail.${props.league.id}`, 'DraftDetailEvent', () => {
+    {
         router.visit(route('draft.detail', { league_id: props.league.id }), {
             only: ['draftOrders', 'pokemon', 'teams', 'currentPicker'],
             preserveState: true,
@@ -132,16 +164,14 @@ useEchoPublic(`draft.detail.${props.league.id}`, 'DraftDetailEvent', (e: any) =>
     }
 });
 
-// useEchoPublic<boolean>(
-//     `end.draft.${props.draft.id}`,
-//     "EndDraftEvent",
-//     (e) => {
-//         endDraft.value = e.end_draft === 1;
-//         if (endDraft.value) {
-//             router.get(route('leagues.detail', { league: props.league.id }));
-//         }
-//     }
-// )
+useEchoPublic(
+    `end.draft.${props.draft.id}`, 'EndDraftEvent', () => {
+        router.visit(route('leagues.detail', { league: props.league.id }), {
+            preserveState: true,
+            preserveScroll: true,
+        });
+});
+
 const revertLastPick = () => {
     router.post(route('draft.revert-last-pick'), {
         league_id: props.league.id,
@@ -152,6 +182,43 @@ const abortDraft = () => {
     router.post(route('draft.abort-draft'), {
         league_id: props.league.id,
     });
+};
+
+const openPokemonDialog = (pokemon: Pokemon) => {
+    if (isSubmitting.value) return;
+    if (props.currentPicker.team.id === props.userTeam.id) {
+        selectedPokemon.value = pokemon;
+        isDialogOpen.value = true;
+    }
+};
+
+const submitPokemonPick = () => {
+    if (isSubmitting.value || !selectedPokemon.value) return;
+    
+    isSubmitting.value = true;
+    router.post(
+        route('draft.pick'),
+        {
+            pokemon_id: selectedPokemon.value.id,
+            pokemon_name: selectedPokemon.value.name,
+            pokemon_cost: selectedPokemon.value.cost,
+            league_id: props.league.id,
+        },
+        {
+            onSuccess: () => {
+                selectedPokemon.value = null;
+                isDialogOpen.value = false;
+                isSubmitting.value = false;
+                router.reload();
+            },
+            onError: () => {
+                isSubmitting.value = false;
+            },
+            onFinish: () => {
+                isSubmitting.value = false;
+            },
+        },
+    );
 };
 </script>
 
@@ -201,7 +268,7 @@ const abortDraft = () => {
                     <p>Draft Points: {{ props.lastPick.team.draft_points }}</p>
                     </div>
                 </div>
-                <PokemonCard :pokemon="props.lastPick.league_pokemon.pokemon" />
+                <PokemonCard v-if="props?.lastPick?.league_pokemon?.pokemon" :pokemon="props?.lastPick?.league_pokemon?.pokemon" />
             </div>
 
             <!-- Select Pokemon -->
@@ -214,12 +281,13 @@ const abortDraft = () => {
             </div>
             <!-- Draft Order -->
             <div class="mx-auto max-w-7xl sm:px-6 lg:px-8">
+                <ScrollArea class="h-[600px] w-full">
                 <div class="flex flex-col items-center">
                     <div
                         class="mb-2 overflow-hidden rounded-lg bg-white shadow-sm dark:bg-gray-800/50 dark:shadow-none dark:outline dark:-outline-offset-1 dark:outline-white/10"
                     >
                         <h1 class="mb-2 text-center text-2xl font-bold">Draft Order</h1>
-                        <ul role="list" class="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6">
+                        <ul role="list" class="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
                             <li
                                 v-for="draftOrderItem in props.draftOrders"
                                 :key="draftOrderItem.id"
@@ -238,6 +306,7 @@ const abortDraft = () => {
                         </ul>
                     </div>
                 </div>
+            </ScrollArea>
             </div>
         </div>
         <!-- Pokemon Grid -->
@@ -248,25 +317,93 @@ const abortDraft = () => {
             </TabsList>
             <div>
                 <TabsContent value="pokemon" class="w-full outline-1 outline-indigo-600">
-                    <div class="grid-rows-auto grid auto-rows-max grid-cols-6">
+                    <div class="mb-6 flex flex-col gap-4 rounded-lg border border-gray-200 bg-gray-50 p-4 dark:border-white/10 dark:bg-gray-800/50">
+                        <div class="flex flex-col gap-4 sm:flex-row sm:items-end">
+                            <div class="flex-1">
+                                <Label for="min-cost">Minimum Cost</Label>
+                                <Input
+                                    id="min-cost"
+                                    type="number"
+                                    v-model="minCost"
+                                    placeholder="Min"
+                                    min="0"
+                                />
+                            </div>
+                            <div class="flex-1">
+                                <Label for="max-cost">Maximum Cost</Label>
+                                <Input
+                                    id="max-cost"
+                                    type="number"
+                                    v-model="maxCost"
+                                    placeholder="Max"
+                                    min="0"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex flex-col gap-6">
                         <div
-                            v-for="costHeader in props.costHeaders"
+                            v-for="costHeader in filteredCostHeaders"
                             :key="costHeader"
-                            class="rounded-md bg-gray-800/85 text-center text-sm dark:bg-muted/85"
+                            class="flex flex-col gap-4"
                         >
-                            <span class="rounded-md bg-gray-800/85 text-center text-sm dark:bg-muted/85"> Cost: {{ costHeader }}</span>
-                            <PokemonCard
-                                v-for="pokemon in props.pokemon.filter((pokemon) => pokemon.cost === costHeader)"
-                                :key="pokemon.id"
-                                :pokemon="pokemon"
-                                class="mt-2 gap-2"
-                            />
+                            <div class="sticky top-0 z-10 rounded-md border border-gray-200 bg-gray-100 px-4 py-3 text-center text-lg font-semibold text-gray-900 dark:border-white/10 dark:bg-gray-800 dark:text-white">
+                                Cost: {{ costHeader }}
+                            </div>
+                            <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                                <div
+                                    v-for="pokemon in props.pokemon.filter((pokemon) => pokemon.cost === costHeader)"
+                                    :key="pokemon.id"
+                                    @click="openPokemonDialog(pokemon)"
+                                    :class="[
+                                        props.currentPicker.team.id === props.userTeam.id && !isSubmitting 
+                                            ? 'cursor-pointer transition-transform hover:scale-105' 
+                                            : '',
+                                        isSubmitting ? 'pointer-events-none opacity-50' : ''
+                                    ]"
+                                >
+                                    <PokemonCard :pokemon="pokemon" />
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </TabsContent>
             </div>
             <TabsContent value="teams" class="mr-4 ml-4">
-                <div v-for="key in Object.keys(props.teams)" :key="key" class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                <ScrollArea class="h-[600px] w-full">
+                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    <div
+                        v-for="team in props.teams"
+                        :key="team.id"
+                        class="flex flex-col rounded-lg bg-white shadow-sm dark:bg-gray-800/50 dark:shadow-none dark:outline dark:-outline-offset-1 dark:outline-white/10"
+                    >
+                        <div class="flex flex-col items-center border-b border-gray-200 px-4 py-3 dark:border-white/10">
+                            <img
+                                v-if="team.logo"
+                                :src="team.logo"
+                                alt="Team Logo"
+                                class="mb-2 size-16 rounded-full bg-gray-300 outline -outline-offset-1 outline-black/5 dark:bg-gray-700 dark:outline-white/10"
+                            />
+                            <h3 class="text-center text-sm font-semibold text-gray-900 dark:text-white">{{ team.name }}</h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">Draft Points: {{ team.draft_points }}</p>
+                        </div>
+                        <div class="flex flex-col gap-2 p-4">
+                            <PokemonCard
+                                v-for="draft_pick in team.draft_picks"
+                                :key="draft_pick.id"
+                                :pokemon="{
+                                    name: draft_pick.league_pokemon.pokemon.name,
+                                    sprite_url: draft_pick.league_pokemon.pokemon.sprite_url,
+                                    type1: draft_pick.league_pokemon.pokemon.type1,
+                                    type2: draft_pick.league_pokemon.pokemon.type2 ?? '',
+                                    cost: draft_pick.league_pokemon.cost,
+                                }"
+                            />
+                        </div>
+                    </div>
+                    </div>
+                </ScrollArea>
+                <!-- <div v-for="key in Object.keys(props.teams)" :key="key" class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
                     <div
                         v-for="team in props.teams[key]"
                         :key="team.id"
@@ -295,8 +432,34 @@ const abortDraft = () => {
                             </ItemContent>
                         </Item>
                     </div>
-                </div>
+                </div> -->
             </TabsContent>
         </Tabs>
+        
+        <!-- Pokemon Selection Dialog -->
+        <Dialog v-model:open="isDialogOpen">
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Confirm Pokemon Selection</DialogTitle>
+                    <DialogDescription>
+                        Are you sure you want to draft this Pokemon?
+                    </DialogDescription>
+                </DialogHeader>
+                <div v-if="selectedPokemon" class="flex flex-col items-center gap-4 py-4">
+                    <PokemonCard :pokemon="selectedPokemon" />
+                    <div class="text-center">
+                        <p class="text-lg font-semibold capitalize">{{ selectedPokemon.name }}</p>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">Cost: {{ selectedPokemon.cost }}</p>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" @click="() => { if (!isSubmitting) isDialogOpen = false; }" :disabled="isSubmitting">Cancel</Button>
+                    <Button @click="submitPokemonPick" :disabled="isSubmitting">
+                        <LoaderCircle v-if="isSubmitting" class="mr-2 h-4 w-4 animate-spin" />
+                        Confirm Selection
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </AppLayout>
 </template>
