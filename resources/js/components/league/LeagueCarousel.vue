@@ -27,7 +27,7 @@ const props = defineProps<props>();
     >
         <CarouselContent class="mt-10 w-[800px]">
             <CarouselItem v-for="league in leagues" :key="league.id" class="md:basis-1/2 lg:basis-1/3" @click="router.get(`/leagues/${league.id}`)">
-                <Card class="flex aspect-square cursor-pointer items-center hover:bg-black/50">
+                <Card class="w-full text-center">
                     <CardHeader>
                         <CardTitle>
                             {{ league.name }}

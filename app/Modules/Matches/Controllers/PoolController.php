@@ -21,6 +21,7 @@ class PoolController extends Controller
     }
     public function create(Request $request, CreateEditPoolAction $createEditPoolAction)
     {
+        Log::info('Create Pools', [$request->all()]);
         $pools = $createEditPoolAction(['league_id' => $request->league_id, 'command' => 'create']);
         return redirect()->route('leagues.detail', ['league' => $request->league_id]);
     }

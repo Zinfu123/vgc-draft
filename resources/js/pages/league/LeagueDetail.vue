@@ -176,7 +176,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                 v-if="props.adminFlag === true || props.adminFlag === 1"
             />
         </div>
-        <div class="mx-auto mt-8 mb-8 flex max-w-4xl flex-col items-center" :style="{ backgroundImage: `url(${props.league.logo})` }">
+        <div class="mx-auto mt-8 mb-8 flex max-w-4xl flex-col items-center" style="background-image: url('{{ props.league.logo }}')">
             <h1 class="text-3xl font-bold">{{ props.league.name }}</h1>
         </div>
         <Tabs defaultValue="matches">

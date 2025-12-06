@@ -40,7 +40,7 @@ const props = defineProps<props>();
     <Head title="Leagues" />
     <AppLayout :breadcrumbs="breadcrumbs">
         <LeagueForm />
-        <div class="mx-auto flex max-w-4xl flex-col items-center">
+        <div class="mx-auto flex flex-col items-center">
             <h1 class="text-3xl font-bold">Current Leagues</h1>
             <LeagueCarousel :leagues="props.currentLeagues" />
         </div>
