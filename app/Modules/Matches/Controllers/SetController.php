@@ -10,7 +10,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Log;
-
+use App\Modules\Teams\Models\Team;
 class SetController extends Controller
 {
 
@@ -23,11 +23,13 @@ class SetController extends Controller
     public function show($match_id, ShowSetsAction $showSetsAction)
     {
         $set = $showSetsAction(['set_id' => $match_id, 'command' => 'detail']);
+        $CurrentUserTeam = Team::where('user_id', Auth::user()->id)->where('league_id', $set->league_id)->first();
         if (!$set) {
             abort(404, 'Set not found');
         }
         return Inertia::render('match/MatchDetail', [
             'set' => fn () => $set,
+            'currentUserTeam' => fn () => $CurrentUserTeam,
         ]);
     }
 

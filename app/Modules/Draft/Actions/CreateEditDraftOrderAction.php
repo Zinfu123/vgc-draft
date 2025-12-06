@@ -28,7 +28,8 @@ class CreateEditDraftOrderAction
         $draft = Draft::where('league_id', $data['league_id'])->first();
         log::info("draft: ".$draft);
         $roundnumber = $draft->round_number;
-        $teams = ($roundnumber % 2 == 0) ? Team::where('league_id', $data['league_id'])->orderBy('pick_position', 'desc')->where('draft_points', '>', 0)->get() : Team::where('league_id', $data['league_id'])->orderBy('pick_position', 'asc')->where('draft_points', '>', 0)->get();
+        $deleteDraftOrder =DraftOrder::deleteWhere('league_id', $data['league_id']);
+        $teams = ($roundnumber % 2 == 0) ? Team::where('league_id', $data['league_id'])->where('draft_points', '>', 0)->orderBy('pick_position', 'desc')->get() : Team::where('league_id', $data['league_id'])->where('draft_points', '>', 0)->orderBy('pick_position', 'asc')->get();
         $i = 1;
         foreach ($teams as $team) {
             DraftOrder::create([

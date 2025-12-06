@@ -26,7 +26,7 @@ class ReadCurrentDraftAction
     elseif($data['command'] == 'draftorder') {
         $roundnumber = Draft::where('league_id', $data['league_id'])->first();
         $roundnumber = $roundnumber->round_number;
-        $draftorder = DraftOrder::where('league_id', $data['league_id'])->with('team')->where('status', 1)
+        $draftorder = DraftOrder::where('league_id', $data['league_id'])->with('team')
         ->where('round_number', $roundnumber)
         ->get();
         $draftorder = $draftorder->map(function ($draftorder) {

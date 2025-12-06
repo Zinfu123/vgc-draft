@@ -59,11 +59,15 @@ interface Set {
     status: number;
 }
 
+interface CurrentUserTeam {
+    id: number;
+}
 const page = usePage();
 const user = computed(() => page.props.auth.user);
 
 interface props {
     set: Set;
+    currentUserTeam: CurrentUserTeam;
 }
 
 const props = defineProps<props>();
@@ -119,7 +123,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 const disableForm = computed(() => {
     if (echoEvent.value.status == 0 || props.set.status === 0) {
         return 1;
-    } else if (props.set.team1.user.id != user.value.id || props.set.team2.user.id != user.value.id) {
+    } else if (props.set.team1.user.id != props.currentUserTeam.id || props.set.team2.user.id != props.currentUserTeam.id) {
         return 1;
     } else {
         return 0;

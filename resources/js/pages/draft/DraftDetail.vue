@@ -9,7 +9,6 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/vue3';
 import { useEchoPublic } from '@laravel/echo-vue';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface League {
     id: number;
@@ -39,9 +38,6 @@ interface Pokemon {
     cost: number;
 }
 
-interface CostHeaders {
-    costHeaders: number;
-}
 
 interface Draft {
     id: number | null;
@@ -172,10 +168,10 @@ const abortDraft = () => {
                     <p>Current Picker:</p>
                     {{ props.currentPicker.team_name }}
                     <img
-                        :src="props.currentPicker.team.logo"
+                        :src="props.currentPicker.logo"
                         alt="Team Logo"
                         class="h-15 w-15 justify-center rounded-full"
-                        v-if="props.currentPicker.team.logo !== null"
+                        v-if="props.currentPicker.logo !== null"
                     />
                 </div>
             </div>

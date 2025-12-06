@@ -20,7 +20,7 @@ class DraftPokemonAction
 public function __invoke($data)
 {    /* check if the team has enough points to draft the pokemon */
     $team = Team::find($data['team_id']);
-    if ($team->draft_points < $data['pokemon_cost']) {
+    if ($team->draft_points < $data['pokemon_cost'] + $data['mandatory_picks']) {
         throw new \Exception('Team does not have enough points to draft the pokemon');
     }
 

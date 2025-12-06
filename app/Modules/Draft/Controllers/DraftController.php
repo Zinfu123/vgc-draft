@@ -14,6 +14,7 @@ use App\Modules\League\Models\League;
 use App\Modules\Teams\Models\Team;
 use App\Modules\Draft\Models\Draft;
 use App\Events\DraftPickEvent;
+use App\Modules\Matches\Models\MatchConfig;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -59,8 +60,9 @@ class DraftController extends Controller
         $user = Auth::user();
         $team = Team::where('user_id', $user->id)->where('league_id', $leagueId)->first();
         $draft = Draft::where('league_id', $leagueId)->first();
+        $mandatoryPicks = 10 - $draft->round_number;
         $draftOrder = DraftOrder::where('league_id', $leagueId)->where('team_id', $team->id)->where('status', 1)->first();
-        $draftPokemonAction(['league_id' => $leagueId, 'team_id' => $team->id, 'pokemon_cost' => $request->pokemon_cost, 'pokemon_id' => $request->pokemon_id, 'is_last_pick' => $draftOrder->is_last_pick, 'draft_id' => $draft->id, 'round_number' => $draft->round_number, 'pick_number' => $draftOrder->pick_number]);
+        $draftPokemonAction(['league_id' => $leagueId, 'team_id' => $team->id, 'pokemon_cost' => $request->pokemon_cost, 'pokemon_id' => $request->pokemon_id, 'is_last_pick' => $draftOrder->is_last_pick, 'draft_id' => $draft->id, 'round_number' => $draft->round_number, 'pick_number' => $draftOrder->pick_number, 'mandatory_picks' => $mandatoryPicks]);
         $broadcast = $readLeagueDraftAction(['league_id' => $leagueId, 'command' => 'broadcastdraft', 'end_draft' => 0]);
         return redirect()->route('draft.detail', ['league_id' => $leagueId]);
     }
