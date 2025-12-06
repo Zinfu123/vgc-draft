@@ -23,7 +23,6 @@ interface MatchConfig {
     number_of_pools: number;
     frequency_type: number;
     frequency_value: number;
-    duration: number;
     status: number;
 }
 
