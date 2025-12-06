@@ -146,8 +146,8 @@ class CreateEditSetsAction
         for ($i = $bottomLeftIndex; $i < $lastIndex; $i += 1) {
             $teams[$i] = $teams[$i + 1];
         }
-        $teams[1] = $topRightItem;
-        $teams[$lastIndex] = $bottomLeftItem;
+        $teams[1] = $bottomLeftItem;
+        $teams[$lastIndex] = $topRightItem;
         return $teams;
     }
 }
