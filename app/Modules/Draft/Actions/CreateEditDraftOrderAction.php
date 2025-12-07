@@ -6,7 +6,6 @@ use App\Events\EndDraftEvent;
 use App\Modules\Draft\Models\Draft;
 use App\Modules\Draft\Models\DraftOrder;
 use App\Modules\Teams\Models\Team;
-use Illuminate\Support\Facades\Log;
 
 class CreateEditDraftOrderAction
 {
@@ -23,7 +22,6 @@ class CreateEditDraftOrderAction
             ]);
         } else {
             $draft = Draft::where('league_id', $data['league_id'])->first();
-            log::info('draft: '.$draft);
             $roundnumber = $draft->round_number;
             $teams = ($roundnumber % 2 == 0) ? Team::where('league_id', $data['league_id'])->where('draft_points', '>', 0)->orderBy('pick_position', 'desc')->get() : Team::where('league_id', $data['league_id'])->where('draft_points', '>', 0)->orderBy('pick_position', 'asc')->get();
             $i = 1;

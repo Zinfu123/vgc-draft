@@ -4,7 +4,6 @@ namespace App\Modules\League\Actions;
 
 /* Define Models */
 use App\Modules\League\Models\LeaguePokemon;
-use Illuminate\Support\Facades\Log;
 
 /* End Define Models */
 
@@ -23,7 +22,6 @@ class ReadLeaguePokemonAction
                 ->orderBy('league_pokemon.cost', 'desc')
                 ->orderBy('pokedex.name', 'asc')
                 ->get();
-            Log::info('draftedpokemon: '.$pokemon);
 
             return $pokemon;
         } elseif (($data['command'] ?? null) == 'lastdraftedpokemon') {

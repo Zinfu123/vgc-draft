@@ -5,7 +5,6 @@ namespace App\Modules\League\Actions;
 /* Define Models */
 use App\Modules\League\Models\LeaguePokemon;
 use App\Modules\Pokedex\Models\Pokedex;
-use Illuminate\Support\Facades\Log;
 
 /* End Define Models */
 
@@ -37,7 +36,6 @@ class CreateEditLeaguePokemonAction
             $pokemon = Pokedex::where('nationaldex_id', $nationaldex_id)->first();
             $cost = $row[1];
             if (! $pokemon) {
-                log::info('Pokemon not found: '.$nationaldex_id);
             } else {
                 $pokedex_id = $pokemon->id;
                 $pokemon = LeaguePokemon::create([

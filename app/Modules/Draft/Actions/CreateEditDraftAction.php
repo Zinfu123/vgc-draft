@@ -8,7 +8,6 @@ use App\Modules\Draft\Models\DraftPick;
 use App\Modules\League\Models\League;
 use App\Modules\League\Models\LeaguePokemon;
 use App\Modules\Teams\Models\Team;
-use Illuminate\Support\Facades\Log;
 
 class CreateEditDraftAction
 {
@@ -46,7 +45,6 @@ class CreateEditDraftAction
             $lastPickedPokemonID = DraftPick::where('league_id', $data['league_id'])->orderBy('round_number', 'desc')->orderBy('pick_number', 'desc')->first()->league_pokemon_id;
             $lastPick = DraftPick::where('league_id', $data['league_id'])->orderBy('round_number', 'desc')->orderBy('pick_number', 'desc')->first();
             $lastPick->delete();
-            log::info($lastPickedPokemonID);
             /* Revert the league pokemon is_drafted */
             $pokemonReversion = LeaguePokemon::where('id', $lastPickedPokemonID)->first();
             $pokemonReversion->is_drafted = 0;
