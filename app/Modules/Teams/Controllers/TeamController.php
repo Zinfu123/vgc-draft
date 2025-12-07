@@ -44,7 +44,6 @@ class TeamController extends Controller
     public function edit(Request $request)
     {
         $team = (new CreateEditTeamAction)->edit($request);
-        $league = League::find($team->league_id);
         return redirect()->route('teams.detail', ['team_id' => $team->id]);
     }
 }
