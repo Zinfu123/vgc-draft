@@ -15,6 +15,11 @@ class CreateEditPoolAction
     public function __invoke($data)
     {
         $matchConfig = MatchConfig::where('league_id', $data['league_id'])->select('id', 'number_of_pools')->first();
+        
+        if (!$matchConfig) {
+            throw new \Exception('Match config not found for this league. Please create a match config first.');
+        }
+        
         $poolcount = Pool::where('league_id', $data['league_id'])->count();
         if ($poolcount == $matchConfig->number_of_pools) {
             throw new \Exception('Pool count is equal to number of pools');
@@ -22,12 +27,13 @@ class CreateEditPoolAction
         $numberOfPools = $matchConfig->number_of_pools - $poolcount;
         $match_config_id = $matchConfig->id;
         if ($data['command'] == 'create') {
+            $pools = [];
             for ($i = 0; $i < $numberOfPools; $i++) {
-                $pools[] = $pool = Pool::create([
+                $pool = Pool::create([
                     'match_config_id' => $match_config_id,
                     'league_id' => $data['league_id'],
                 ]);
-                $pool->save();
+                $pools[] = $pool;
             }
             return $pools;
         }

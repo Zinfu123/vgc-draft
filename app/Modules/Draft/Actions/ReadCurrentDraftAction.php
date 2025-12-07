@@ -26,13 +26,16 @@ class ReadCurrentDraftAction
     /* Draft Order */
     elseif($data['command'] == 'draftorder') {
         $roundnumber = Draft::where('league_id', $data['league_id'])->first();
+        if ($roundnumber === null) {
+            return collect([]);
+        }
         $roundnumber = $roundnumber->round_number;
         $draftorder = DraftOrder::where('league_id', $data['league_id'])->with('team')
         ->where('round_number', $roundnumber)
         ->orderBy('pick_number', 'asc')
         ->get();
         $draftorder = $draftorder->map(function ($draftorder) {
-            if ($draftorder->team->logo ?? null !== null) {
+            if ($draftorder->team && $draftorder->team->logo !== null) {
                 $draftorder->team->logo = str_replace('\\', '/', Storage::disk('s3-team-logos')->url($draftorder->team->logo));
             }
             return $draftorder;
@@ -43,8 +46,8 @@ class ReadCurrentDraftAction
     /* Current Picker */
     elseif($data['command'] == 'currentpicker') {
         $currentpicker = DraftOrder::where('league_id', $data['league_id'])->with('team')->where('status', 1)->orderBy('pick_number', 'asc')->first();
-        if ($currentpicker->team ?? null !== null) {
-            if ($currentpicker->team->logo ?? null !== null) {
+        if ($currentpicker && $currentpicker->team !== null) {
+            if ($currentpicker->team->logo !== null) {
                 $currentpicker->team->logo = str_replace('\\', '/', Storage::disk('s3-team-logos')->url($currentpicker->team->logo));
             }
         }
@@ -62,15 +65,18 @@ class ReadCurrentDraftAction
         return $teams;
     }
     elseif($data['command'] == 'lastpick') {
-        $lastpick = DraftPick::Where('league_id', $data['league_id'])->orderBy('round_number', 'desc')->with('leaguePokemon.pokemon')->orderBy('pick_number', 'desc')->first();
+        $lastpick = DraftPick::where('league_id', $data['league_id'])->with('leaguePokemon.pokemon')->orderBy('round_number', 'desc')->orderBy('pick_number', 'desc')->first();
         if($lastpick !== null) {
             $lastpick->team = Team::where('id', $lastpick->team_id)->where('league_id', $lastpick->league_id)->first();
-            if($lastpick->team->logo !== null) {
-                $lastpick->team->logo = str_replace('\\', '/', Storage::disk('s3-team-logos')->url($lastpick->team->logo));
+            if($lastpick->team !== null) {
+                if($lastpick->team->logo !== null) {
+                    $lastpick->team->logo = str_replace('\\', '/', Storage::disk('s3-team-logos')->url($lastpick->team->logo));
+                }
+                $user = User::where('id', $lastpick->team->user_id)->value('name');
+                $lastpick->team->coach = $user ?? null;
             }
-            $lastpick->team->coach = User::where('id', $lastpick->team->user_id)->select('name')->first();
         }
-    return $lastpick;
+        return $lastpick;
     }
 }
 }

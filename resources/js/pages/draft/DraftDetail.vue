@@ -86,6 +86,9 @@ interface CurrentPicker {
         name: string;
         logo: string | null;
         draft_points: number;
+        user: {
+            name: string;
+        };
     } | null;
 }
 
@@ -98,15 +101,19 @@ interface LastPick {
         name: string;
         draft_points: number;
         logo: string;
-        coach: string;
-    };
+        coach: string | null;
+    } | null;
     league_pokemon: {
         id: number;
         name: string;
-        sprite_url: string;
-        type1: string;
-        type2: string;
         cost: number;
+        pokemon: {
+            id: number;
+            name: string;
+            sprite_url: string;
+            type1: string;
+            type2: string;
+        };
     };
 }
 
@@ -255,12 +262,12 @@ const submitPokemonPick = () => {
                         v-if="props.currentPicker.team?.logo !== null"
                     />
                     <p class="mt-4 text-lg font-medium">Name: {{ props.currentPicker.team?.name ?? 'N/A' }}</p>
-                    <p class="mt-1 text-base text-gray-500 dark:text-gray-400">Draft Points: {{ props.currentPicker.team?.draft_points ?? 'N/A' }}</p>
+                    <p class="mt-1 text-base text-gray-500 dark:text-gray-400">Coach: {{ props.currentPicker.team?.user?.name ?? 'N/A' }}</p>
                 </div>
             </div>
             
             <!-- Last Pick - Smaller (1 column) -->
-            <div v-if="props.lastPick !== null" class="lg:col-span-1 overflow-hidden rounded-lg bg-white shadow-sm dark:bg-gray-800/50 dark:shadow-none dark:outline dark:-outline-offset-1 dark:outline-white/10">
+            <div v-if="props.lastPick !== null && props.lastPick.team !== null" class="lg:col-span-1 overflow-hidden rounded-lg bg-white shadow-sm dark:bg-gray-800/50 dark:shadow-none dark:outline dark:-outline-offset-1 dark:outline-white/10">
                 <div class="px-4 py-4">
                     <h1 class="text-lg font-semibold mb-3 text-center">Last Pick</h1>
                     <div class="flex flex-row items-center justify-center gap-3">
