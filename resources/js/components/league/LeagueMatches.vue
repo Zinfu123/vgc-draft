@@ -89,7 +89,7 @@ const props = defineProps<props>();
         <!-- 3 column wrapper -->
         <div class="mx-auto w-full max-w-6xl grow lg:flex xl:px-2">
             <!-- Left sidebar & main wrapper -->
-            <div class="w-full flex-1 xl:flex">
+            <div class="w-full flex-1 xl:flex min-h-0">
                 <div
                     class="border-b border-gray-200 px-4 py-6 sm:px-6 lg:pl-8 xl:w-64 xl:shrink-0 xl:border-r xl:border-b-0 xl:pl-4 dark:border-white/10"
                 >
@@ -111,22 +111,22 @@ const props = defineProps<props>();
                     </div>
                 </div>
                 <div
-                    class="shrink-0 border-t border-gray-200 px-4 py-6 sm:px-6 lg:w-96 lg:border-t-0 lg:border-l lg:pr-8 xl:pr-6 dark:border-white/10"
+                    class="flex flex-col shrink-0 border-t border-gray-200 px-4 py-6 sm:px-6 lg:w-96 lg:border-t-0 lg:border-l lg:pr-8 xl:pr-6 dark:border-white/10"
                 >
                     <!-- middle column area -->
                     <template v-if="props.upcoming_sets">
-                        <h1 class="text-2xl font-bold">Sets To Be Played</h1>
-                        <ScrollArea class="h-96 w-full">
+                        <h1 class="text-2xl font-bold text-center mb-4">Sets To Be Played</h1>
+                        <ScrollArea class="flex-1 w-full min-h-0">
                             <ListWithHeadings :set="props.upcoming_sets" />
                         </ScrollArea>
                     </template>
                 </div>
             </div>
-            <div class="shrink-0 border-t border-gray-200 px-4 py-6 sm:px-6 lg:w-96 lg:border-t-0 lg:border-l lg:pr-8 xl:pr-6 dark:border-white/10">
+            <div class="flex flex-col shrink-0 border-t border-gray-200 px-4 py-6 sm:px-6 lg:w-96 lg:border-t-0 lg:border-l lg:pr-8 xl:pr-6 dark:border-white/10">
                 <!-- Right column area -->
                 <template v-if="props.played_sets">
-                    <h1 class="text-2xl font-bold text-center">Played Sets</h1>
-                    <ScrollArea class="h-96 w-full">
+                    <h1 class="text-2xl font-bold text-center mb-4">Played Sets</h1>
+                    <ScrollArea class="flex-1 w-full min-h-0">
                         <ListWithHeadings :set="props.played_sets" />
                     </ScrollArea>
                 </template>
