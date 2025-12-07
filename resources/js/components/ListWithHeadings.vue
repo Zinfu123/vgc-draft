@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown, ChevronRight } from 'lucide-vue-next';
 import { ref } from 'vue';
-
+import { router } from '@inertiajs/vue3';
 const isOpen: { [key: number]: boolean } = ref({});
 
 interface Set {
@@ -62,15 +62,17 @@ const props = defineProps<props>();
                             :key="item.id"
                             class="flex gap-x-4 px-3 py-5 hover:bg-gray-50 sm:px-6 dark:hover:bg-white/2.5"
                         >
+                        <Link :href="`/match/set/${item.id}`">
                             <img
                                 v-if="item.team1.logo"
                                 class="size-12 flex-none rounded-full bg-gray-50 dark:bg-gray-800 dark:outline dark:-outline-offset-1 dark:outline-white/10"
                                 :src="item.team1.logo"
                                 alt=""
+                                @click="router.visit(`/match/set/${item.id}`)"
                             />
                             <div class="min-w-0">
-                                <p class="text-sm/6 font-semibold text-gray-900 dark:text-white">{{ item.team1.name }}</p>
-                                <p class="mt-1 truncate text-xs/5 text-gray-500 dark:text-gray-400">{{ item.team1.user.name }}</p>
+                                <p class="text-sm/6 font-semibold text-gray-900 dark:text-white hover:text-blue-500" @click="router.visit(`/match/set/${item.id}`)">{{ item.team1.name }}</p>
+                                <p class="mt-1 truncate text-xs/5 text-gray-500 dark:text-gray-400 hover:text-blue-500" @click="router.visit(`/match/set/${item.id}`)">{{ item.team1.user.name }}</p>
                             </div>
                             <div class="flex flex-col items-center justify-center">
                                 <p class="text-sm/6 font-semibold text-gray-900 dark:text-white">VS</p>
@@ -85,6 +87,7 @@ const props = defineProps<props>();
                                 <p class="text-sm/6 font-semibold text-gray-900 dark:text-white">{{ item.team2.name }}</p>
                                 <p class="mt-1 truncate text-xs/5 text-gray-500 dark:text-gray-400">{{ item.team2.user.name }}</p>
                             </div>
+                            </Link>
                         </li>
                     </ul>
                 </CollapsibleContent>
