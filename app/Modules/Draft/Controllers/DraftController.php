@@ -61,7 +61,7 @@ class DraftController extends Controller
         $user = Auth::user();
         $team = Team::where('user_id', $user->id)->where('league_id', $leagueId)->first();
         $draft = Draft::where('league_id', $leagueId)->first();
-        $mandatoryPicks = 10 - $draft->round_number;
+        $mandatoryPicks = League::where('id', $leagueId)->first()->minimum_drafts - $draft->round_number;
         $draftOrder = DraftOrder::where('league_id', $leagueId)->where('team_id', $team->id)->where('status', 1)->first();
         $draftPokemonAction(['league_id' => $leagueId, 'team_id' => $team->id, 'pokemon_cost' => $request->pokemon_cost, 'pokemon_id' => $request->pokemon_id, 'is_last_pick' => $draftOrder->is_last_pick, 'draft_id' => $draft->id, 'round_number' => $draft->round_number, 'pick_number' => $draftOrder->pick_number, 'mandatory_picks' => $mandatoryPicks]);
         $broadcast = $readLeagueDraftAction(['league_id' => $leagueId, 'command' => 'broadcastdraft', 'end_draft' => 0]);
