@@ -38,7 +38,7 @@ const props = defineProps<props>();
 </script>
 
 <template>
-    <nav class="h-full overflow-y-auto" aria-label="Matches">
+    <nav class="h-full w-full overflow-y-auto" aria-label="Matches">
         <div v-for="key in Object.keys(props.set)" :key="key" class="relative">
             <Collapsible :open="isOpen[key]" @open-change="isOpen[key] = $event">
                 <div
