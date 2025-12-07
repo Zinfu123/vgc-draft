@@ -42,7 +42,7 @@ class ReadCurrentDraftAction
 
     /* Current Picker */
     elseif($data['command'] == 'currentpicker') {
-        $currentpicker = DraftOrder::where('league_id', $data['league_id'])->with('team')->where('status', 1)->first();
+        $currentpicker = DraftOrder::where('league_id', $data['league_id'])->with('team')->where('status', 1)->orderBy('pick_number', 'asc')->first();
         if ($currentpicker->team ?? null !== null) {
             if ($currentpicker->team->logo ?? null !== null) {
                 $currentpicker->team->logo = str_replace('\\', '/', Storage::disk('s3-team-logos')->url($currentpicker->team->logo));
