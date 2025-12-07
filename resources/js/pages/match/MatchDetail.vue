@@ -2,7 +2,7 @@
 import PokemonCard from '@/components/pokemon/PokemonCard.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { Head, Link, useForm } from '@inertiajs/vue3';
 import { useEchoPublic } from '@laravel/echo-vue';
 import { computed, ref } from 'vue';
 
@@ -70,13 +70,11 @@ interface Set {
 interface CurrentUserTeam {
     id: number;
 }
-const page = usePage();
 
 interface props {
     set: Set;
     currentUserTeam: CurrentUserTeam;
 }
-const user = computed(() => page.props.auth.user);
 
 const props = defineProps<props>();
 const setId = props.set.id;
@@ -128,13 +126,13 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-const disableForm = computed(() => {
-    if (echoEvent.value.status == 0 || props.set.status === 0) {
-        return 1;
-    } else if (props.set.team1.user.id != props.currentUserTeam.id && props.set.team2.user.id != props.currentUserTeam.id) {
-        return 1;
+const disableForm = computed((): boolean => {
+    if (echoEvent.value.status === 0 || props.set.status === 0) {
+        return true;
+    } else if (props.set.team1.user.id !== props.currentUserTeam.id && props.set.team2.user.id !== props.currentUserTeam.id) {
+        return true;
     } else {
-        return 0;
+        return false;
     }
 });
 </script>
@@ -184,7 +182,7 @@ const disableForm = computed(() => {
                                             id="team1_score"
                                             class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 dark:bg-gray-900 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-indigo-500"
                                             v-model="form.team1_score"
-                                            :disabled="disableForm == 1"
+                                            :disabled="disableForm"
                                         >
                                             <option value="0">0</option>
                                             <option value="1">1</option>
@@ -202,7 +200,7 @@ const disableForm = computed(() => {
                                             id="team2_score"
                                             class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 dark:bg-gray-900 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-indigo-500"
                                             v-model="form.team2_score"
-                                            :disabled="disableForm == 1"
+                                            :disabled="disableForm"
                                         >
                                             <option value="0">0</option>
                                             <option value="1">1</option>
@@ -216,13 +214,13 @@ const disableForm = computed(() => {
                                     >
                                     <div class="mt-2">
                                         <input
-                                            v-if="disableForm != 1"
+                                            v-if="!disableForm"
                                             type="string"
                                             name="team1_pokepaste"
                                             id="team1_pokepaste"
                                             class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 dark:bg-gray-900 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-indigo-500"
                                             v-model="form.team1_pokepaste"
-                                            :disabled="disableForm == 1"
+                                            :disabled="disableForm"
                                         />
                                     </div>
                                 </div>
@@ -232,26 +230,26 @@ const disableForm = computed(() => {
                                     >
                                     <div class="mt-2">
                                         <input
-                                            v-if="disableForm != 1"
+                                            v-if="!disableForm"
                                             type="string"
                                             name="team2_pokepaste"
                                             id="team2_pokepaste"
                                             class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 dark:bg-gray-900 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-indigo-500"
                                             v-model="form.team2_pokepaste"
-                                            :disabled="disableForm == 1"
+                                            :disabled="disableForm"
                                         />
                                         <Link
                                             :href="`/teams/form/${props.set.team2.id}`"
-                                            v-if="disableForm == 1 && form.team2_pokepaste != null && form.team2_pokepaste != 0"
+                                            v-if="disableForm && form.team2_pokepaste != null && form.team2_pokepaste !== ''"
                                         >
-                                            <p v-if="disableForm == 1 && form.team2_pokepaste != null" class="text-center text-sm text-gray-500">
+                                            <p v-if="disableForm && form.team2_pokepaste != null" class="text-center text-sm text-gray-500">
                                                 {{ form.team2_pokepaste }}
                                             </p>
                                         </Link>
                                     </div>
                                 </div>
                                 <button
-                                    v-if="disableForm === 0 && (form.team1_score == 2 || form.team2_score == 2)"
+                                    v-if="!disableForm && (form.team1_score === 2 || form.team2_score === 2)"
                                     type="submit"
                                     class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
                                 >
