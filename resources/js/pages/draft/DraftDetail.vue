@@ -313,6 +313,7 @@ const submitPokemonPick = () => {
                                         alt=""
                                     />
                                     <h3 class="mt-3 sm:mt-4 text-sm font-medium text-gray-900 dark:text-white">{{ draftOrderItem.team?.name ?? 'N/A' }}</h3>
+                                    <p class="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">Round: {{ draftOrderItem.coach }}</p>
                                     <p class="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">Draft Points: {{ draftOrderItem.team?.draft_points ?? 'N/A' }}</p>
                                 </div>
                             </li>

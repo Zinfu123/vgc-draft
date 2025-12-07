@@ -29,6 +29,7 @@ class ReadCurrentDraftAction
         $roundnumber = $roundnumber->round_number;
         $draftorder = DraftOrder::where('league_id', $data['league_id'])->with('team')
         ->where('round_number', $roundnumber)
+        ->orderBy('pick_number', 'asc')
         ->get();
         $draftorder = $draftorder->map(function ($draftorder) {
             if ($draftorder->team->logo ?? null !== null) {
