@@ -218,7 +218,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                 >
             </TabsList>
             <TabsContent value="teams">
-                <TeamCarousel :leagueteams="props.teams" />
+                <TeamCarousel :teams="props.teams" />
             </TabsContent>
             <TabsContent value="pools"> </TabsContent>
             <TabsContent value="matches">

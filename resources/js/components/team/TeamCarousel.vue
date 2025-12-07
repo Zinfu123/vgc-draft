@@ -14,7 +14,7 @@ interface Teams {
 }
 
 interface props {
-    leagueteams: Teams[];
+    teams: Teams;
 }
 
 const props = defineProps<props>();
@@ -22,6 +22,6 @@ const props = defineProps<props>();
 
 <template>
     <div class="flex flex-wrap gap-4">
-        <TeamCard v-for="team in leagueteams" :key="team.id" :team="team" @click="router.get(`/teams/${team.id}`)" />
+        <TeamCard v-for="team in teams" :key="team.id" :team="team" @click="router.get(`/teams/${team.id}`)" />
     </div>
 </template>

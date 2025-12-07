@@ -40,7 +40,7 @@ class ReadTeamAction
             ->first();
 
             $team->pokemon = $team->pokemon->map(function ($pokemon) {
-                $pokemon->pokemon = Pokedex::where('id', $pokemon->pokedex_id)->select('id', 'name', 'sprite_url', 'type1', 'type2', 'cost')->first();
+                $pokemon->pokemon = Pokedex::where('id', $pokemon->pokedex_id)->select('id', 'name', 'sprite_url', 'type1', 'type2')->first();
                 return $pokemon;
             });
             if ($team->logo !== null) {
