@@ -80,8 +80,8 @@ const props = defineProps<props>();
 const setId = props.set.id;
 const form = useForm({
     set_id: props.set.id,
-    team1_score: props.set.team1_score,
-    team2_score: props.set.team2_score,
+    team1_score: props.set.team1_score || 0,
+    team2_score: props.set.team2_score || 0,
     team1_id: props.set.team1.id,
     team2_id: props.set.team2.id,
     team1_pokepaste: props.set.team1_pokepaste || null,
@@ -126,14 +126,38 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
+const isUserInSet = computed((): boolean => {
+    return (
+        props.set.team1.user.id === props.currentUserTeam.id || props.set.team2.user.id === props.currentUserTeam.id
+    );
+});
+
 const disableForm = computed((): boolean => {
     if (echoEvent.value.status === 0 || props.set.status === 0) {
         return true;
-    } else if (props.set.team1.user.id !== props.currentUserTeam.id && props.set.team2.user.id !== props.currentUserTeam.id) {
+    } else if (!isUserInSet.value) {
         return true;
     } else {
         return false;
     }
+});
+
+const winnerCoach = computed((): string | null => {
+    if (props.set.winner_id === props.set.team1.id) {
+        return props.set.team1.user.name;
+    } else if (props.set.winner_id === props.set.team2.id) {
+        return props.set.team2.user.name;
+    }
+    return null;
+});
+
+const winnerLogo = computed((): string | null => {
+    if (props.set.winner_id === props.set.team1.id) {
+        return props.set.team1.logo || null;
+    } else if (props.set.winner_id === props.set.team2.id) {
+        return props.set.team2.logo || null;
+    }
+    return props.set.winner_logo || null;
 });
 </script>
 <template>
@@ -248,13 +272,32 @@ const disableForm = computed((): boolean => {
                                         </Link>
                                     </div>
                                 </div>
-                                <button
-                                    v-if="!disableForm && (form.team1_score === 2 || form.team2_score === 2)"
-                                    type="submit"
-                                    class="rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                                >
-                                    Update
-                                </button>
+                                <div class="sm:col-span-6 min-h-[38px]">
+                                    <button
+                                        type="submit"
+                                        :class="[
+                                            'rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline-offset-2 focus-visible:outline-indigo-600',
+                                            !(isUserInSet && (form.team1_score == 2 || form.team2_score == 2)) && 'invisible pointer-events-none'
+                                        ]"
+                                    >
+                                        Update
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div v-if="props.set.winner_id" class="mt-8 border-t border-gray-900/10 pt-8 dark:border-white/10">
+                            <h2 class="mb-6 text-center text-base/7 font-semibold text-gray-900 dark:text-white">Winner</h2>
+                            <div class="flex flex-col items-center justify-center space-y-4">
+                                <img
+                                    v-if="winnerLogo"
+                                    :src="winnerLogo"
+                                    alt="Winner Logo"
+                                    class="mx-auto h-30 w-30 rounded-full"
+                                />
+                                <div class="text-center">
+                                    <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ props.set.winner_name }}</p>
+                                    <p v-if="winnerCoach" class="text-lg text-gray-500 dark:text-gray-400">Coach: {{ winnerCoach }}</p>
+                                </div>
                             </div>
                         </div>
                     </div>
