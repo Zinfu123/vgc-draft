@@ -157,6 +157,7 @@ const props = defineProps<props>();
 
 const user = usePage().props.auth.user;
 const coachexists = props.teams.some((team) => team.coach === user.name);
+const userTeam = props.teams.find((team) => team.coach === user.name) || null;
 
 const draftDetail = () => {
     router.get(route('draft.detail', { league_id: props.league.id }));
@@ -177,7 +178,20 @@ const breadcrumbs: BreadcrumbItem[] = [
     <AppLayout :breadcrumbs="breadcrumbs">
         <Head :title="`${props.league.name}`" />
         <div class="mt-4 mr-14 flex w-full flex-row items-end justify-end">
-            <TeamForm :league_id="props.league.id" :user_id="usePage().props.auth.user.id" v-if="coachexists === false" />
+            <TeamForm
+                :league_id="props.league.id"
+                :user_id="usePage().props.auth.user.id"
+                :command="'create'"
+                :user_team="null"
+                v-if="coachexists === false"
+            />
+            <TeamForm
+                :league_id="props.league.id"
+                :user_id="usePage().props.auth.user.id"
+                :command="'edit'"
+                :user_team="userTeam"
+                v-if="coachexists === true"
+            />
             <AdminPanel
                 :league="props.league"
                 :draft="props.draft"

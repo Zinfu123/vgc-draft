@@ -4,6 +4,7 @@ namespace App\Modules\Teams\Actions;
 
 use App\Modules\Teams\Models\Team;
 use App\Modules\League\Models\League;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\Request;
 
 class CreateEditTeamAction
@@ -42,6 +43,22 @@ class CreateEditTeamAction
                 $team->save();
             }
         }
+        return $team;
+    }
+
+    public function edit(Request $request)
+    {
+        $team = Team::where('id', $request->team_id)->first();
+        $team->name = $request->name;
+        if ($request->hasFile('logo')) {
+            $oldlogo = $team->logo;
+            Storage::disk('s3-team-logos')->delete($oldlogo);
+            $logo = (new TeamLogoUploadAction)->upload($request);
+        } else {
+            $logo = null;
+        }
+        $team->logo = $logo;
+        $team->save();
         return $team;
     }
 }

@@ -89,12 +89,12 @@ const props = defineProps<props>();
         <!-- 3 column wrapper -->
         <div class="mx-auto w-full max-w-6xl grow lg:flex xl:px-2">
             <!-- Left sidebar & main wrapper -->
-            <div class="w-full flex-1 xl:flex min-h-0">
+            <div class="min-h-0 w-full flex-1 xl:flex">
                 <div
                     class="border-b border-gray-200 px-4 py-6 sm:px-6 lg:pl-8 xl:w-64 xl:shrink-0 xl:border-r xl:border-b-0 xl:pl-4 dark:border-white/10"
                 >
                     <!-- Left column area -->
-                    <h1 class="text-2xl font-bold text-center">Your Next Set</h1>
+                    <h1 class="text-center text-2xl font-bold">Your Next Set</h1>
                     <div
                         v-if="props.team_next"
                         class="overflow-hidden rounded-md bg-white shadow-sm dark:bg-gray-800/50 dark:shadow-none dark:outline dark:-outline-offset-0 dark:outline-white/10"
@@ -111,12 +111,12 @@ const props = defineProps<props>();
                     </div>
                 </div>
                 <div
-                    class="flex flex-col shrink-0 border-t border-gray-200 px-4 py-6 sm:px-6 lg:w-96 lg:border-t-0 lg:border-l lg:pr-8 xl:pr-6 dark:border-white/10"
+                    class="flex shrink-0 flex-col border-t border-gray-200 px-4 py-6 sm:px-6 lg:w-96 lg:border-t-0 lg:border-l lg:pr-8 xl:pr-6 dark:border-white/10"
                 >
                     <!-- middle column area -->
                     <template v-if="props.upcoming_sets">
-                        <h1 class="text-2xl font-bold text-center mb-4">Sets To Be Played</h1>
-                        <div class="flex-1 min-h-0">
+                        <h1 class="mb-4 text-center text-2xl font-bold">Sets To Be Played</h1>
+                        <div class="min-h-0 flex-1">
                             <ScrollArea class="h-full w-full">
                                 <ListWithHeadings :set="props.upcoming_sets" />
                             </ScrollArea>
@@ -124,11 +124,13 @@ const props = defineProps<props>();
                     </template>
                 </div>
             </div>
-            <div class="flex flex-col shrink-0 border-t border-gray-200 px-4 py-6 sm:px-6 lg:w-96 lg:border-t-0 lg:border-l lg:pr-8 xl:pr-6 dark:border-white/10">
+            <div
+                class="flex shrink-0 flex-col border-t border-gray-200 px-4 py-6 sm:px-6 lg:w-96 lg:border-t-0 lg:border-l lg:pr-8 xl:pr-6 dark:border-white/10"
+            >
                 <!-- Right column area -->
                 <template v-if="props.played_sets">
-                    <h1 class="text-2xl font-bold text-center mb-4">Played Sets</h1>
-                    <div class="flex-1 min-h-0">
+                    <h1 class="mb-4 text-center text-2xl font-bold">Played Sets</h1>
+                    <div class="min-h-0 flex-1">
                         <ScrollArea class="h-full w-full">
                             <ListWithHeadings :set="props.played_sets" />
                         </ScrollArea>

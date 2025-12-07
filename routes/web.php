@@ -46,6 +46,7 @@ Route::prefix('teams')->group(function () {
     Route::get('/', [TeamController::class, 'index'])->middleware(['auth', 'verified'])->name('teams.index');
     Route::post('/', [TeamController::class, 'create'])->middleware(['auth', 'verified'])->name('teams.create');
     Route::get('/{team_id}', [TeamController::class, 'show'])->middleware(['auth', 'verified'])->name('teams.detail');
+    Route::post('/{team_id}', [TeamController::class, 'edit'])->middleware(['auth', 'verified'])->name('teams.edit');
 });
 
 // Draft Routes

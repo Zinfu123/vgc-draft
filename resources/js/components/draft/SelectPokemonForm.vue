@@ -27,7 +27,7 @@ const props = defineProps<{
 
 const submit = () => {
     if (isSubmitting.value || !selectedPokemon.value) return;
-    
+
     isSubmitting.value = true;
     router.post(
         route('draft.pick'),

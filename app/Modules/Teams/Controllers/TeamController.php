@@ -40,4 +40,10 @@ class TeamController extends Controller
             'team' => $team,
         ]);
     }
+
+    public function edit(Request $request)
+    {
+        $team = (new CreateEditTeamAction)->edit($request);
+        return redirect()->route('leagues.detail', ['league' => $team->league_id]);
+    }
 }

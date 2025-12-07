@@ -73,6 +73,7 @@ class LeagueController extends Controller
             'pokemon_drafted' => fn () => $pokemon_drafted,
             'costHeaders' => fn () => $pokemon->unique('cost')->pluck('cost'),
             'draft' => fn () => $readLeagueDraftAction(['league_id' => $league->id]),
+            'user_team' => fn () => $user_team,
             'adminFlag' => fn () => $adminflag,
             'matchConfig' => fn () => $match_config,
             'played_sets' => fn () => $played_sets,

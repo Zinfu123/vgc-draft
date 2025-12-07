@@ -158,7 +158,11 @@ const disableForm = computed(() => {
                     <div class="mx-auto flex max-w-7xl flex-col sm:px-6 lg:px-8">
                         <p class="text-center text-2xl font-bold">Pokemon</p>
                         <div class="grid grid-cols-2 gap-4">
-                            <PokemonCard v-for="pokemon in props.set.team1.pokemon" :key="pokemon.id" :pokemon="{ ...pokemon.pokemon, cost: pokemon.cost, type2: pokemon.pokemon.type2 || '-' }" />
+                            <PokemonCard
+                                v-for="pokemon in props.set.team1.pokemon"
+                                :key="pokemon.id"
+                                :pokemon="{ ...pokemon.pokemon, cost: pokemon.cost, type2: pokemon.pokemon.type2 || '-' }"
+                            />
                         </div>
                     </div>
                 </div>
@@ -261,7 +265,11 @@ const disableForm = computed(() => {
                     <div class="mx-auto flex max-w-7xl flex-col sm:px-6 lg:px-8">
                         <p class="text-center text-2xl font-bold">Pokemon</p>
                         <div class="grid grid-cols-2 gap-4">
-                            <PokemonCard v-for="pokemon in props.set.team2.pokemon" :key="pokemon.id" :pokemon="{ ...pokemon.pokemon, cost: pokemon.cost, type2: pokemon.pokemon.type2 || '-' }" />
+                            <PokemonCard
+                                v-for="pokemon in props.set.team2.pokemon"
+                                :key="pokemon.id"
+                                :pokemon="{ ...pokemon.pokemon, cost: pokemon.cost, type2: pokemon.pokemon.type2 || '-' }"
+                            />
                         </div>
                     </div>
                 </div>
