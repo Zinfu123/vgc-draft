@@ -116,9 +116,11 @@ const props = defineProps<props>();
                     <!-- middle column area -->
                     <template v-if="props.upcoming_sets">
                         <h1 class="text-2xl font-bold text-center mb-4">Sets To Be Played</h1>
-                        <ScrollArea class="flex-1 w-full min-h-0">
-                            <ListWithHeadings :set="props.upcoming_sets" />
-                        </ScrollArea>
+                        <div class="flex-1 min-h-0">
+                            <ScrollArea class="h-full w-full">
+                                <ListWithHeadings :set="props.upcoming_sets" />
+                            </ScrollArea>
+                        </div>
                     </template>
                 </div>
             </div>
@@ -126,9 +128,11 @@ const props = defineProps<props>();
                 <!-- Right column area -->
                 <template v-if="props.played_sets">
                     <h1 class="text-2xl font-bold text-center mb-4">Played Sets</h1>
-                    <ScrollArea class="flex-1 w-full min-h-0">
-                        <ListWithHeadings :set="props.played_sets" />
-                    </ScrollArea>
+                    <div class="flex-1 min-h-0">
+                        <ScrollArea class="h-full w-full">
+                            <ListWithHeadings :set="props.played_sets" />
+                        </ScrollArea>
+                    </div>
                 </template>
             </div>
         </div>

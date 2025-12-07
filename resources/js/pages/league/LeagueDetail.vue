@@ -26,10 +26,18 @@ interface Teams {
     set_wins: number;
     set_losses: number;
     victory_points: number;
-    drafted_pokemon: DraftedPokemon[];
 }
 
 interface Pokemon {
+    id: number;
+    cost: number;
+    name: string;
+    sprite_url: string;
+    type1: string;
+    type2?: string;
+}
+
+interface PokemonDrafted {
     id: number;
     cost: number;
     name: string;
@@ -142,6 +150,7 @@ interface props {
     played_sets: PlayedSets;
     upcoming_sets: UpcomingSets;
     team_next: TeamNext;
+    pokemon_drafted: PokemonDrafted[];
 }
 
 const props = defineProps<props>();
@@ -202,7 +211,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                 <LeagueMatches :team_next="props.team_next" :played_sets="props.played_sets" :upcoming_sets="props.upcoming_sets" />
             </TabsContent>
             <TabsContent value="pokemon">
-                <LeaguePokemon :pokemon="props.pokemon" :league="props.league" />
+                <LeaguePokemon :pokemon="props.pokemon" :league="props.league" :pokemon_drafted="props.pokemon_drafted" />
             </TabsContent>
             <TabsContent value="draft">
                 <div class="flex flex-row items-center justify-center">

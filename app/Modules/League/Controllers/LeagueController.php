@@ -39,7 +39,8 @@ class LeagueController extends Controller
 
     public function show(League $league, ReadTeamAction $readTeamAction, ReadLeaguePokemonAction $readLeaguePokemonAction, ReadLeagueDraftAction $readLeagueDraftAction, ShowSetsAction $showSetsAction)
     {
-        $pokemon = $readLeaguePokemonAction(['league_id' => $league->id]);
+        $pokemon = $readLeaguePokemonAction(['league_id' => $league->id, 'command' => 'available']);
+        $pokemon_drafted = $readLeaguePokemonAction(['league_id' => $league->id, 'command' => 'draftedpokemon']);
         $teams = $readTeamAction(['league_id' => $league->id, 'command' => 'league']);
         $user_team = Team::where('user_id', Auth::user()->id)->where('league_id', $league->id)->select('id', 'admin_flag')->first();
         $adminflag = $user_team ? $user_team->admin_flag : 0;
@@ -69,6 +70,7 @@ class LeagueController extends Controller
             'league' => fn () => $league,
             'teams' => fn () => $teams,
             'pokemon' => fn () => $pokemon,
+            'pokemon_drafted' => fn () => $pokemon_drafted,
             'costHeaders' => fn () => $pokemon->unique('cost')->pluck('cost'),
             'draft' => fn () => $readLeagueDraftAction(['league_id' => $league->id]),
             'adminFlag' => fn () => $adminflag,
