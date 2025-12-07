@@ -2,6 +2,7 @@
 import AdminPanel from '@/components/league/AdminPanel.vue';
 import LeagueMatches from '@/components/league/LeagueMatches.vue';
 import LeaguePokemon from '@/components/league/LeaguePokemon.vue';
+import StandingsList from '@/components/league/StandingsList.vue';
 import TeamCarousel from '@/components/team/TeamCarousel.vue';
 import TeamForm from '@/components/team/TeamForm.vue';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -140,6 +141,18 @@ interface TeamNext {
     };
 }
 
+interface Standings {
+    [key: number]: {
+        id: number;
+        name: string;
+        logo: string;
+        user: {
+            name: string;
+        };
+        victory_points: number;
+    };
+}
+
 interface props {
     league: League;
     teams: Teams[];
@@ -152,6 +165,7 @@ interface props {
     upcoming_sets: UpcomingSets;
     team_next: TeamNext;
     pokemon_drafted: PokemonDrafted[];
+    standings: Standings[];
 }
 
 const props = defineProps<props>();
@@ -206,7 +220,6 @@ const breadcrumbs: BreadcrumbItem[] = [
         <Tabs defaultValue="matches">
             <TabsList class="mb-4 self-center">
                 <TabsTrigger value="teams" class="dark:data-[state=active]:bg-black/80">Teams</TabsTrigger>
-                <TabsTrigger value="pools" class="dark:data-[state=active]:bg-black/80">Pools</TabsTrigger>
                 <TabsTrigger value="matches" class="dark:data-[state=active]:bg-black/80">Matches</TabsTrigger>
                 <TabsTrigger value="standings" class="dark:data-[state=active]:bg-black/80">Standings</TabsTrigger>
                 <TabsTrigger value="trades" class="dark:data-[state=active]:bg-black/80">Trades</TabsTrigger>
@@ -221,9 +234,11 @@ const breadcrumbs: BreadcrumbItem[] = [
             <TabsContent value="teams">
                 <TeamCarousel :teams="props.teams" />
             </TabsContent>
-            <TabsContent value="pools"> </TabsContent>
             <TabsContent value="matches">
                 <LeagueMatches :team_next="props.team_next" :played_sets="props.played_sets" :upcoming_sets="props.upcoming_sets" />
+            </TabsContent>
+            <TabsContent value="standings">
+                <StandingsList :standings="props.standings" />
             </TabsContent>
             <TabsContent value="pokemon">
                 <LeaguePokemon :pokemon="props.pokemon" :league="props.league" :pokemon_drafted="props.pokemon_drafted" />

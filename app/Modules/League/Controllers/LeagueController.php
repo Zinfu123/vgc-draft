@@ -45,6 +45,7 @@ class LeagueController extends Controller
         $played_sets = $showSetsAction(['league_id' => $league->id, 'command' => 'played']);
         $upcoming_sets = $showSetsAction(['league_id' => $league->id, 'command' => 'upcoming']);
         $team_next = $showSetsAction(['league_id' => $league->id, 'command' => 'team_next', 'team_id' => $user_team?->id]);
+        $standings = $readTeamAction(['league_id' => $league->id, 'command' => 'standings']);
         if ($match_config === null) {
             $match_config = (object) [
                 'id' => 0,
@@ -76,6 +77,7 @@ class LeagueController extends Controller
             'played_sets' => fn () => $played_sets,
             'upcoming_sets' => fn () => $upcoming_sets,
             'team_next' => fn () => $team_next,
+            'standings' => fn () => $standings,
         ]);
     }
 

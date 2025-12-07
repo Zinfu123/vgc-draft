@@ -7,10 +7,6 @@ import { Head } from '@inertiajs/vue3';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Dashboard',
-        href: '/dashboard',
-    },
-    {
         title: 'Leagues',
         href: '/Leagues',
     },
@@ -41,7 +37,7 @@ const props = defineProps<props>();
     <AppLayout :breadcrumbs="breadcrumbs">
         <LeagueForm />
         <div class="mx-auto flex flex-col items-center">
-            <h1 class="text-3xl font-bold">Current Leagues</h1>
+            <h1 class="mb-4 text-3xl font-bold">Current Leagues</h1>
             <LeagueCarousel :leagues="props.currentLeagues" />
         </div>
     </AppLayout>
