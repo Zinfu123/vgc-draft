@@ -11,7 +11,6 @@ class LogoToUrlAction
 {
     public function logoToUrl($logo)
     {
-        Log::info('LogoToUrlAction: ' . $logo);
         // If it's already a full URL, return it as-is
         if (filter_var($logo, FILTER_VALIDATE_URL) || strpos($logo, 'http://') === 0 || strpos($logo, 'https://') === 0) {
             return str_replace('\\', '/', $logo);

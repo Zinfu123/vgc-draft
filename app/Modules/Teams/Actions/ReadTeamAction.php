@@ -47,7 +47,7 @@ class ReadTeamAction
                 $action = new LogoToUrlAction();
                 $team->logo = $action->logoToUrl($team->logo);
             }
-            Log::info($team);
+            $team->coach = User::find($team->user_id)->name;
             return $team;
         }
     }
