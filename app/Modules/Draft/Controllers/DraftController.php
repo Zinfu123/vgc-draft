@@ -60,9 +60,26 @@ class DraftController extends Controller
         $leagueId = $request->league_id;
         $user = Auth::user();
         $team = Team::where('user_id', $user->id)->where('league_id', $leagueId)->first();
+        if (!$team) {
+            return redirect()->route('draft.detail', ['league_id' => $leagueId])->withErrors(['error' => 'Team not found for this user and league.']);
+        }
+        
         $draft = Draft::where('league_id', $leagueId)->first();
-        $mandatoryPicks = League::where('id', $leagueId)->first()->minimum_drafts - $draft->round_number;
+        if (!$draft) {
+            return redirect()->route('draft.detail', ['league_id' => $leagueId])->withErrors(['error' => 'Draft not found for this league.']);
+        }
+        
+        $league = League::where('id', $leagueId)->first();
+        if (!$league) {
+            return redirect()->route('draft.detail', ['league_id' => $leagueId])->withErrors(['error' => 'League not found.']);
+        }
+        
+        $mandatoryPicks = $league->minimum_drafts - $draft->round_number;
         $draftOrder = DraftOrder::where('league_id', $leagueId)->where('team_id', $team->id)->where('status', 1)->first();
+        if (!$draftOrder) {
+            return redirect()->route('draft.detail', ['league_id' => $leagueId])->withErrors(['error' => 'Draft order not found for this team.']);
+        }
+        
         $draftPokemonAction(['league_id' => $leagueId, 'team_id' => $team->id, 'pokemon_cost' => $request->pokemon_cost, 'pokemon_id' => $request->pokemon_id, 'is_last_pick' => $draftOrder->is_last_pick, 'draft_id' => $draft->id, 'round_number' => $draft->round_number, 'pick_number' => $draftOrder->pick_number, 'mandatory_picks' => $mandatoryPicks]);
         $broadcast = $readLeagueDraftAction(['league_id' => $leagueId, 'command' => 'broadcastdraft', 'end_draft' => 0]);
         return redirect()->route('draft.detail', ['league_id' => $leagueId]);

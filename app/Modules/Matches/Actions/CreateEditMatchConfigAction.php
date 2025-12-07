@@ -25,6 +25,9 @@ class CreateEditMatchConfigAction
         }
         elseif ($data['command'] == 'update') {
             $matchConfig = MatchConfig::where('league_id', $data['league_id'])->first();
+            if (!$matchConfig) {
+                throw new \Exception('Match config not found for this league. Please create a match config first.');
+            }
             $matchConfig->number_of_pools = $data['number_of_pools'];
             $matchConfig->frequency_type = $data['frequency_type'];
             $matchConfig->save();

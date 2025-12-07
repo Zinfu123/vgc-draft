@@ -59,6 +59,12 @@ class LeagueController extends Controller
                 'status' => 0,
             ];
         }
+        
+        // Convert logo to full URL if it exists
+        if ($league->logo !== null) {
+            $league->logo = str_replace('\\', '/', Storage::disk('s3-league-logos')->url($league->logo));
+        }
+        
         return Inertia::render('league/LeagueDetail', [
             'league' => fn () => $league,
             'teams' => fn () => $teams,
