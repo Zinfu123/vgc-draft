@@ -11,7 +11,16 @@ interface Team {
     set_wins: number;
     set_losses: number;
     victory_points: number;
-    draft_picks: [];
+    pokemon: Array<{
+        id: number;
+        name: string;
+        cost: number;
+        pokemon: {
+            sprite_url: string;
+            type1: string;
+            type2?: string;
+        };
+    }>;
 }
 
 interface League {
@@ -52,10 +61,9 @@ const breadcrumbs: BreadcrumbItem[] = [
                     <h2 class="mb-4 object-top text-2xl font-bold">Drafted Pokemon</h2>
                     <div class="flex flex-row flex-wrap items-center justify-center gap-2">
                         <PokemonCard
-                            v-for="draft_pick in props.team.draft_picks"
-                            :key="draft_pick.id"
-                            :pokemon="draft_pick.league_pokemon.pokemon"
-                            :cost="{ cost: draft_pick.league_pokemon.cost }"
+                            v-for="pokemon in props.team.pokemon"
+                            :key="pokemon.id"
+                            :pokemon="{ name: pokemon.name, ...pokemon.pokemon, cost: pokemon.cost, type2: pokemon.pokemon.type2 || '-' }"
                         />
                     </div>
                 </div>

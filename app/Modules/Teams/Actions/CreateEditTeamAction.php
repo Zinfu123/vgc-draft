@@ -50,14 +50,15 @@ class CreateEditTeamAction
     {
         $team = Team::where('id', $request->team_id)->first();
         $team->name = $request->name;
+        $team->save();
         if ($request->hasFile('logo')) {
-            $oldlogo = $team->logo;
-            Storage::disk('s3-team-logos')->delete($oldlogo);
+            if ($team->logo !== null) {
+                $oldlogo = $team->logo;
+                Storage::disk('s3-team-logos')->delete($oldlogo);
+            }
             $logo = (new TeamLogoUploadAction)->upload($request);
-        } else {
-            $logo = null;
-        }
-        $team->logo = $logo;
+            $team->logo = $logo;
+            }
         $team->save();
         return $team;
     }

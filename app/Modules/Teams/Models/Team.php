@@ -2,6 +2,7 @@
 
 namespace App\Modules\Teams\Models;
 
+use App\Modules\Draft\Actions\DraftPokemonAction;
 use Illuminate\Database\Eloquent\Model;
 
 class Team extends Model
@@ -41,6 +42,11 @@ class Team extends Model
     public function draftPicks()
     {
         return $this->hasMany(\App\Modules\Draft\Models\DraftPick::class, 'team_id');
+    }
+
+    public function pokemon()
+    {
+        return $this->hasMany(\App\Modules\League\Models\LeaguePokemon::class, 'drafted_by', 'id');
     }
 
 }

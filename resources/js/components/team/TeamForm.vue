@@ -23,6 +23,7 @@ interface props {
 const props = defineProps<props>();
 
 const form = useForm({
+    id: props.user_team?.id || null,
     name: props.user_team?.name || '',
     league_id: props.league_id,
     user_id: usePage().props.auth.user.id,
@@ -52,7 +53,7 @@ const submit = () => {
             forceFormData: true,
         });
     } else {
-        form.post(route('teams.edit'), {
+        form.post(route('teams.edit', { team_id: props.user_team?.id }), {
             forceFormData: true,
         });
     }
