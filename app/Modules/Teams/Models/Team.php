@@ -46,7 +46,7 @@ class Team extends Model
 
     public function pokemon()
     {
-        return $this->hasMany(\App\Modules\League\Models\LeaguePokemon::class, 'drafted_by', 'id');
+        return $this->hasMany(\App\Modules\League\Models\LeaguePokemon::class, 'drafted_by', 'id')->orderBy('cost', 'desc');
     }
 
 }
