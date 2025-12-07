@@ -22,7 +22,7 @@ interface Teams {
     id: number;
     name: string;
     coach: string;
-    logo: string;
+    logo: string | null;
     set_wins: number;
     set_losses: number;
     victory_points: number;

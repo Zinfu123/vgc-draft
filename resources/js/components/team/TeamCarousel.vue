@@ -6,7 +6,7 @@ interface Teams {
     id: number;
     league_id: number;
     name: string;
-    logo: string;
+    logo: string | null;
     set_wins: number;
     set_losses: number;
     victory_points: number;

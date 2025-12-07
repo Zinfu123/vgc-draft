@@ -19,9 +19,11 @@ class ReadTeamAction
             ->get();
 
         $teams = $teams->map(function ($team) {
-            if ($team->logo !== null) {
+            if ($team->logo !== null && trim($team->logo) !== '') {
                 $action = new LogoToUrlAction();
                 $team->logo = $action->logoToUrl($team->logo);
+            } else {
+                $team->logo = null;
             }
 
             return $team;
@@ -43,9 +45,11 @@ class ReadTeamAction
                 $pokemon->pokemon = Pokedex::where('id', $pokemon->pokedex_id)->select('id', 'name', 'sprite_url', 'type1', 'type2')->first();
                 return $pokemon;
             });
-            if ($team->logo !== null) {
+            if ($team->logo !== null && trim($team->logo) !== '') {
                 $action = new LogoToUrlAction();
                 $team->logo = $action->logoToUrl($team->logo);
+            } else {
+                $team->logo = null;
             }
             $team->coach = User::find($team->user_id)->name;
             return $team;
