@@ -6,6 +6,7 @@ namespace App\Modules\League\Actions;
 use App\Modules\League\Models\LeaguePokemon;
 use App\Modules\Pokedex\Models\Pokedex;
 use Illuminate\Support\Facades\Log;
+
 /* End Define Models */
 
 /* Define Dependencies */
@@ -35,18 +36,17 @@ class CreateEditLeaguePokemonAction
             $nationaldex_id = $row[0];
             $pokemon = Pokedex::where('nationaldex_id', $nationaldex_id)->first();
             $cost = $row[1];
-            if (!$pokemon) {
-                log::info('Pokemon not found: ' . $nationaldex_id);
-            }
-            else {
-            $pokedex_id = $pokemon->id;
-            $pokemon = LeaguePokemon::create([
-                'league_id' => $league_id,
-                'pokedex_id' => $pokedex_id,
-                'cost' => $cost,
-                'name' => $pokemon->name,
+            if (! $pokemon) {
+                log::info('Pokemon not found: '.$nationaldex_id);
+            } else {
+                $pokedex_id = $pokemon->id;
+                $pokemon = LeaguePokemon::create([
+                    'league_id' => $league_id,
+                    'pokedex_id' => $pokedex_id,
+                    'cost' => $cost,
+                    'name' => $pokemon->name,
                 ]);
-            };
+            }
         }
     }
 }

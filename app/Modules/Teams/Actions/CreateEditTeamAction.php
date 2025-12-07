@@ -2,10 +2,10 @@
 
 namespace App\Modules\Teams\Actions;
 
-use App\Modules\Teams\Models\Team;
 use App\Modules\League\Models\League;
-use Illuminate\Support\Facades\Storage;
+use App\Modules\Teams\Models\Team;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 
 class CreateEditTeamAction
 {
@@ -25,24 +25,24 @@ class CreateEditTeamAction
         }
         if (team::where('league_id', $request->league_id)->where('user_id', $request->user_id)->exists()) {
             throw new \Exception('Team already exists');
-        }
-        else {
-        $draftPoints = League::where('id', $request->league_id)->select('draft_points')->first();
-        $draftPoints = $draftPoints->draft_points;
-        $team = Team::create([
-            'name' => $request->name,
-            'league_id' => $request->league_id,
-            'user_id' => $request->user_id,
-            'logo' => $logo,
-            'pick_position' => $request->pick_position,
-            'draft_points' => $draftPoints,
-        ]);
-        $teamcount = Team::where('league_id', $request->league_id)->count();
-        if ($teamcount == 1) {
-            $team->admin_flag = 1;
+        } else {
+            $draftPoints = League::where('id', $request->league_id)->select('draft_points')->first();
+            $draftPoints = $draftPoints->draft_points;
+            $team = Team::create([
+                'name' => $request->name,
+                'league_id' => $request->league_id,
+                'user_id' => $request->user_id,
+                'logo' => $logo,
+                'pick_position' => $request->pick_position,
+                'draft_points' => $draftPoints,
+            ]);
+            $teamcount = Team::where('league_id', $request->league_id)->count();
+            if ($teamcount == 1) {
+                $team->admin_flag = 1;
                 $team->save();
             }
         }
+
         return $team;
     }
 
@@ -58,8 +58,9 @@ class CreateEditTeamAction
             }
             $logo = (new TeamLogoUploadAction)->upload($request);
             $team->logo = $logo;
-            }
+        }
         $team->save();
+
         return $team;
     }
 }

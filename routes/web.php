@@ -4,16 +4,16 @@
 use App\Modules\Draft\Controllers\DraftController;
 use App\Modules\League\Controllers\LeagueController;
 use App\Modules\League\Controllers\LeaguePokemonController;
+use App\Modules\Matches\Controllers\MatchConfigController;
+use App\Modules\Matches\Controllers\PoolController;
+use App\Modules\Matches\Controllers\SetController;
 use App\Modules\Pokedex\Controllers\PokedexController;
 use App\Modules\Teams\Controllers\TeamController;
-use App\Modules\Matches\Controllers\PoolController;
-use App\Modules\Matches\Controllers\MatchConfigController;
-use App\Modules\Matches\Controllers\SetController;
 /* End Define Controllers */
 
 /* Dependencies */
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Broadcast;
+use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
 /* End Dependencies */
@@ -24,7 +24,6 @@ Route::get('/', function () {
 })->name('home');
 
 Route::get('dashboard', [LeagueController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
-
 
 // Pokemon Routes
 Route::get('pokedex', [PokedexController::class, 'index'])->middleware(['auth', 'verified'])->name('pokedex.index');

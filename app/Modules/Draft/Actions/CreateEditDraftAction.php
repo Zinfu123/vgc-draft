@@ -3,11 +3,11 @@
 namespace App\Modules\Draft\Actions;
 
 use App\Modules\Draft\Models\Draft;
+use App\Modules\Draft\Models\DraftOrder;
 use App\Modules\Draft\Models\DraftPick;
+use App\Modules\League\Models\League;
 use App\Modules\League\Models\LeaguePokemon;
 use App\Modules\Teams\Models\Team;
-use App\Modules\Draft\Models\DraftOrder;
-use App\Modules\League\Models\League;
 use Illuminate\Support\Facades\Log;
 
 class CreateEditDraftAction
@@ -41,9 +41,7 @@ class CreateEditDraftAction
             $draft = Draft::where('league_id', $data['league_id'])->first();
             $draft->status = 0;
             $draft->save();
-        }
-
-        elseif ($data['command'] == 'revert_last_pick') {
+        } elseif ($data['command'] == 'revert_last_pick') {
             /* Revert the last picked pokemon */
             $lastPickedPokemonID = DraftPick::where('league_id', $data['league_id'])->orderBy('round_number', 'desc')->orderBy('pick_number', 'desc')->first()->league_pokemon_id;
             $lastPick = DraftPick::where('league_id', $data['league_id'])->orderBy('round_number', 'desc')->orderBy('pick_number', 'desc')->first();
@@ -64,41 +62,41 @@ class CreateEditDraftAction
             $draftOrder->save();
             /* Revert the draft pick number */
             if ($lastPick->pick_number > 1 && $lastPick->round_number > 1) {
-            $draft = Draft::where('league_id', $data['league_id'])->first();
-            $draft->pick_number = $draftOrder->pick_number;
-            $draft->round_number = $draftOrder->round_number;
-            $draft->save();
+                $draft = Draft::where('league_id', $data['league_id'])->first();
+                $draft->pick_number = $draftOrder->pick_number;
+                $draft->round_number = $draftOrder->round_number;
+                $draft->save();
+            }
+        }
+        // Abort Draft
+        elseif ($data['command'] == 'abort_draft') {
+            $draft = Draft::where('league_id', $data['league_id'])->get();
+            foreach ($draft as $draft) {
+                $draft->delete();
+            }
+
+            $draftPicks = DraftPick::where('league_id', $data['league_id'])->get();
+            foreach ($draftPicks as $draftPick) {
+                $draftPick->delete();
+            }
+            $leaguePokemon = LeaguePokemon::where('is_drafted', 1)->where('league_id', $data['league_id'])->get();  // get all the pokemon that were drafted
+            foreach ($leaguePokemon as $pokemon) {
+                $pokemon->is_drafted = 0;
+                $pokemon->drafted_by = null;
+                $pokemon->save();
+            }
+            $draftOrder = DraftOrder::where('league_id', $data['league_id'])->get();
+            foreach ($draftOrder as $order) {
+                $order->delete();
+            }
+
+            $draftPoints = League::where('id', $data['league_id'])->first();
+            $draftPoints = $draftPoints->draft_points;
+            $teams = Team::where('league_id', $data['league_id'])->get();
+            foreach ($teams as $team) {
+                $team->draft_points = $draftPoints;
+                $team->save();
+            }
         }
     }
-    // Abort Draft
-    elseif ($data['command'] == 'abort_draft') {
-        $draft = Draft::where('league_id', $data['league_id'])->get();
-        foreach ($draft as $draft) {
-            $draft->delete();
-        }
-
-        $draftPicks = DraftPick::where('league_id', $data['league_id'])->get();
-        foreach ($draftPicks as $draftPick) {
-            $draftPick->delete();
-        }
-        $leaguePokemon = LeaguePokemon::where('is_drafted', 1)->where('league_id', $data['league_id'])->get();  //get all the pokemon that were drafted
-        foreach ($leaguePokemon as $pokemon) {
-            $pokemon->is_drafted = 0;
-            $pokemon->drafted_by = null;
-            $pokemon->save();
-        }
-        $draftOrder = DraftOrder::where('league_id', $data['league_id'])->get();
-        foreach ($draftOrder as $order) {
-            $order->delete();
-        }
-
-        $draftPoints = League::where('id', $data['league_id'])->first();
-        $draftPoints = $draftPoints->draft_points;
-        $teams = Team::where('league_id', $data['league_id'])->get();
-        foreach ($teams as $team) {
-            $team->draft_points = $draftPoints;
-            $team->save();
-        }
-    }
-}
 }

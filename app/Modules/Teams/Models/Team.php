@@ -2,7 +2,6 @@
 
 namespace App\Modules\Teams\Models;
 
-use App\Modules\Draft\Actions\DraftPokemonAction;
 use Illuminate\Database\Eloquent\Model;
 
 class Team extends Model
@@ -48,5 +47,4 @@ class Team extends Model
     {
         return $this->hasMany(\App\Modules\League\Models\LeaguePokemon::class, 'drafted_by', 'id')->orderBy('cost', 'desc');
     }
-
 }

@@ -9,6 +9,7 @@ use App\Modules\Teams\Models\Team;
 
 /* Define Dependencies */
 use Illuminate\Support\Facades\Log;
+
 /* End Define Dependencies */
 
 class TeamsToPoolsAction
@@ -20,10 +21,11 @@ class TeamsToPoolsAction
         $teams = Team::where('league_id', $data['league_id'])->select('id', 'name', 'seed')->get();
         $numberOfPools = $pools->count();
         foreach ($teams as $team) {
-            Log::info('Pool ID: ' . $pools[$team->seed % $numberOfPools]);
+            Log::info('Pool ID: '.$pools[$team->seed % $numberOfPools]);
             $team->pool_id = $pools[$team->seed % $numberOfPools];
             $team->save();
         }
+
         return $teams;
     }
 }

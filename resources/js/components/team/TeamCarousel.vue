@@ -14,7 +14,7 @@ interface Teams {
 }
 
 interface props {
-    teams: Teams;
+    teams: Teams[];
 }
 
 const props = defineProps<props>();

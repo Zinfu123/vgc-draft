@@ -15,10 +15,8 @@ class SetUpdatedEvent implements ShouldBroadcast
     /**
      * Create a new event instance.
      */
-    public function __construct(public array $data)
-    {
-    
-    }
+    public function __construct(public array $data) {}
+
     public function broadcastWith(): array
     {
         return [

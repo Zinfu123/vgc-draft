@@ -57,12 +57,8 @@ const props = defineProps<props>();
                         role="list"
                         class="divide-y divide-gray-100 bg-white shadow-xs outline-1 outline-gray-900/5 sm:rounded-xl dark:divide-white/5 dark:bg-gray-800/50 dark:shadow-none dark:outline-white/10 dark:sm:-outline-offset-1"
                     >
-                        <li
-                            v-for="item in props.set[Number(key)]"
-                            :key="item.id"
-                            class="px-3 py-5 hover:bg-gray-50 sm:px-6 dark:hover:bg-white/2.5"
-                        >
-                            <Link :href="`/match/set/${item.id}`" class="flex gap-x-4 w-full">
+                        <li v-for="item in props.set[Number(key)]" :key="item.id" class="px-3 py-5 hover:bg-gray-50 sm:px-6 dark:hover:bg-white/2.5">
+                            <Link :href="`/match/set/${item.id}`" class="flex w-full gap-x-4">
                                 <img
                                     v-if="item.team1.logo"
                                     class="size-12 flex-none rounded-full bg-gray-50 dark:bg-gray-800 dark:outline dark:-outline-offset-1 dark:outline-white/10"

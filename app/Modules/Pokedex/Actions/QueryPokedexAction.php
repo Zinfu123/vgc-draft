@@ -3,8 +3,8 @@
 namespace App\Modules\Pokedex\Actions;
 
 /* Define Models */
-use App\Modules\Pokedex\Models\Pokedex; 
-use Illuminate\Support\Facades\Log;
+use App\Modules\Pokedex\Models\Pokedex;
+
 /* End Define Models */
 
 /* Define Dependencies */

@@ -64,6 +64,7 @@ interface Draft {
 interface DraftOrder {
     id: number;
     pick_number: number;
+    round_number: number;
     status: number;
     team: {
         id: number;
@@ -285,7 +286,12 @@ const submitPokemonPick = () => {
                         </div>
                         <!-- Pokemon Card -->
                         <div v-if="props?.lastPick?.league_pokemon?.pokemon" class="flex flex-shrink-0 scale-75 items-center justify-center">
-                            <PokemonCard :pokemon="props?.lastPick?.league_pokemon?.pokemon" />
+                            <PokemonCard
+                                :pokemon="{
+                                    ...props.lastPick.league_pokemon.pokemon,
+                                    cost: props.lastPick.league_pokemon.cost,
+                                }"
+                            />
                         </div>
                     </div>
                 </div>
@@ -324,7 +330,7 @@ const submitPokemonPick = () => {
                                     <h3 class="mt-3 text-sm font-medium text-gray-900 sm:mt-4 dark:text-white">
                                         {{ draftOrderItem.team?.name ?? 'N/A' }}
                                     </h3>
-                                    <p class="mt-1 text-xs text-gray-500 sm:text-sm dark:text-gray-400">Round: {{ draftOrderItem.coach }}</p>
+                                    <p class="mt-1 text-xs text-gray-500 sm:text-sm dark:text-gray-400">Round: {{ draftOrderItem.round_number }}</p>
                                     <p class="mt-1 text-xs text-gray-500 sm:text-sm dark:text-gray-400">
                                         Draft Points: {{ draftOrderItem.team?.draft_points ?? 'N/A' }}
                                     </p>

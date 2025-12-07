@@ -2,13 +2,11 @@
 
 namespace App\Modules\Matches\Models;
 
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Log;
 use App\Modules\Teams\Models\Team;
+use Illuminate\Database\Eloquent\Model;
 
 class Set extends Model
 {
-
     protected $table = 'sets';
 
     protected $fillable = [
@@ -34,5 +32,4 @@ class Set extends Model
     {
         return $this->belongsTo(Team::class, 'team2_id', 'id')->select('id', 'name', 'logo', 'user_id')->with('user:id,name');
     }
-
 }

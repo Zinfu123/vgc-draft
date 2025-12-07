@@ -3,15 +3,14 @@
 namespace App\Modules\Matches\Actions;
 
 /* Define Models */
-use App\Modules\Matches\Models\Set;
-use App\Modules\Matches\Models\Pool;
-use App\Modules\Teams\Models\Team;
 use App\Events\SetUpdatedEvent;
+use App\Modules\Matches\Models\Pool;
+use App\Modules\Matches\Models\Set;
+use App\Modules\Teams\Models\Team;
+
 /* End Define Models */
 
 /* Define Dependencies */
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Arr;
 /* End Define Dependencies */
 
 class CreateEditSetsAction
@@ -42,35 +41,35 @@ class CreateEditSetsAction
                     }
                 }
             }
-        }
-        elseif ($data['command'] == 'update') {
+        } elseif ($data['command'] == 'update') {
             $setid = $data['set_id'];
             $set = Set::where('id', $setid)->first();
-            if (!$set) {
+            if (! $set) {
                 return;
             }
             if ($set->status == 0) {
                 return;
             } else {
-            $winner = $this->CalculateWinner($data);
-            $team1points = $this->calculatePoints($data['team1_score'], $data['team2_score']);
-            $team2points = $this->calculatePoints($data['team2_score'], $data['team1_score']);
-            $set->team1_score = $data['team1_score'];
-            $set->team2_score = $data['team2_score'];
-            $set->team1_pokepaste = $data['team1_pokepaste'] || null;
-            $set->team2_pokepaste = $data['team2_pokepaste'] || null;
-            $set->winner_id = $winner;
-            $set->status = 0;
-            $set->save();
+                $winner = $this->CalculateWinner($data);
+                $team1points = $this->calculatePoints($data['team1_score'], $data['team2_score']);
+                $team2points = $this->calculatePoints($data['team2_score'], $data['team1_score']);
+                $set->team1_score = $data['team1_score'];
+                $set->team2_score = $data['team2_score'];
+                $set->team1_pokepaste = $data['team1_pokepaste'] || null;
+                $set->team2_pokepaste = $data['team2_pokepaste'] || null;
+                $set->winner_id = $winner;
+                $set->status = 0;
+                $set->save();
 
-            $team1 = Team::where('id', $set->team1_id)->first();
-            $team1->victory_points += $team1points;
-            $team1->save();
-            $team2 = Team::where('id', $set->team2_id)->first();
-            $team2->victory_points += $team2points;
-            $team2->save();
-            SetUpdatedEvent::dispatch(['set_id' => $set->id, 'status' => $set->status]);
-            return true;
+                $team1 = Team::where('id', $set->team1_id)->first();
+                $team1->victory_points += $team1points;
+                $team1->save();
+                $team2 = Team::where('id', $set->team2_id)->first();
+                $team2->victory_points += $team2points;
+                $team2->save();
+                SetUpdatedEvent::dispatch(['set_id' => $set->id, 'status' => $set->status]);
+
+                return true;
             }
         }
     }
@@ -86,18 +85,16 @@ class CreateEditSetsAction
 
     protected function calculatePoints($playerscore, $opponentscore)
     {
-            if ($playerscore == 2 && $opponentscore == 0) {
-                return 3;
-            } else if ($playerscore == 2 && $opponentscore == 1) {
-                return 2;
-            } else if ($playerscore == 1 && $opponentscore == 2) {
-                return 1;
-            } else {
-                return 0;
-            }
+        if ($playerscore == 2 && $opponentscore == 0) {
+            return 3;
+        } elseif ($playerscore == 2 && $opponentscore == 1) {
+            return 2;
+        } elseif ($playerscore == 1 && $opponentscore == 2) {
+            return 1;
+        } else {
+            return 0;
+        }
     }
-
-
 
     protected function scheduleSets($teams)
     {
@@ -106,18 +103,19 @@ class CreateEditSetsAction
         $rounds = $teamsCount - 1;
         $matchesPerRound = floor($teamsCount / 2);
         for ($round = 1; $round <= $rounds; $round += 1) {
-        $schedule[$round] = collect();
-        $teams->each(function ($team, $index) use ($matchesPerRound, $round, $teams, $schedule) {
-            if ($index >= $matchesPerRound) {
-                return;
-            }
-            $team1 = $team;
-            $team2 = $teams[$index + $matchesPerRound];
-            $matchup = $round % 2 === 0 ? collect(['round' => $round, 'team1' => $team1, 'team2' => $team2]) : collect(['round' => $round, 'team1' => $team2, 'team2' => $team1]);
-            $schedule[$round]->push($matchup);
-        });
-        $teams = $this->rotate($teams);
+            $schedule[$round] = collect();
+            $teams->each(function ($team, $index) use ($matchesPerRound, $round, $teams, $schedule) {
+                if ($index >= $matchesPerRound) {
+                    return;
+                }
+                $team1 = $team;
+                $team2 = $teams[$index + $matchesPerRound];
+                $matchup = $round % 2 === 0 ? collect(['round' => $round, 'team1' => $team1, 'team2' => $team2]) : collect(['round' => $round, 'team1' => $team2, 'team2' => $team1]);
+                $schedule[$round]->push($matchup);
+            });
+            $teams = $this->rotate($teams);
         }
+
         return $schedule;
     }
 
@@ -125,9 +123,10 @@ class CreateEditSetsAction
     {
         $schedule = collect($schedule)->transform(function ($rounds, $key) {
             return $rounds->filter(function ($round) {
-                return !is_null($round->get('team1')) && !is_null($round->get('team2'));
+                return ! is_null($round->get('team1')) && ! is_null($round->get('team2'));
             })->values();
         })->values();
+
         return $schedule;
     }
 
@@ -135,7 +134,7 @@ class CreateEditSetsAction
     {
         $teamsCount = $teams->count();
         $lastIndex = $teamsCount - 1;
-        $factor = (int) ($teamsCount % 2 === 0 ? $teamsCount/2 : ceil($teamsCount/2));
+        $factor = (int) ($teamsCount % 2 === 0 ? $teamsCount / 2 : ceil($teamsCount / 2));
         $topRightIndex = $factor - 1;
         $topRightItem = $teams[$topRightIndex];
         $bottomLeftIndex = $factor;
@@ -148,6 +147,7 @@ class CreateEditSetsAction
         }
         $teams[1] = $bottomLeftItem;
         $teams[$lastIndex] = $topRightItem;
+
         return $teams;
     }
 }

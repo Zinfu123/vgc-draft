@@ -2,11 +2,10 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
+use App\Modules\Pokedex\Models\Pokedex;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use App\Modules\Pokedex\Models\Pokedex;
 
 class PokedexSeeder extends Seeder
 {
@@ -15,14 +14,14 @@ class PokedexSeeder extends Seeder
      */
     public function run()
     {
-        
+
         // Clear the table
         DB::table('pokedex')->delete();
-        
+
         $csvFile = fopen(Storage::disk('s3')->url('pokedex.csv'), 'r');
         $firstline = true;
         while (($data = fgetcsv($csvFile, 2000, ',')) !== false) {
-            if (!$firstline) {
+            if (! $firstline) {
                 Pokedex::create([
                     'id' => $data[0],
                     'nationaldex_id' => $data[1],

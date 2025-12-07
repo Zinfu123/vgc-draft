@@ -23,7 +23,7 @@ class ProcessSet implements ShouldQueue
      */
     public function handle(): void
     {
-        $createEditSetsAction = new CreateEditSetsAction();
+        $createEditSetsAction = new CreateEditSetsAction;
         $createEditSetsAction($this->data);
     }
 }

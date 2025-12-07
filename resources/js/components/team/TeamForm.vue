@@ -10,7 +10,7 @@ interface UserTeam {
     id: number;
     name: string;
     coach: string;
-    logo: string;
+    logo: string | null;
 }
 
 interface props {

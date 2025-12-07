@@ -9,13 +9,12 @@ enum LeagueType: int
     case POOL = 2;
     case BRACKET = 3;
 
-
-public function label(): string
-{
-    return match ($this) {
-        self::ROUND_ROBIN => 'Round Robin',
-        self::POOL => 'Pool',
-        self::BRACKET => 'Bracket',
-    };
-}
+    public function label(): string
+    {
+        return match ($this) {
+            self::ROUND_ROBIN => 'Round Robin',
+            self::POOL => 'Pool',
+            self::BRACKET => 'Bracket',
+        };
+    }
 }

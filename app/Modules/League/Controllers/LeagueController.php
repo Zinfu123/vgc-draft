@@ -5,19 +5,16 @@ namespace App\Modules\League\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\League\Actions\CreateEditLeagueAction;
 use App\Modules\League\Actions\ReadLeagueDraftAction;
-use App\Modules\League\Models\League;
 use App\Modules\League\Actions\ReadLeaguePokemonAction;
-use App\Modules\Teams\Actions\ReadTeamAction;
+use App\Modules\League\Models\League;
 use App\Modules\Matches\Actions\ShowSetsAction;
-use App\Modules\Matches\Resources\SetsResource;
+use App\Modules\Matches\Models\MatchConfig;
+use App\Modules\Teams\Actions\ReadTeamAction;
+use App\Modules\Teams\Models\Team;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
-use App\Modules\Teams\Models\Team;
-use Illuminate\Support\Facades\Auth;
-use App\Modules\Matches\Models\MatchConfig;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Pagination\Paginator;
 
 class LeagueController extends Controller
 {
@@ -60,12 +57,12 @@ class LeagueController extends Controller
                 'status' => 0,
             ];
         }
-        
+
         // Convert logo to full URL if it exists
         if ($league->logo !== null) {
             $league->logo = str_replace('\\', '/', Storage::disk('s3-league-logos')->url($league->logo));
         }
-        
+
         return Inertia::render('league/LeagueDetail', [
             'league' => fn () => $league,
             'teams' => fn () => $teams,

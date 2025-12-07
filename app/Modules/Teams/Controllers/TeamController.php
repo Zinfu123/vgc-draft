@@ -3,13 +3,12 @@
 namespace App\Modules\Teams\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Teams\Actions\CreateEditTeamAction;
-use App\Modules\Teams\Models\Team;
 use App\Modules\League\Models\League;
+use App\Modules\Teams\Actions\CreateEditTeamAction;
 use App\Modules\Teams\Actions\ReadTeamAction;
+use App\Modules\Teams\Models\Team;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Illuminate\Support\Facades\Log;
 
 class TeamController extends Controller
 {
@@ -35,6 +34,7 @@ class TeamController extends Controller
     {
         $team = $readTeamAction(['team_id' => $request->team_id, 'command' => 'team']);
         $league = League::find($team->league_id);
+
         return Inertia::render('teams/TeamDetail', [
             'league' => $league,
             'team' => $team,
@@ -44,6 +44,7 @@ class TeamController extends Controller
     public function edit(Request $request)
     {
         $team = (new CreateEditTeamAction)->edit($request);
+
         return redirect()->route('teams.detail', ['team_id' => $team->id]);
     }
 }

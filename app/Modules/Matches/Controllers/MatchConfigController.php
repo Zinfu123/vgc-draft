@@ -3,11 +3,9 @@
 namespace App\Modules\Matches\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\Matches\Models\MatchConfig;
-use Illuminate\Http\Request;
 use App\Modules\Matches\Actions\CreateEditMatchConfigAction;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Illuminate\Support\Facades\Log;
 
 class MatchConfigController extends Controller
 {
@@ -18,12 +16,10 @@ class MatchConfigController extends Controller
             return inertia('MatchConfigDetail', [
                 'matchConfig' => $matchConfig,
             ]);
-        }
-        else {
+        } else {
             return inertia::render('league/LeagueDetail', [
                 'league' => $request->league_id,
             ]);
         }
     }
-
 }

@@ -2,11 +2,10 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Database\Seeder;
-use App\Modules\Teams\Models\Team;
 use App\Models\User;
 use App\Modules\League\Models\League;
+use App\Modules\Teams\Models\Team;
+use Illuminate\Database\Seeder;
 
 class LeagueTeamsSeeder extends Seeder
 {
@@ -17,7 +16,7 @@ class LeagueTeamsSeeder extends Seeder
     {
         // Get or create a user for the teams
         $user = User::first();
-        if (!$user) {
+        if (! $user) {
             $user = User::create([
                 'name' => 'Test User',
                 'email' => 'test@example.com',
@@ -27,8 +26,9 @@ class LeagueTeamsSeeder extends Seeder
 
         // Verify league exists
         $league = League::find(1);
-        if (!$league) {
+        if (! $league) {
             $this->command->error('League with id 1 does not exist. Please create it first.');
+
             return;
         }
 
@@ -38,7 +38,7 @@ class LeagueTeamsSeeder extends Seeder
         // Create 20 teams
         for ($i = 1; $i <= 20; $i++) {
             Team::create([
-                'name' => 'Team ' . $i,
+                'name' => 'Team '.$i,
                 'league_id' => 1,
                 'user_id' => $user->id,
                 'pick_position' => $i,
@@ -57,5 +57,3 @@ class LeagueTeamsSeeder extends Seeder
         $this->command->info('Created 20 teams for League id 1');
     }
 }
-
-

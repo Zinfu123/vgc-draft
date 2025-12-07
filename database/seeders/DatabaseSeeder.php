@@ -16,4 +16,4 @@ class DatabaseSeeder extends Seeder
             PokedexSeeder::class,
         ]);
     }
-} 
+}

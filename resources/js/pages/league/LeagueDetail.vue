@@ -20,6 +20,7 @@ interface League {
 
 interface Teams {
     id: number;
+    league_id: number;
     name: string;
     coach: string;
     logo: string | null;
@@ -183,7 +184,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                 :user_id="usePage().props.auth.user.id"
                 :command="'create'"
                 :user_team="null"
-                v-if="coachexists === false"
+                v-if="coachexists === false && (!props.draft || props.draft?.status === 1)"
             />
             <TeamForm
                 :league_id="props.league.id"
