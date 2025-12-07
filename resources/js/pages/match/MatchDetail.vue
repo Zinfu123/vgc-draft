@@ -131,8 +131,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 const disableForm = computed(() => {
     if (echoEvent.value.status == 0 || props.set.status === 0) {
         return 1;
-    } else if (props.set.team1.user.id != props.currentUserTeam.id || props.set.team2.user.id != props.currentUserTeam.id) {
-        return 1;
+    } else if (props.set.team1.user.id != props.currentUserTeam.id && props.set.team2.user.id != props.currentUserTeam.id) {
+        return ;
     } else {
         return 0;
     }
