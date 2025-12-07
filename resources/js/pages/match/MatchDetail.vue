@@ -148,7 +148,7 @@ const disableForm = computed(() => {
             <div class="mx-auto flex max-w-7xl flex-col border-1 border-red-600 sm:px-6 lg:px-8">
                 <div>
                     <!-- Team 1 -->
-                    <img v-if="props.set.team1.logo" :src="props.set.team1.logo" alt="Team Logo" class="mx-auto h-50 w-50 rounded" />
+                    <img v-if="props.set.team1.logo" :src="props.set.team1.logo" alt="Team Logo" class="mx-auto h-30 w-30 rounded-full"  />
                     <Link :href="`/teams/${props.set.team1.id}`">
                         <p class="text-center text-2xl font-bold hover:text-blue-500">
                             {{ props.set.team1.name }}
@@ -216,6 +216,7 @@ const disableForm = computed(() => {
                                     >
                                     <div class="mt-2">
                                         <input
+                                            v-if="disableForm != 1"
                                             type="string"
                                             name="team1_pokepaste"
                                             id="team1_pokepaste"
@@ -231,6 +232,7 @@ const disableForm = computed(() => {
                                     >
                                     <div class="mt-2">
                                         <input
+                                            v-if="disableForm != 1"
                                             type="string"
                                             name="team2_pokepaste"
                                             id="team2_pokepaste"
@@ -238,6 +240,9 @@ const disableForm = computed(() => {
                                             v-model="form.team2_pokepaste"
                                             :disabled="disableForm == 1"
                                         />
+                                        <Link :href="`/teams/form/${props.set.team2.id}`" v-if="disableForm == 1 && form.team2_pokepaste != null && form.team2_pokepaste != 0">
+                                        <p v-if="disableForm == 1 && form.team2_pokepaste != null" class="text-center text-sm text-gray-500">{{ form.team2_pokepaste }}</p>
+                                        </Link>
                                     </div>
                                 </div>
                                 <button
