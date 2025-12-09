@@ -69,7 +69,7 @@ interface MatchConfig {
 }
 
 interface PlayedSets {
-    [key: number]: {
+    [key: number]: Array<{
         id: number;
         league_id: number;
         pool_id: number;
@@ -90,11 +90,11 @@ interface PlayedSets {
                 name: string;
             };
         };
-    };
+    }>;
 }
 
 interface UpcomingSets {
-    [key: number]: {
+    [key: number]: Array<{
         id: number;
         league_id: number;
         pool_id: number;
@@ -115,7 +115,7 @@ interface UpcomingSets {
                 name: string;
             };
         };
-    };
+    }>;
 }
 
 interface TeamNext {
@@ -163,7 +163,7 @@ interface props {
     matchConfig: MatchConfig;
     played_sets: PlayedSets;
     upcoming_sets: UpcomingSets;
-    team_next: TeamNext;
+    team_next: TeamNext | null;
     pokemon_drafted: PokemonDrafted[];
     standings: Standings[];
 }
@@ -171,8 +171,8 @@ interface props {
 const props = defineProps<props>();
 
 const user = usePage().props.auth.user;
-const coachexists = props.teams.some((team) => team.coach === user.name);
-const userTeam = props.teams.find((team) => team.coach === user.name) || null;
+const coachexists = props.teams.some((team) => team.coach === user?.name);
+const userTeam = props.teams.find((team) => team.coach === user?.name) || null;
 
 const draftDetail = () => {
     router.get(route('draft.detail', { league_id: props.league.id }));

@@ -27,7 +27,7 @@ interface TeamNext {
 }
 
 interface PlayedSets {
-    [key: number]: {
+    [key: number]: Array<{
         id: number;
         league_id: number;
         pool_id: number;
@@ -48,11 +48,11 @@ interface PlayedSets {
                 name: string;
             };
         };
-    };
+    }>;
 }
 
 interface UpcomingSets {
-    [key: number]: {
+    [key: number]: Array<{
         id: number;
         league_id: number;
         pool_id: number;
@@ -73,11 +73,11 @@ interface UpcomingSets {
                 name: string;
             };
         };
-    };
+    }>;
 }
 
 interface props {
-    team_next: TeamNext;
+    team_next: TeamNext | null;
     played_sets: PlayedSets;
     upcoming_sets: UpcomingSets;
 }
@@ -95,20 +95,29 @@ const props = defineProps<props>();
                 >
                     <!-- Left column area -->
                     <h1 class="text-center text-2xl font-bold">Your Next Set</h1>
-                    <div
-                        v-if="props.team_next"
-                        class="overflow-hidden rounded-md bg-white shadow-sm dark:bg-gray-800/50 dark:shadow-none dark:outline dark:-outline-offset-0 dark:outline-white/10"
-                    >
-                        <ul
-                            v-if="props.team_next"
-                            role="list"
-                            class="divide-y divide-gray-100 overflow-hidden bg-white shadow-xs outline-1 outline-gray-900/5 sm:rounded-xl dark:divide-white/5 dark:bg-gray-800/50 dark:shadow-none dark:outline-white/10 dark:sm:-outline-offset-1"
+                    <template v-if="props.team_next">
+                        <div
+                            class="overflow-hidden rounded-md bg-white shadow-sm dark:bg-gray-800/50 dark:shadow-none dark:outline dark:-outline-offset-0 dark:outline-white/10"
                         >
-                            <li class="relative flex justify-between gap-x-6 px-4 py-5 hover:bg-gray-50 sm:px-6 dark:hover:bg-white/2.5">
-                                <MatchCard :sets="props.team_next" :team1="props.team_next.team1" :team2="props.team_next.team2" />
-                            </li>
-                        </ul>
-                    </div>
+                            <ul
+                                role="list"
+                                class="divide-y divide-gray-100 overflow-hidden bg-white shadow-xs outline-1 outline-gray-900/5 sm:rounded-xl dark:divide-white/5 dark:bg-gray-800/50 dark:shadow-none dark:outline-white/10 dark:sm:-outline-offset-1"
+                            >
+                                <li class="relative flex justify-between gap-x-6 px-4 py-5 hover:bg-gray-50 sm:px-6 dark:hover:bg-white/2.5">
+                                    <MatchCard :sets="props.team_next" :team1="props.team_next.team1" :team2="props.team_next.team2" />
+                                </li>
+                            </ul>
+                        </div>
+                    </template>
+                    <template v-else>
+                        <div
+                            class="overflow-hidden rounded-md bg-white shadow-sm dark:bg-gray-800/50 dark:shadow-none dark:outline dark:-outline-offset-0 dark:outline-white/10"
+                        >
+                            <div class="px-4 py-5 text-center text-sm text-gray-500 dark:text-gray-400">
+                                No upcoming set scheduled
+                            </div>
+                        </div>
+                    </template>
                 </div>
                 <div
                     class="flex shrink-0 flex-col border-t border-gray-200 px-4 py-6 sm:px-6 lg:w-96 lg:border-t-0 lg:border-l lg:pr-8 xl:pr-6 dark:border-white/10"

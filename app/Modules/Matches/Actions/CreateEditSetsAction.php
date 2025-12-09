@@ -55,8 +55,8 @@ class CreateEditSetsAction
                 $team2points = $this->calculatePoints($data['team2_score'], $data['team1_score']);
                 $set->team1_score = $data['team1_score'];
                 $set->team2_score = $data['team2_score'];
-                $set->team1_pokepaste = $data['team1_pokepaste'] || null;
-                $set->team2_pokepaste = $data['team2_pokepaste'] || null;
+                $set->team1_pokepaste = !empty($data['team1_pokepaste']) ? $data['team1_pokepaste'] : null;
+                $set->team2_pokepaste = !empty($data['team2_pokepaste']) ? $data['team2_pokepaste'] : null;
                 $set->winner_id = $winner;
                 $set->status = 0;
                 $set->save();
@@ -71,6 +71,13 @@ class CreateEditSetsAction
 
                 return true;
             }
+        }
+        elseif ($data['command'] == 'updatePokepaste') {
+            $set = Set::where('id', $data['set_id'])->first();
+            $set->team1_pokepaste = !empty($data['team1_pokepaste']) ? $data['team1_pokepaste'] : null;
+            $set->team2_pokepaste = !empty($data['team2_pokepaste']) ? $data['team2_pokepaste'] : null;
+            $set->save();
+            return true;
         }
     }
 
@@ -150,4 +157,5 @@ class CreateEditSetsAction
 
         return $teams;
     }
+
 }

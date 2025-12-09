@@ -132,6 +132,14 @@ const isUserInSet = computed((): boolean => {
     );
 });
 
+const isSetCompleted = computed((): boolean => {
+    return echoEvent.value.status === 0 || props.set.status === 0;
+});
+
+const canUpdatePokepaste = computed((): boolean => {
+    return isSetCompleted.value && isUserInSet.value;
+});
+
 const disableForm = computed((): boolean => {
     if (echoEvent.value.status === 0 || props.set.status === 0) {
         return true;
@@ -159,6 +167,15 @@ const winnerLogo = computed((): string | null => {
     }
     return props.set.winner_logo || null;
 });
+
+const handleSubmit = () => {
+    if (isSetCompleted.value && isUserInSet.value) {
+        form.command = 'updatePokepaste';
+    } else {
+        form.command = 'update';
+    }
+    form.put('/match');
+};
 </script>
 <template>
     <AppLayout :breadcrumbs="breadcrumbs">
@@ -191,7 +208,7 @@ const winnerLogo = computed((): string | null => {
             </div>
             <!-- Center Column-->
             <div class="mx-auto flex max-w-7xl flex-col sm:px-6 lg:px-8">
-                <form class="top-0" @submit.prevent="form.put('/match')">
+                <form class="top-0" @submit.prevent="handleSubmit">
                     <div class="space-y-12">
                         <div class="border-b border-gray-900/10 pb-12 dark:border-white/10">
                             <h2 class="mb-6 text-center text-base/7 font-semibold text-gray-900 dark:text-white">Set Result</h2>
@@ -238,14 +255,22 @@ const winnerLogo = computed((): string | null => {
                                     >
                                     <div class="mt-2">
                                         <input
-                                            v-if="!disableForm"
-                                            type="string"
+                                            v-if="!disableForm || canUpdatePokepaste"
+                                            type="text"
                                             name="team1_pokepaste"
                                             id="team1_pokepaste"
                                             class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 dark:bg-gray-900 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-indigo-500"
                                             v-model="form.team1_pokepaste"
-                                            :disabled="disableForm"
+                                            :disabled="!canUpdatePokepaste && disableForm"
                                         />
+                                        <Link
+                                            v-if="disableForm && !canUpdatePokepaste && form.team1_pokepaste != null && form.team1_pokepaste !== ''"
+                                            :href="`/teams/form/${props.set.team1.id}`"
+                                        >
+                                            <p class="text-center text-sm text-gray-500">
+                                                {{ form.team1_pokepaste }}
+                                            </p>
+                                        </Link>
                                     </div>
                                 </div>
                                 <div class="sm:col-span-3">
@@ -254,19 +279,19 @@ const winnerLogo = computed((): string | null => {
                                     >
                                     <div class="mt-2">
                                         <input
-                                            v-if="!disableForm"
-                                            type="string"
+                                            v-if="!disableForm || canUpdatePokepaste"
+                                            type="text"
                                             name="team2_pokepaste"
                                             id="team2_pokepaste"
                                             class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 dark:bg-gray-900 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-indigo-500"
                                             v-model="form.team2_pokepaste"
-                                            :disabled="disableForm"
+                                            :disabled="!canUpdatePokepaste && disableForm"
                                         />
                                         <Link
+                                            v-if="disableForm && !canUpdatePokepaste && form.team2_pokepaste != null && form.team2_pokepaste !== ''"
                                             :href="`/teams/form/${props.set.team2.id}`"
-                                            v-if="disableForm && form.team2_pokepaste != null && form.team2_pokepaste !== ''"
                                         >
-                                            <p v-if="disableForm && form.team2_pokepaste != null" class="text-center text-sm text-gray-500">
+                                            <p class="text-center text-sm text-gray-500">
                                                 {{ form.team2_pokepaste }}
                                             </p>
                                         </Link>
@@ -277,7 +302,7 @@ const winnerLogo = computed((): string | null => {
                                         type="submit"
                                         :class="[
                                             'rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline-offset-2 focus-visible:outline-indigo-600',
-                                            !(isUserInSet && (form.team1_score == 2 || form.team2_score == 2)) && 'invisible pointer-events-none'
+                                            (!canUpdatePokepaste && (props.set.status == 0 || !(isUserInSet && (form.team1_score == 2 || form.team2_score == 2 )))) && 'invisible pointer-events-none'
                                         ]"
                                     >
                                         Update
