@@ -39,8 +39,6 @@ class SetController extends Controller
         $data = collect($request);
         $set = Set::where('id', $request->set_id)->first();
         $result = $createEditSetsAction($data->toArray());
-
-        // ProcessSet::dispatch($data->toArray());
         return redirect()->route('sets.show', ['set_id' => $request->set_id]);
     }
 }

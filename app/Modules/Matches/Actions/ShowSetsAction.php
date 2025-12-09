@@ -44,27 +44,44 @@ class ShowSetsAction
 
             return $sets;
         } elseif ($data['command'] == 'team') {
-            $sets = Set::where('league_id', $data['league_id'])->where('team1_id', $data['team_id'])->orWhere('team2_id', $data['team_id'])->get();
+            $sets = Set::where('league_id', $data['league_id'])
+                ->where(function ($query) use ($data) {
+                    $query->where('team1_id', $data['team_id'])
+                          ->orWhere('team2_id', $data['team_id']);
+                })
+                ->get();
 
             return $sets;
         } elseif ($data['command'] == 'team_active') {
             $sets = Set::where('league_id', $data['league_id'])
                 ->where('status', 1)
-                ->where('team1_id', $data['team_id'])->orWhere('team2_id', $data['team_id'])
+                ->where(function ($query) use ($data) {
+                    $query->where('team1_id', $data['team_id'])
+                          ->orWhere('team2_id', $data['team_id']);
+                })
                 ->orderBy('round', 'asc')->first();
 
             return $sets;
         } elseif ($data['command'] == 'team_played') {
             $sets = Set::where('league_id', $data['league_id'])
                 ->where('status', 0)
-                ->where('team1_id', $data['team_id'])->orWhere('team2_id', $data['team_id'])
+                ->where(function ($query) use ($data) {
+                    $query->where('team1_id', $data['team_id'])
+                          ->orWhere('team2_id', $data['team_id']);
+                })
                 ->orderBy('round', 'asc')->get();
 
             return $sets;
         } elseif ($data['command'] == 'team_next') {
+            if (empty($data['team_id'])) {
+                return null;
+            }
             $set = Set::where('league_id', $data['league_id'])
                 ->where('status', 1)
-                ->where('team1_id', $data['team_id'])->orWhere('team2_id', $data['team_id'])
+                ->where(function ($query) use ($data) {
+                    $query->where('team1_id', $data['team_id'])
+                          ->orWhere('team2_id', $data['team_id']);
+                })
                 ->with('team1', 'team2')
                 ->orderBy('round', 'asc')
                 ->first();
