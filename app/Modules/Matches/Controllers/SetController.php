@@ -41,4 +41,12 @@ class SetController extends Controller
         $result = $createEditSetsAction($data->toArray());
         return redirect()->route('sets.show', ['set_id' => $request->set_id]);
     }
+
+    public function updatePokepaste(Request $request, CreateEditSetsAction $createEditSetsAction)
+    {
+        $data = collect($request);
+        $set = Set::where('id', $request->set_id)->first();
+        $result = $createEditSetsAction($data->toArray());
+        return redirect()->route('sets.show', ['set_id' => $request->set_id]);
+    }
 }

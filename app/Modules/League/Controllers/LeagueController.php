@@ -11,6 +11,7 @@ use App\Modules\Matches\Actions\ShowSetsAction;
 use App\Modules\Matches\Models\MatchConfig;
 use App\Modules\Teams\Actions\ReadTeamAction;
 use App\Modules\Teams\Models\Team;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
@@ -23,7 +24,9 @@ class LeagueController extends Controller
         $currentLeagues = League::where('status', 1)->get();
         $currentLeaguesUrl = $currentLeagues->map(function ($league) {
             if ($league->logo !== null) {
-                $league->logo = str_replace('\\', '/', Storage::disk('s3-league-logos')->url($league->logo));
+                /** @var FilesystemAdapter $disk */
+                $disk = Storage::disk('s3-league-logos');
+                $league->logo = str_replace('\\', '/', $disk->url($league->logo));
             }
 
             return $league;
@@ -61,7 +64,9 @@ class LeagueController extends Controller
 
         // Convert logo to full URL if it exists
         if ($league->logo !== null) {
-            $league->logo = str_replace('\\', '/', Storage::disk('s3-league-logos')->url($league->logo));
+            /** @var FilesystemAdapter $disk */
+            $disk = Storage::disk('s3-league-logos');
+            $league->logo = str_replace('\\', '/', $disk->url($league->logo));
         }
 
         return Inertia::render('league/LeagueDetail', [
