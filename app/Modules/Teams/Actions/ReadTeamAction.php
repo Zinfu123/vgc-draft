@@ -54,5 +54,23 @@ class ReadTeamAction
 
             return $team;
         }
+        elseif ($data['command'] == 'standings') {
+            $standings = Team::where('league_id', $data['league_id'])
+                ->select('id', 'league_id', 'name', 'logo', 'user_id', 'set_wins', 'set_losses', 'victory_points', 'pool_id')
+                ->with('user')
+                ->orderBy('victory_points', 'desc')
+                ->get();
+            $standings = $standings->map(function ($team) {
+                    if ($team->logo !== null && trim($team->logo) !== '') {
+                        $action = new LogoToUrlAction;
+                        $team->logo = $action->logoToUrl($team->logo);
+                    } else {
+                        $team->logo = null;
+                    }
+                    return $team;
+                });
+            $standings = $standings->groupBy('pool_id');
+            return $standings;
+        }
     }
 }

@@ -11,7 +11,7 @@ interface Standings {
         };
         victory_points: number;
     };
-}
+};
 
 interface props {
     standings: Standings[];
