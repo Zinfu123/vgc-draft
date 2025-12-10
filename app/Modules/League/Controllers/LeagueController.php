@@ -16,7 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
-
+use Illuminate\Support\Facades\Log;
 class LeagueController extends Controller
 {
     public function index()
@@ -49,6 +49,7 @@ class LeagueController extends Controller
         $upcoming_sets = $showSetsAction(['league_id' => $league->id, 'command' => 'upcoming']);
         $team_next = $showSetsAction(['league_id' => $league->id, 'command' => 'team_next', 'team_id' => $user_team?->id]);
         $standings = $readTeamAction(['league_id' => $league->id, 'command' => 'standings']);
+        Log::info($standings);
         if ($match_config === null) {
             $match_config = (object) [
                 'id' => 0,
