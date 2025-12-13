@@ -127,8 +127,11 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const isUserInSet = computed((): boolean => {
+    if (!props.currentUserTeam || !props.currentUserTeam.id) {
+        return false;
+    }
     return (
-        props.set.team1.user.id === props.currentUserTeam.id || props.set.team2.user.id === props.currentUserTeam.id
+        props.set.team1.id === props.currentUserTeam.id || props.set.team2.id === props.currentUserTeam.id
     );
 });
 
