@@ -55,28 +55,44 @@ class CreateEditSetsAction
                 $team2points = $this->calculatePoints($data['team2_score'], $data['team1_score']);
                 $set->team1_score = $data['team1_score'];
                 $set->team2_score = $data['team2_score'];
-                $set->team1_pokepaste = !empty($data['team1_pokepaste']) ? $data['team1_pokepaste'] : null;
-                $set->team2_pokepaste = !empty($data['team2_pokepaste']) ? $data['team2_pokepaste'] : null;
+                $set->team1_pokepaste = ! empty($data['team1_pokepaste']) ? $data['team1_pokepaste'] : null;
+                $set->team2_pokepaste = ! empty($data['team2_pokepaste']) ? $data['team2_pokepaste'] : null;
                 $set->winner_id = $winner;
                 $set->status = 0;
                 $set->save();
 
                 $team1 = Team::where('id', $set->team1_id)->first();
                 $team1->victory_points += $team1points;
-                $team1->save();
                 $team2 = Team::where('id', $set->team2_id)->first();
                 $team2->victory_points += $team2points;
+
+                // Update set wins/losses
+                if ($winner == $set->team1_id) {
+                    $team1->set_wins += 1;
+                    $team2->set_losses += 1;
+                } else {
+                    $team1->set_losses += 1;
+                    $team2->set_wins += 1;
+                }
+
+                // Update game wins/losses
+                $team1->game_wins += $data['team1_score'];
+                $team1->game_losses += $data['team2_score'];
+                $team2->game_wins += $data['team2_score'];
+                $team2->game_losses += $data['team1_score'];
+
+                $team1->save();
                 $team2->save();
                 SetUpdatedEvent::dispatch(['set_id' => $set->id, 'status' => $set->status]);
 
                 return true;
             }
-        }
-        elseif ($data['command'] == 'updatePokepaste') {
+        } elseif ($data['command'] == 'updatePokepaste') {
             $set = Set::where('id', $data['set_id'])->first();
-            $set->team1_pokepaste = !empty($data['team1_pokepaste']) ? $data['team1_pokepaste'] : null;
-            $set->team2_pokepaste = !empty($data['team2_pokepaste']) ? $data['team2_pokepaste'] : null;
+            $set->team1_pokepaste = ! empty($data['team1_pokepaste']) ? $data['team1_pokepaste'] : null;
+            $set->team2_pokepaste = ! empty($data['team2_pokepaste']) ? $data['team2_pokepaste'] : null;
             $set->save();
+
             return true;
         }
     }
@@ -157,5 +173,4 @@ class CreateEditSetsAction
 
         return $teams;
     }
-
 }
