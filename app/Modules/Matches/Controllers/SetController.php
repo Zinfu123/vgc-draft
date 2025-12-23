@@ -5,7 +5,6 @@ namespace App\Modules\Matches\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Matches\Actions\CreateEditSetsAction;
 use App\Modules\Matches\Actions\ShowSetsAction;
-use App\Modules\Matches\Models\Set;
 use App\Modules\Teams\Models\Team;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -36,17 +35,15 @@ class SetController extends Controller
 
     public function update(Request $request, CreateEditSetsAction $createEditSetsAction)
     {
-        $data = collect($request);
-        $set = Set::where('id', $request->set_id)->first();
-        $result = $createEditSetsAction($data->toArray());
+        $result = $createEditSetsAction($request->all());
+
         return redirect()->route('sets.show', ['set_id' => $request->set_id]);
     }
 
     public function updatePokepaste(Request $request, CreateEditSetsAction $createEditSetsAction)
     {
-        $data = collect($request);
-        $set = Set::where('id', $request->set_id)->first();
-        $result = $createEditSetsAction($data->toArray());
+        $result = $createEditSetsAction($request->all());
+
         return redirect()->route('sets.show', ['set_id' => $request->set_id]);
     }
 }
