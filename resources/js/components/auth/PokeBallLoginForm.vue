@@ -2,7 +2,7 @@
 import InputError from '@/components/InputError.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-vue-next';
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
 interface LoginForm {
     email: string;
@@ -15,7 +15,7 @@ interface LoginForm {
     };
 }
 
-defineProps<{
+const props = defineProps<{
     status?: string;
     canResetPassword: boolean;
     form: LoginForm;
@@ -23,6 +23,32 @@ defineProps<{
 }>();
 
 const showPassword = ref(false);
+
+// Computed properties to avoid mutating props directly
+// Inertia forms are designed to be mutated, so we disable the eslint rule
+const email = computed({
+    get: () => props.form.email,
+    set: (value: string) => {
+        // eslint-disable-next-line vue/no-mutating-props
+        props.form.email = value;
+    },
+});
+
+const password = computed({
+    get: () => props.form.password,
+    set: (value: string) => {
+        // eslint-disable-next-line vue/no-mutating-props
+        props.form.password = value;
+    },
+});
+
+const remember = computed({
+    get: () => props.form.remember,
+    set: (value: boolean) => {
+        // eslint-disable-next-line vue/no-mutating-props
+        props.form.remember = value;
+    },
+});
 </script>
 
 <template>
@@ -174,7 +200,7 @@ const showPassword = ref(false);
                                 <input
                                     id="email"
                                     type="email"
-                                    v-model="form.email"
+                                    v-model="email"
                                     required
                                     autofocus
                                     :tabindex="1"
@@ -194,7 +220,7 @@ const showPassword = ref(false);
                                 <input
                                     id="password"
                                     :type="showPassword ? 'text' : 'password'"
-                                    v-model="form.password"
+                                    v-model="password"
                                     required
                                     :tabindex="2"
                                     autocomplete="current-password"
@@ -214,11 +240,11 @@ const showPassword = ref(false);
                             <InputError :message="form.errors.password" />
                         </div>
 
-                        <div class="flex items-center justify-between text-xs pt-1">
+                        <div class="flex items-center justify-between text-xs pt-1 pl-2">
                             <label class="flex items-center cursor-pointer">
                                 <input
                                     type="checkbox"
-                                    v-model="form.remember"
+                                    v-model="remember"
                                     :tabindex="3"
                                     class="w-3.5 h-3.5 text-blue-500 bg-white border-gray-300 rounded focus:ring-2 focus:ring-blue-500 accent-blue-500"
                                 />
