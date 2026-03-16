@@ -219,7 +219,7 @@ const handleSubmit = () => {
                                         <select
                                             name="team1_score"
                                             id="team1_score"
-                                            class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                                            class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
                                             v-model="form.team1_score"
                                             :disabled="disableForm"
                                         >
@@ -237,7 +237,7 @@ const handleSubmit = () => {
                                         <select
                                             name="team2_score"
                                             id="team2_score"
-                                            class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                                            class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
                                             v-model="form.team2_score"
                                             :disabled="disableForm"
                                         >
@@ -257,7 +257,7 @@ const handleSubmit = () => {
                                             type="text"
                                             name="team1_pokepaste"
                                             id="team1_pokepaste"
-                                            class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                                            class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
                                             v-model="form.team1_pokepaste"
                                             :disabled="!canUpdatePokepaste && disableForm"
                                         />
@@ -281,7 +281,7 @@ const handleSubmit = () => {
                                             type="text"
                                             name="team2_pokepaste"
                                             id="team2_pokepaste"
-                                            class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                                            class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
                                             v-model="form.team2_pokepaste"
                                             :disabled="!canUpdatePokepaste && disableForm"
                                         />

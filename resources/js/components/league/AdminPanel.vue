@@ -2,14 +2,13 @@
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { useForm } from '@inertiajs/vue3';
-import { router } from '@inertiajs/vue3';
+import { router, useForm } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import StartDraft from '../draft/StartDraft.vue';
 import MatchConfigButton from '../match/MatchConfigButton.vue';
 import PoolsButtons from '../pools/PoolsButtons.vue';
-import ImportLeaguePokemon from './ImportLeaguePokemon.vue';
 import EditLeague from './EditLeague.vue';
+import ImportLeaguePokemon from './ImportLeaguePokemon.vue';
 
 interface League {
     id: number;
@@ -89,20 +88,16 @@ const setWinner = () => {
                     <DialogContent>
                         <DialogHeader>
                             <DialogTitle>Set League Winner</DialogTitle>
-                            <DialogDescription>
-                                Select the winning coach. This will also mark the league as completed.
-                            </DialogDescription>
+                            <DialogDescription> Select the winning coach. This will also mark the league as completed. </DialogDescription>
                         </DialogHeader>
                         <div class="space-y-2">
                             <label class="text-sm font-medium">Winning Team</label>
                             <select
                                 v-model="winnerForm.winner_user_id"
-                                class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                class="w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:outline-none"
                             >
                                 <option :value="null" disabled>Select a team...</option>
-                                <option v-for="team in props.teams" :key="team.id" :value="team.user_id">
-                                    {{ team.name }} ({{ team.coach }})
-                                </option>
+                                <option v-for="team in props.teams" :key="team.id" :value="team.user_id">{{ team.name }} ({{ team.coach }})</option>
                             </select>
                             <div v-if="winnerForm.errors.winner_user_id" class="text-sm text-destructive">
                                 {{ winnerForm.errors.winner_user_id }}

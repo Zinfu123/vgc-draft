@@ -60,7 +60,7 @@ const handleSubmit = () => {
                 <select
                     name="team1_score"
                     id="team1_score"
-                    class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
                     v-model="form.team1_score"
                 >
                     <option value="0">0</option>
@@ -75,7 +75,7 @@ const handleSubmit = () => {
                 <select
                     name="team2_score"
                     id="team2_score"
-                    class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
                     v-model="form.team2_score"
                 >
                     <option value="0">0</option>
@@ -85,15 +85,13 @@ const handleSubmit = () => {
             </div>
         </div>
         <div class="sm:col-span-3">
-            <label for="team1_pokepaste" class="block text-sm/6 font-medium text-foreground"
-                >{{ props.set.team1.name }} Pokepaste</label
-            >
+            <label for="team1_pokepaste" class="block text-sm/6 font-medium text-foreground">{{ props.set.team1.name }} Pokepaste</label>
             <div class="mt-2">
                 <input
                     type="text"
                     name="team1_pokepaste"
                     id="team1_pokepaste"
-                    class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
                     v-model="form.team1_pokepaste"
                 />
                 <Link :href="`/teams/form/${props.set.team1.id}`">
@@ -104,15 +102,13 @@ const handleSubmit = () => {
             </div>
         </div>
         <div class="sm:col-span-3">
-            <label for="team2_pokepaste" class="block text-sm/6 font-medium text-foreground"
-                >{{ props.set.team2.name }} Pokepaste</label
-            >
+            <label for="team2_pokepaste" class="block text-sm/6 font-medium text-foreground">{{ props.set.team2.name }} Pokepaste</label>
             <div class="mt-2">
                 <input
                     type="text"
                     name="team2_pokepaste"
                     id="team2_pokepaste"
-                    class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
                     v-model="form.team2_pokepaste"
                 />
                 <Link :href="`/teams/form/${props.set.team2.id}`">

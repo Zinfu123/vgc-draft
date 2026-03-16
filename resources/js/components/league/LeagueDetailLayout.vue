@@ -87,21 +87,10 @@ const sections: { value: LeagueDetailSection; label: string; route: string }[] =
                         command="create"
                         :user_team="null"
                     />
-                    <TeamForm
-                        v-if="coachexists"
-                        :league_id="props.league.id"
-                        :user_id="user?.id"
-                        command="edit"
-                        :user_team="userTeam"
-                    />
+                    <TeamForm v-if="coachexists" :league_id="props.league.id" :user_id="user?.id" command="edit" :user_team="userTeam" />
                 </template>
                 <div v-if="props.adminFlag === true || props.adminFlag === 1" class="flex flex-col items-end gap-2">
-                    <AdminPanel
-                        :league="props.league"
-                        :draft="props.draft"
-                        :matchConfig="props.matchConfig"
-                        :teams="props.teams"
-                    />
+                    <AdminPanel :league="props.league" :draft="props.draft" :matchConfig="props.matchConfig" :teams="props.teams" />
                     <TeamForm
                         v-if="!coachexists && (!props.draft || props.draft?.status === 1)"
                         :league_id="props.league.id"
@@ -109,13 +98,7 @@ const sections: { value: LeagueDetailSection; label: string; route: string }[] =
                         command="create"
                         :user_team="null"
                     />
-                    <TeamForm
-                        v-if="coachexists"
-                        :league_id="props.league.id"
-                        :user_id="user?.id"
-                        command="edit"
-                        :user_team="userTeam"
-                    />
+                    <TeamForm v-if="coachexists" :league_id="props.league.id" :user_id="user?.id" command="edit" :user_team="userTeam" />
                 </div>
             </div>
             <div class="mt-6 flex flex-col items-center">
@@ -125,7 +108,7 @@ const sections: { value: LeagueDetailSection; label: string; route: string }[] =
                 <ButtonGroup>
                     <template v-for="s in sections" :key="s.value">
                         <Button
-                            v-if="(s.value !== 'draft' || props.draft !== null)"
+                            v-if="s.value !== 'draft' || props.draft !== null"
                             size="sm"
                             :variant="props.section === s.value ? 'default' : 'outline'"
                             as-child

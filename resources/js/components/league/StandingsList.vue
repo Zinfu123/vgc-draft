@@ -38,11 +38,7 @@ const props = defineProps<props>();
                                     @click="router.get(`/teams/${team.id}`)"
                                 >
                                     <div class="flex min-w-0 gap-x-4">
-                                        <img
-                                            :src="team.logo"
-                                            :alt="team.name"
-                                            class="size-12 flex-none rounded-full bg-muted"
-                                        />
+                                        <img :src="team.logo" :alt="team.name" class="size-12 flex-none rounded-full bg-muted" />
                                         <div class="min-w-0 flex-auto">
                                             <p class="text-sm/6 font-semibold text-foreground">{{ team.name }}</p>
                                             <p class="mt-1 truncate text-xs/5 text-muted-foreground">{{ team.user.name }}</p>

@@ -63,35 +63,35 @@ const submit = () => {
 <template>
     <div class="flex flex-col gap-4 md:items-center md:justify-between">
         <div class="mt-4 mr-14 flex w-full flex-col items-end justify-end">
-        <Dialog>
-            <DialogTrigger>
-                <Button variant="outline">{{ command === 'create' ? 'Create Team' : 'Edit Team' }} <Plus /></Button>
-            </DialogTrigger>
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{{ command === 'create' ? 'Create Team' : 'Edit Team' }}</DialogTitle>
-                </DialogHeader>
-                <DialogDescription>{{ command === 'create' ? 'Create a new team' : 'Edit your team.' }}</DialogDescription>
-                <form @submit.prevent="submit">
-                    <div class="grid w-full max-w-sm items-center justify-center gap-4">
-                        <label for="name">Team Name</label>
-                        <Input type="text" name="name" v-model="form.name" placeholder="Team Name" />
-                        <label for="logo">Logo</label>
-                        <div v-if="user_team?.logo" class="mb-2">
-                            <p class="mb-2 text-sm text-muted-foreground">Current logo:</p>
-                            <img :src="user_team.logo" :alt="user_team.name + ' logo'" class="h-16 w-16 object-contain" />
+            <Dialog>
+                <DialogTrigger>
+                    <Button variant="outline">{{ command === 'create' ? 'Create Team' : 'Edit Team' }} <Plus /></Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>{{ command === 'create' ? 'Create Team' : 'Edit Team' }}</DialogTitle>
+                    </DialogHeader>
+                    <DialogDescription>{{ command === 'create' ? 'Create a new team' : 'Edit your team.' }}</DialogDescription>
+                    <form @submit.prevent="submit">
+                        <div class="grid w-full max-w-sm items-center justify-center gap-4">
+                            <label for="name">Team Name</label>
+                            <Input type="text" name="name" v-model="form.name" placeholder="Team Name" />
+                            <label for="logo">Logo</label>
+                            <div v-if="user_team?.logo" class="mb-2">
+                                <p class="mb-2 text-sm text-muted-foreground">Current logo:</p>
+                                <img :src="user_team.logo" :alt="user_team.name + ' logo'" class="h-16 w-16 object-contain" />
+                            </div>
+                            <Input
+                                type="file"
+                                name="logo"
+                                @input="form.logo = ($event.target as HTMLInputElement)?.files?.[0] || null"
+                                accept="image/*"
+                            />
                         </div>
-                        <Input
-                            type="file"
-                            name="logo"
-                            @input="form.logo = ($event.target as HTMLInputElement)?.files?.[0] || null"
-                            accept="image/*"
-                        />
-                    </div>
-                    <Button type="submit" class="w-1/3" variant="outline">{{ command === 'create' ? 'Create' : 'Edit' }}</Button>
-                </form>
-            </DialogContent>
-        </Dialog>
+                        <Button type="submit" class="w-1/3" variant="outline">{{ command === 'create' ? 'Create' : 'Edit' }}</Button>
+                    </form>
+                </DialogContent>
+            </Dialog>
         </div>
     </div>
 </template>

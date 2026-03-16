@@ -70,29 +70,21 @@ const props = defineProps<Props>();
                     <Card>
                         <CardContent class="flex flex-col items-center gap-1 pt-6 text-center">
                             <span class="text-4xl font-bold">{{ props.userStats.league_wins }}</span>
-                            <span class="text-muted-foreground text-sm">League Wins</span>
+                            <span class="text-sm text-muted-foreground">League Wins</span>
                         </CardContent>
                     </Card>
                     <Card>
                         <CardContent class="flex flex-col items-center gap-1 pt-6 text-center">
-                            <span class="text-4xl font-bold tabular-nums"
-                                >{{ props.userStats.game_wins }} – {{ props.userStats.game_losses }}</span
-                            >
-                            <span class="text-muted-foreground text-sm">Game Record</span>
-                            <span class="text-muted-foreground text-xs">{{
-                                winPct(props.userStats.game_wins, props.userStats.game_losses)
-                            }}</span>
+                            <span class="text-4xl font-bold tabular-nums">{{ props.userStats.game_wins }} – {{ props.userStats.game_losses }}</span>
+                            <span class="text-sm text-muted-foreground">Game Record</span>
+                            <span class="text-xs text-muted-foreground">{{ winPct(props.userStats.game_wins, props.userStats.game_losses) }}</span>
                         </CardContent>
                     </Card>
                     <Card>
                         <CardContent class="flex flex-col items-center gap-1 pt-6 text-center">
-                            <span class="text-4xl font-bold tabular-nums"
-                                >{{ props.userStats.set_wins }} – {{ props.userStats.set_losses }}</span
-                            >
-                            <span class="text-muted-foreground text-sm">Set Record</span>
-                            <span class="text-muted-foreground text-xs">{{
-                                winPct(props.userStats.set_wins, props.userStats.set_losses)
-                            }}</span>
+                            <span class="text-4xl font-bold tabular-nums">{{ props.userStats.set_wins }} – {{ props.userStats.set_losses }}</span>
+                            <span class="text-sm text-muted-foreground">Set Record</span>
+                            <span class="text-xs text-muted-foreground">{{ winPct(props.userStats.set_wins, props.userStats.set_losses) }}</span>
                         </CardContent>
                     </Card>
                 </div>

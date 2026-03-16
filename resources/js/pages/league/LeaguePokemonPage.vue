@@ -1,7 +1,7 @@
 <script setup lang="ts">
+import type { LeagueDetailSection } from '@/components/league/LeagueDetailLayout.vue';
 import LeagueDetailLayout from '@/components/league/LeagueDetailLayout.vue';
 import LeaguePokemon from '@/components/league/LeaguePokemon.vue';
-import type { LeagueDetailSection } from '@/components/league/LeagueDetailLayout.vue';
 
 interface League {
     id: number;
@@ -61,14 +61,7 @@ defineProps<{
 </script>
 
 <template>
-    <LeagueDetailLayout
-        :league="league"
-        section="pokemon"
-        :teams="teams"
-        :draft="draft"
-        :adminFlag="adminFlag"
-        :matchConfig="matchConfig"
-    >
+    <LeagueDetailLayout :league="league" section="pokemon" :teams="teams" :draft="draft" :adminFlag="adminFlag" :matchConfig="matchConfig">
         <LeaguePokemon :pokemon="pokemon" :league="league" :pokemon_drafted="pokemon_drafted" />
     </LeagueDetailLayout>
 </template>
