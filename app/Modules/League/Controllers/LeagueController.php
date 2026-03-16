@@ -100,7 +100,7 @@ class LeagueController extends Controller
 
     public function createEditShow(Request $request, ReadLeagueAction $readLeagueAction)
     {
-        $league = $readLeagueAction(['league_id' => $request->league_id]);
+        $league = $readLeagueAction(['league_id' => $request->league_id, 'command' => 'league']);
 
         return Inertia::render('league/LeagueCreateEdit', [
             'command' => $request->command,

@@ -29,13 +29,9 @@ class ReadLeagueAction
             return $league;
         } elseif ($data['command'] == 'league') {
             $league = League::find($data['league_id']);
-            $league = $league->map(function ($league) {
-                if ($league->logo !== null) {
-                    $league->logo = str_replace('\\', '/', Storage::disk('s3-league-logos')->url($league->logo));
-                }
-
-                return $league;
-            });
+            if ($league->logo !== null) {
+                $league->logo = str_replace('\\', '/', Storage::disk('s3-league-logos')->url($league->logo));
+            }
 
             return $league;
         } elseif ($data['command'] == 'past') {

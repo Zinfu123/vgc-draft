@@ -1,6 +1,7 @@
 <?php
 
 /* Define Controllers */
+use App\Modules\Dashboard\Controllers\DashboardController;
 use App\Modules\Draft\Controllers\DraftController;
 use App\Modules\League\Controllers\LeagueController;
 use App\Modules\League\Controllers\LeaguePokemonController;
@@ -23,7 +24,7 @@ Route::get('/', function () {
     return Inertia::render('Welcome');
 })->name('home');
 
-Route::get('dashboard', [LeagueController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 
 // Pokemon Routes
 Route::get('pokedex', [PokedexController::class, 'index'])->middleware(['auth', 'verified'])->name('pokedex.index');
