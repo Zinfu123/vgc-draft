@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import TournamentBracketBackground from '@/components/auth/TournamentBracketBackground.vue';
 import PokeBallLoginForm from '@/components/auth/PokeBallLoginForm.vue';
+import TournamentBracketBackground from '@/components/auth/TournamentBracketBackground.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 
 defineProps<{
@@ -22,16 +22,11 @@ const submit = () => {
 </script>
 
 <template>
-    <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-cyan-800 relative overflow-hidden">
+    <div class="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-slate-900 via-blue-900 to-cyan-800">
         <Head title="Log in" />
 
         <TournamentBracketBackground />
 
-        <PokeBallLoginForm
-            :status="status"
-            :can-reset-password="canResetPassword"
-            :form="form"
-            :on-submit="submit"
-        />
+        <PokeBallLoginForm :status="status" :can-reset-password="canResetPassword" :form="form" :on-submit="submit" />
     </div>
 </template>

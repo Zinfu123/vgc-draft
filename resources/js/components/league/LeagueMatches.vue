@@ -85,42 +85,33 @@ interface props {
 const props = defineProps<props>();
 </script>
 <template>
-    <div class="flex min-h-full flex-col">
+    <div class="flex min-h-full w-full flex-col">
         <!-- 3 column wrapper -->
-        <div class="mx-auto w-full max-w-6xl grow lg:flex xl:px-2">
+        <div class="mx-auto w-full max-w-6xl grow lg:flex">
             <!-- Left sidebar & main wrapper -->
             <div class="min-h-0 w-full flex-1 xl:flex">
                 <div
-                    class="border-b border-gray-200 px-4 py-6 sm:px-6 lg:pl-8 xl:w-64 xl:shrink-0 xl:border-r xl:border-b-0 xl:pl-4 dark:border-white/10"
+                    class="border-b border-border px-4 py-6 sm:px-6 xl:w-64 xl:shrink-0 xl:border-r xl:border-b-0 xl:px-6"
                 >
                     <!-- Left column area -->
                     <h1 class="text-center text-2xl font-bold">Your Next Set</h1>
                     <template v-if="props.team_next">
-                        <div
-                            class="overflow-hidden rounded-md bg-white shadow-sm dark:bg-gray-800/50 dark:shadow-none dark:outline dark:-outline-offset-0 dark:outline-white/10"
-                        >
-                            <ul
-                                role="list"
-                                class="divide-y divide-gray-100 overflow-hidden bg-white shadow-xs outline-1 outline-gray-900/5 sm:rounded-xl dark:divide-white/5 dark:bg-gray-800/50 dark:shadow-none dark:outline-white/10 dark:sm:-outline-offset-1"
-                            >
-                                <li class="relative flex justify-between gap-x-6 px-4 py-5 hover:bg-gray-50 sm:px-6 dark:hover:bg-white/2.5">
+                        <div class="overflow-hidden rounded-md border border-border bg-card shadow-sm">
+                            <ul role="list" class="divide-y divide-border overflow-hidden bg-card sm:rounded-xl">
+                                <li class="relative flex justify-between gap-x-6 px-4 py-5 transition-colors hover:bg-accent sm:px-6">
                                     <MatchCard :sets="props.team_next" :team1="props.team_next.team1" :team2="props.team_next.team2" />
                                 </li>
                             </ul>
                         </div>
                     </template>
                     <template v-else>
-                        <div
-                            class="overflow-hidden rounded-md bg-white shadow-sm dark:bg-gray-800/50 dark:shadow-none dark:outline dark:-outline-offset-0 dark:outline-white/10"
-                        >
-                            <div class="px-4 py-5 text-center text-sm text-gray-500 dark:text-gray-400">
-                                No upcoming set scheduled
-                            </div>
+                        <div class="overflow-hidden rounded-md border border-border bg-card shadow-sm">
+                            <div class="px-4 py-5 text-center text-sm text-muted-foreground">No upcoming set scheduled</div>
                         </div>
                     </template>
                 </div>
                 <div
-                    class="flex shrink-0 flex-col border-t border-gray-200 px-4 py-6 sm:px-6 lg:w-96 lg:border-t-0 lg:border-l lg:pr-8 xl:pr-6 dark:border-white/10"
+                    class="flex shrink-0 flex-col border-t border-border px-4 py-6 sm:px-6 lg:w-96 lg:border-t-0 lg:border-l lg:px-6"
                 >
                     <!-- middle column area -->
                     <template v-if="props.upcoming_sets">
@@ -134,7 +125,7 @@ const props = defineProps<props>();
                 </div>
             </div>
             <div
-                class="flex shrink-0 flex-col border-t border-gray-200 px-4 py-6 sm:px-6 lg:w-96 lg:border-t-0 lg:border-l lg:pr-8 xl:pr-6 dark:border-white/10"
+                class="flex shrink-0 flex-col border-t border-border px-4 py-6 sm:px-6 lg:w-96 lg:border-t-0 lg:border-l lg:px-6"
             >
                 <!-- Right column area -->
                 <template v-if="props.played_sets">

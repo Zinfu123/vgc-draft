@@ -29,7 +29,7 @@ const submit = () => {
 <template>
     <Dialog>
         <DialogTrigger asChild>
-            <Button variant="outline"> Import Pokemon CSV </Button>
+            <Button variant="outline"> Import Pokemon </Button>
         </DialogTrigger>
         <DialogContent>
             <DialogHeader>

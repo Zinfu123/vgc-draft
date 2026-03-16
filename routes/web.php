@@ -31,8 +31,15 @@ Route::get('pokedex', [PokedexController::class, 'index'])->middleware(['auth', 
 // League Routes
 Route::prefix('leagues')->group(function () {
     Route::get('/', [LeagueController::class, 'index'])->middleware(['auth', 'verified'])->name('leagues.index');
+    Route::get('/create-edit', [LeagueController::class, 'createEditShow'])->middleware(['auth', 'verified'])->name('leagues.create-edit');
     Route::get('/{league}', [LeagueController::class, 'show'])->middleware(['auth', 'verified'])->name('leagues.detail');
+    Route::get('/{league}/teams', [LeagueController::class, 'showTeams'])->middleware(['auth', 'verified'])->name('leagues.teams');
+    Route::get('/{league}/matches', [LeagueController::class, 'showMatches'])->middleware(['auth', 'verified'])->name('leagues.matches');
+    Route::get('/{league}/standings', [LeagueController::class, 'showStandings'])->middleware(['auth', 'verified'])->name('leagues.standings');
+    Route::get('/{league}/trades', [LeagueController::class, 'showTrades'])->middleware(['auth', 'verified'])->name('leagues.trades');
+    Route::get('/{league}/draft', [LeagueController::class, 'showDraft'])->middleware(['auth', 'verified'])->name('leagues.draft');
     Route::post('/', [LeagueController::class, 'create'])->middleware(['auth', 'verified'])->name('leagues.create');
+    Route::post('/{league}/set-winner', [LeagueController::class, 'setWinner'])->middleware(['auth', 'verified'])->name('leagues.set-winner');
     Route::get('/{league}/pokemon', [LeaguePokemonController::class, 'read'])->middleware(['auth', 'verified'])->name('leagues.pokemon');
     Route::post('/pokemon', [LeaguePokemonController::class, 'create'])->middleware(['auth', 'verified'])->name('leagues.pokemon.create');
     Route::get('/{league}/pools', [PoolController::class, 'index'])->middleware(['auth', 'verified'])->name('leagues.pools');

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import LeagueCarousel from '@/components/league/LeagueCarousel.vue';
-import LeagueForm from '@/components/league/LeagueForm.vue';
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -17,6 +17,16 @@ interface CurrentLeagues {
     draft_date: string;
     set_start_date: string;
     logo: string | null;
+    winner: string | null;
+}
+
+interface PastLeagues {
+    id: number;
+    name: string;
+    draft_date: string;
+    set_start_date: string;
+    logo: string | null;
+    winner: string | null;
 }
 
 // interface ParticipatingLeague {
@@ -26,7 +36,7 @@ interface CurrentLeagues {
 
 interface props {
     currentLeagues: CurrentLeagues[];
-    // participatingLeague: ParticipatingLeague[];
+    pastLeagues: PastLeagues[];
 }
 
 const props = defineProps<props>();
@@ -35,10 +45,22 @@ const props = defineProps<props>();
 <template>
     <Head title="Leagues" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <LeagueForm />
+        <div class="mt-6 mr-4 flex justify-end">
+            <Button variant="outline" @click="router.get(route('leagues.create-edit'), { command: 'create' })">
+                Create League
+            </Button>
+        </div>
         <div class="mx-auto flex flex-col items-center">
+            <div class="mb-10">
             <h1 class="mb-4 text-3xl font-bold">Current Leagues</h1>
             <LeagueCarousel :leagues="props.currentLeagues" />
+        </div>
+        </div>
+        <div class="mx-auto flex flex-col items-center">
+            <div class="mb-10">
+            <h1 class="mb-4 text-3xl font-bold">Past Leagues</h1>
+            <LeagueCarousel :leagues="props.pastLeagues" />
+        </div>
         </div>
     </AppLayout>
 </template>

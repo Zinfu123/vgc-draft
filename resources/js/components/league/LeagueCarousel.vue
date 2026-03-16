@@ -8,6 +8,7 @@ interface Leagues {
     draft_date: string;
     set_start_date: string;
     logo: string | null;
+    winner: string | null;
 }
 
 interface props {
@@ -21,7 +22,7 @@ const props = defineProps<props>();
     <Card
         v-for="league in leagues"
         :key="league.id"
-        class="w-full cursor-pointer bg-blue-500/10 text-center hover:bg-blue-600/50"
+        class="w-full cursor-pointer text-center transition-colors hover:bg-accent"
         @click="router.get(`/leagues/${league.id}`)"
     >
         <CardHeader>
@@ -30,7 +31,11 @@ const props = defineProps<props>();
             </CardTitle>
         </CardHeader>
         <CardContent class="flex flex-col items-center justify-center gap-4">
-            <div>
+            <div v-if="league.winner !== null">
+                <p>Winner</p>
+                <p>{{ league.winner }}</p>
+            </div>
+            <div v-if="league.winner === null">
                 <p>Draft Date</p>
                 <p>{{ league.draft_date }}</p>
             </div>

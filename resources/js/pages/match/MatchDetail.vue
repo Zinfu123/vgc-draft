@@ -127,9 +127,7 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const isUserInSet = computed((): boolean => {
-    return (
-        props.set.team1.user.id === props.currentUserTeam.id || props.set.team2.user.id === props.currentUserTeam.id
-    );
+    return props.set.team1.user.id === props.currentUserTeam.id || props.set.team2.user.id === props.currentUserTeam.id;
 });
 
 const isSetCompleted = computed((): boolean => {
@@ -184,15 +182,15 @@ const handleSubmit = () => {
             <h1 class="text-3xl font-bold">{{ props.set.team1.name }} vs {{ props.set.team2.name }}</h1>
         </div>
         <div class="mt-8 flex flex-row">
-            <div class="mx-auto flex max-w-7xl flex-col border-1 border-red-600 sm:px-6 lg:px-8">
+            <div class="mx-auto flex max-w-7xl flex-col sm:px-6 lg:px-8">
                 <div>
                     <!-- Team 1 -->
                     <img v-if="props.set.team1.logo" :src="props.set.team1.logo" alt="Team Logo" class="mx-auto h-30 w-30 rounded-full" />
                     <Link :href="`/teams/${props.set.team1.id}`">
-                        <p class="text-center text-2xl font-bold hover:text-blue-500">
+                        <p class="text-center text-2xl font-bold transition-colors hover:text-primary">
                             {{ props.set.team1.name }}
                         </p>
-                        <p class="text-2x1 text-center text-gray-500 hover:text-blue-500">Coach: {{ props.set.team1.user.name }}</p>
+                        <p class="text-center text-muted-foreground transition-colors hover:text-primary">Coach: {{ props.set.team1.user.name }}</p>
                     </Link>
                     <div class="mx-auto flex max-w-7xl flex-col sm:px-6 lg:px-8">
                         <p class="text-center text-2xl font-bold">Pokemon</p>
@@ -210,18 +208,18 @@ const handleSubmit = () => {
             <div class="mx-auto flex max-w-7xl flex-col sm:px-6 lg:px-8">
                 <form class="top-0" @submit.prevent="handleSubmit">
                     <div class="space-y-12">
-                        <div class="border-b border-gray-900/10 pb-12 dark:border-white/10">
-                            <h2 class="mb-6 text-center text-base/7 font-semibold text-gray-900 dark:text-white">Set Result</h2>
+                        <div class="border-b border-border pb-12">
+                            <h2 class="mb-6 text-center text-base/7 font-semibold text-foreground">Set Result</h2>
                             <div class="grid max-w-2xl grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6 md:col-span-2">
                                 <div class="sm:col-span-3">
-                                    <label for="team1_score" class="block text-sm/6 font-medium text-gray-900 dark:text-white"
+                                    <label for="team1_score" class="block text-sm/6 font-medium text-foreground"
                                         >{{ props.set.team1.name }} Score</label
                                     >
                                     <div class="mt-2">
                                         <select
                                             name="team1_score"
                                             id="team1_score"
-                                            class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 dark:bg-gray-900 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-indigo-500"
+                                            class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                                             v-model="form.team1_score"
                                             :disabled="disableForm"
                                         >
@@ -232,14 +230,14 @@ const handleSubmit = () => {
                                     </div>
                                 </div>
                                 <div class="sm:col-span-3">
-                                    <label for="team2_score" class="block text-sm/6 font-medium text-gray-900 dark:text-white"
+                                    <label for="team2_score" class="block text-sm/6 font-medium text-foreground"
                                         >{{ props.set.team2.name }} Score</label
                                     >
                                     <div class="mt-2">
                                         <select
                                             name="team2_score"
                                             id="team2_score"
-                                            class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 dark:bg-gray-900 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-indigo-500"
+                                            class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                                             v-model="form.team2_score"
                                             :disabled="disableForm"
                                         >
@@ -250,7 +248,7 @@ const handleSubmit = () => {
                                     </div>
                                 </div>
                                 <div class="sm:col-span-3">
-                                    <label for="team1_pokepaste" class="block text-sm/6 font-medium text-gray-900 dark:text-white"
+                                    <label for="team1_pokepaste" class="block text-sm/6 font-medium text-foreground"
                                         >{{ props.set.team1.name }} Pokepaste</label
                                     >
                                     <div class="mt-2">
@@ -259,7 +257,7 @@ const handleSubmit = () => {
                                             type="text"
                                             name="team1_pokepaste"
                                             id="team1_pokepaste"
-                                            class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 dark:bg-gray-900 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-indigo-500"
+                                            class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                                             v-model="form.team1_pokepaste"
                                             :disabled="!canUpdatePokepaste && disableForm"
                                         />
@@ -267,14 +265,14 @@ const handleSubmit = () => {
                                             v-if="disableForm && !canUpdatePokepaste && form.team1_pokepaste != null && form.team1_pokepaste !== ''"
                                             :href="`/teams/form/${props.set.team1.id}`"
                                         >
-                                            <p class="text-center text-sm text-gray-500">
+                                            <p class="text-center text-sm text-muted-foreground transition-colors hover:text-primary">
                                                 {{ form.team1_pokepaste }}
                                             </p>
                                         </Link>
                                     </div>
                                 </div>
                                 <div class="sm:col-span-3">
-                                    <label for="team2_pokepaste" class="block text-sm/6 font-medium text-gray-900 dark:text-white"
+                                    <label for="team2_pokepaste" class="block text-sm/6 font-medium text-foreground"
                                         >{{ props.set.team2.name }} Pokepaste</label
                                     >
                                     <div class="mt-2">
@@ -283,7 +281,7 @@ const handleSubmit = () => {
                                             type="text"
                                             name="team2_pokepaste"
                                             id="team2_pokepaste"
-                                            class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 dark:bg-gray-900 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-indigo-500"
+                                            class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                                             v-model="form.team2_pokepaste"
                                             :disabled="!canUpdatePokepaste && disableForm"
                                         />
@@ -291,18 +289,20 @@ const handleSubmit = () => {
                                             v-if="disableForm && !canUpdatePokepaste && form.team2_pokepaste != null && form.team2_pokepaste !== ''"
                                             :href="`/teams/form/${props.set.team2.id}`"
                                         >
-                                            <p class="text-center text-sm text-gray-500">
+                                            <p class="text-center text-sm text-muted-foreground transition-colors hover:text-primary">
                                                 {{ form.team2_pokepaste }}
                                             </p>
                                         </Link>
                                     </div>
                                 </div>
-                                <div class="sm:col-span-6 min-h-[38px]">
+                                <div class="min-h-[38px] sm:col-span-6">
                                     <button
                                         type="submit"
                                         :class="[
-                                            'rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline-offset-2 focus-visible:outline-indigo-600',
-                                            (!canUpdatePokepaste && (props.set.status == 0 || !(isUserInSet && (form.team1_score == 2 || form.team2_score == 2 )))) && 'invisible pointer-events-none'
+                                            'rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
+                                            !canUpdatePokepaste &&
+                                                (props.set.status == 0 || !(isUserInSet && (form.team1_score == 2 || form.team2_score == 2))) &&
+                                                'pointer-events-none invisible',
                                         ]"
                                     >
                                         Update
@@ -310,18 +310,13 @@ const handleSubmit = () => {
                                 </div>
                             </div>
                         </div>
-                        <div v-if="props.set.winner_id" class="mt-8 border-t border-gray-900/10 pt-8 dark:border-white/10">
-                            <h2 class="mb-6 text-center text-base/7 font-semibold text-gray-900 dark:text-white">Winner</h2>
+                        <div v-if="props.set.winner_id" class="mt-8 border-t border-border pt-8">
+                            <h2 class="mb-6 text-center text-base/7 font-semibold text-foreground">Winner</h2>
                             <div class="flex flex-col items-center justify-center space-y-4">
-                                <img
-                                    v-if="winnerLogo"
-                                    :src="winnerLogo"
-                                    alt="Winner Logo"
-                                    class="mx-auto h-30 w-30 rounded-full"
-                                />
+                                <img v-if="winnerLogo" :src="winnerLogo" alt="Winner Logo" class="mx-auto h-30 w-30 rounded-full" />
                                 <div class="text-center">
-                                    <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ props.set.winner_name }}</p>
-                                    <p v-if="winnerCoach" class="text-lg text-gray-500 dark:text-gray-400">Coach: {{ winnerCoach }}</p>
+                                    <p class="text-2xl font-bold text-foreground">{{ props.set.winner_name }}</p>
+                                    <p v-if="winnerCoach" class="text-lg text-muted-foreground">Coach: {{ winnerCoach }}</p>
                                 </div>
                             </div>
                         </div>
@@ -329,14 +324,14 @@ const handleSubmit = () => {
                 </form>
             </div>
             <!-- Team 2 -->
-            <div class="justify-top mx-auto flex max-w-7xl flex-col border-1 border-green-600 sm:px-6 lg:px-8">
+            <div class="mx-auto flex max-w-7xl flex-col sm:px-6 lg:px-8">
                 <div>
                     <img v-if="props.set.team2.logo" :src="props.set.team2.logo" alt="Team Logo" class="mx-auto h-30 w-30 rounded-full" />
                     <Link :href="`/teams/${props.set.team2.id}`">
-                        <p class="text-center text-2xl font-bold hover:text-blue-500">
+                        <p class="text-center text-2xl font-bold transition-colors hover:text-primary">
                             {{ props.set.team2.name }}
                         </p>
-                        <p class="text-2x1 text-center text-gray-500 hover:text-blue-500">Coach: {{ props.set.team2.user.name }}</p>
+                        <p class="text-center text-muted-foreground transition-colors hover:text-primary">Coach: {{ props.set.team2.user.name }}</p>
                     </Link>
                     <div class="mx-auto flex max-w-7xl flex-col sm:px-6 lg:px-8">
                         <p class="text-center text-2xl font-bold">Pokemon</p>

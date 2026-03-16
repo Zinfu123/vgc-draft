@@ -20,6 +20,8 @@ class League extends Model
         'minimum_drafts',
         'league_owner',
         'status',
+        'enforce_round_count',
+        'round_count',
         'created_at',
         'updated_at',
     ];
