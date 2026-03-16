@@ -1,8 +1,8 @@
 <script setup lang="ts">
+import type { LeagueDetailSection } from '@/components/league/LeagueDetailLayout.vue';
 import LeagueDetailLayout from '@/components/league/LeagueDetailLayout.vue';
 import { Button } from '@/components/ui/button';
 import { router } from '@inertiajs/vue3';
-import type { LeagueDetailSection } from '@/components/league/LeagueDetailLayout.vue';
 
 interface League {
     id: number;
@@ -55,14 +55,7 @@ const draftDetail = () => {
 </script>
 
 <template>
-    <LeagueDetailLayout
-        :league="league"
-        section="draft"
-        :teams="teams"
-        :draft="draft"
-        :adminFlag="adminFlag"
-        :matchConfig="matchConfig"
-    >
+    <LeagueDetailLayout :league="league" section="draft" :teams="teams" :draft="draft" :adminFlag="adminFlag" :matchConfig="matchConfig">
         <div class="flex flex-row items-center justify-center py-8">
             <Button v-if="draft?.status === 1" size="lg" @click="draftDetail">Draft Detail</Button>
         </div>

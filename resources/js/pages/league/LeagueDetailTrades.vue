@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import LeagueDetailLayout from '@/components/league/LeagueDetailLayout.vue';
 import type { LeagueDetailSection } from '@/components/league/LeagueDetailLayout.vue';
+import LeagueDetailLayout from '@/components/league/LeagueDetailLayout.vue';
 
 interface League {
     id: number;
@@ -49,14 +49,7 @@ defineProps<{
 </script>
 
 <template>
-    <LeagueDetailLayout
-        :league="league"
-        section="trades"
-        :teams="teams"
-        :draft="draft"
-        :adminFlag="adminFlag"
-        :matchConfig="matchConfig"
-    >
+    <LeagueDetailLayout :league="league" section="trades" :teams="teams" :draft="draft" :adminFlag="adminFlag" :matchConfig="matchConfig">
         <div class="py-8 text-center text-muted-foreground">Trades</div>
     </LeagueDetailLayout>
 </template>

@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
-import AppLayout from '@/layouts/AppLayout.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
 
@@ -57,7 +57,6 @@ const frequencyOptions = [
     { label: 'Custom Frequency', value: 4 },
 ];
 
-
 const submit = () => {
     form.post(route('leagues.create'), {
         forceFormData: true,
@@ -94,7 +93,7 @@ const submit = () => {
                     <select
                         id="set_frequency"
                         v-model.number="form.set_frequency"
-                        class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
                     >
                         <option v-for="option in frequencyOptions" :key="option.value" :value="option.value">
                             {{ option.label }}
@@ -133,7 +132,6 @@ const submit = () => {
                     <Input id="minimum_drafts" type="number" v-model.number="form.minimum_drafts" min="1" required />
                     <InputError :message="form.errors.minimum_drafts" />
                 </div>
-
 
                 <div class="grid gap-2">
                     <Label for="logo">League Logo (optional)</Label>

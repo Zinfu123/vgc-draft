@@ -8,7 +8,7 @@ export default defineConfig({
         laravel({
             input: ['resources/js/app.ts'],
             ssr: 'resources/js/ssr.ts',
-            detectTls: 'vgc-draft.test', 
+            // detectTls: 'vgc-draft.test', 
             refresh: true,
         }),
         tailwindcss(),
@@ -21,9 +21,9 @@ export default defineConfig({
             },
         }),
     ],
-    build: {
-        watch: {
-            include: ["resources/**"],
-        },
-    }
+    // build: {
+    //     watch: {
+    //         include: ["resources/**"],
+    //     },
+    // }
 });

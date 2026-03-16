@@ -34,15 +34,15 @@ const props = defineProps<props>();
             <img v-if="league.logo !== null" :src="league.logo" alt="League Logo" class="h-20 w-20 shrink-0 object-contain" />
             <div class="flex flex-col gap-2 text-left">
                 <div v-if="league.winner !== null">
-                    <p class="text-muted-foreground text-xs">Winner</p>
+                    <p class="text-xs text-muted-foreground">Winner</p>
                     <p class="text-sm font-medium">{{ league.winner }}</p>
                 </div>
                 <div v-if="league.winner === null">
-                    <p class="text-muted-foreground text-xs">Draft Date</p>
+                    <p class="text-xs text-muted-foreground">Draft Date</p>
                     <p class="text-sm font-medium">{{ league.draft_date }}</p>
                 </div>
                 <div>
-                    <p class="text-muted-foreground text-xs">Start Date</p>
+                    <p class="text-xs text-muted-foreground">Start Date</p>
                     <p class="text-sm font-medium">{{ league.set_start_date }}</p>
                 </div>
             </div>

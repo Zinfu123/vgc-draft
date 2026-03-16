@@ -90,9 +90,7 @@ const props = defineProps<props>();
         <div class="mx-auto w-full max-w-6xl grow lg:flex">
             <!-- Left sidebar & main wrapper -->
             <div class="min-h-0 w-full flex-1 xl:flex">
-                <div
-                    class="border-b border-border px-4 py-6 sm:px-6 xl:w-64 xl:shrink-0 xl:border-r xl:border-b-0 xl:px-6"
-                >
+                <div class="border-b border-border px-4 py-6 sm:px-6 xl:w-64 xl:shrink-0 xl:border-r xl:border-b-0 xl:px-6">
                     <!-- Left column area -->
                     <h1 class="text-center text-2xl font-bold">Your Next Set</h1>
                     <template v-if="props.team_next">
@@ -110,9 +108,7 @@ const props = defineProps<props>();
                         </div>
                     </template>
                 </div>
-                <div
-                    class="flex shrink-0 flex-col border-t border-border px-4 py-6 sm:px-6 lg:w-96 lg:border-t-0 lg:border-l lg:px-6"
-                >
+                <div class="flex shrink-0 flex-col border-t border-border px-4 py-6 sm:px-6 lg:w-96 lg:border-t-0 lg:border-l lg:px-6">
                     <!-- middle column area -->
                     <template v-if="props.upcoming_sets">
                         <h1 class="mb-4 text-center text-2xl font-bold">Sets To Be Played</h1>
@@ -124,9 +120,7 @@ const props = defineProps<props>();
                     </template>
                 </div>
             </div>
-            <div
-                class="flex shrink-0 flex-col border-t border-border px-4 py-6 sm:px-6 lg:w-96 lg:border-t-0 lg:border-l lg:px-6"
-            >
+            <div class="flex shrink-0 flex-col border-t border-border px-4 py-6 sm:px-6 lg:w-96 lg:border-t-0 lg:border-l lg:px-6">
                 <!-- Right column area -->
                 <template v-if="props.played_sets">
                     <h1 class="mb-4 text-center text-2xl font-bold">Played Sets</h1>
