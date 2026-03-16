@@ -24,6 +24,7 @@ class Team extends Model
         'game_losses',
         'seed',
         'pool_id',
+        'medal_placement',
         'created_at',
         'updated_at',
     ];
