@@ -47,7 +47,7 @@ class ShowSetsAction
             $sets = Set::where('league_id', $data['league_id'])
                 ->where(function ($query) use ($data) {
                     $query->where('team1_id', $data['team_id'])
-                          ->orWhere('team2_id', $data['team_id']);
+                        ->orWhere('team2_id', $data['team_id']);
                 })
                 ->get();
 
@@ -57,7 +57,7 @@ class ShowSetsAction
                 ->where('status', 1)
                 ->where(function ($query) use ($data) {
                     $query->where('team1_id', $data['team_id'])
-                          ->orWhere('team2_id', $data['team_id']);
+                        ->orWhere('team2_id', $data['team_id']);
                 })
                 ->orderBy('round', 'asc')->first();
 
@@ -67,7 +67,7 @@ class ShowSetsAction
                 ->where('status', 0)
                 ->where(function ($query) use ($data) {
                     $query->where('team1_id', $data['team_id'])
-                          ->orWhere('team2_id', $data['team_id']);
+                        ->orWhere('team2_id', $data['team_id']);
                 })
                 ->orderBy('round', 'asc')->get();
 
@@ -80,7 +80,7 @@ class ShowSetsAction
                 ->where('status', 1)
                 ->where(function ($query) use ($data) {
                     $query->where('team1_id', $data['team_id'])
-                          ->orWhere('team2_id', $data['team_id']);
+                        ->orWhere('team2_id', $data['team_id']);
                 })
                 ->with('team1', 'team2')
                 ->orderBy('round', 'asc')

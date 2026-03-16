@@ -31,7 +31,7 @@ const command = computed(() => {
 
 const props = defineProps<props>();
 
-    const form = useForm({
+const form = useForm({
     set_id: props.set.id,
     team1_score: props.set.team1_score || 0,
     team2_score: props.set.team2_score || 0,
@@ -54,91 +54,81 @@ const handleSubmit = () => {
 
 <template>
     <form @submit.prevent="handleSubmit">
-    <div class="sm:col-span-3">
-        <label for="team1_score" class="block text-sm/6 font-medium text-gray-900 dark:text-white"
-            >{{ props.set.team1.name }} Score</label
-        >
-        <div class="mt-2">
-            <select
-                name="team1_score"
-                id="team1_score"
-                class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 dark:bg-gray-900 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-indigo-500"
-                v-model="form.team1_score"
-            >
-                <option value="0">0</option>
-                <option value="1">1</option>
-                <option v-if="form.team2_score < 2" value="2">2</option>
-            </select>
+        <div class="sm:col-span-3">
+            <label for="team1_score" class="block text-sm/6 font-medium text-foreground">{{ props.set.team1.name }} Score</label>
+            <div class="mt-2">
+                <select
+                    name="team1_score"
+                    id="team1_score"
+                    class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    v-model="form.team1_score"
+                >
+                    <option value="0">0</option>
+                    <option value="1">1</option>
+                    <option v-if="form.team2_score < 2" value="2">2</option>
+                </select>
+            </div>
         </div>
-    </div>
-    <div class="sm:col-span-3">
-        <label for="team2_score" class="block text-sm/6 font-medium text-gray-900 dark:text-white"
-            >{{ props.set.team2.name }} Score</label
-        >
-        <div class="mt-2">
-            <select
-                name="team2_score"
-                id="team2_score"
-                class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 dark:bg-gray-900 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-indigo-500"
-                v-model="form.team2_score"
-            >
-                <option value="0">0</option>
-                <option value="1">1</option>
-                <option v-if="form.team1_score < 2" value="2">2</option>
-            </select>
+        <div class="sm:col-span-3">
+            <label for="team2_score" class="block text-sm/6 font-medium text-foreground">{{ props.set.team2.name }} Score</label>
+            <div class="mt-2">
+                <select
+                    name="team2_score"
+                    id="team2_score"
+                    class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    v-model="form.team2_score"
+                >
+                    <option value="0">0</option>
+                    <option value="1">1</option>
+                    <option v-if="form.team1_score < 2" value="2">2</option>
+                </select>
+            </div>
         </div>
-    </div>
-    <div class="sm:col-span-3">
-        <label for="team1_pokepaste" class="block text-sm/6 font-medium text-gray-900 dark:text-white"
-            >{{ props.set.team1.name }} Pokepaste</label
-        >
-        <div class="mt-2">
-            <input
-                type="text"
-                name="team1_pokepaste"
-                id="team1_pokepaste"
-                class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 dark:bg-gray-900 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-indigo-500"
-                v-model="form.team1_pokepaste"
-            />
-            <Link
-                :href="`/teams/form/${props.set.team1.id}`"
+        <div class="sm:col-span-3">
+            <label for="team1_pokepaste" class="block text-sm/6 font-medium text-foreground"
+                >{{ props.set.team1.name }} Pokepaste</label
             >
-                <p class="text-center text-sm text-gray-500">
-                    {{ form.team1_pokepaste }}
-                </p>
-            </Link>
+            <div class="mt-2">
+                <input
+                    type="text"
+                    name="team1_pokepaste"
+                    id="team1_pokepaste"
+                    class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    v-model="form.team1_pokepaste"
+                />
+                <Link :href="`/teams/form/${props.set.team1.id}`">
+                    <p class="text-center text-sm text-muted-foreground transition-colors hover:text-primary">
+                        {{ form.team1_pokepaste }}
+                    </p>
+                </Link>
+            </div>
         </div>
-    </div>
-    <div class="sm:col-span-3">
-        <label for="team2_pokepaste" class="block text-sm/6 font-medium text-gray-900 dark:text-white"
-            >{{ props.set.team2.name }} Pokepaste</label
-        >
-        <div class="mt-2">
-            <input
-                type="text"
-                name="team2_pokepaste"
-                id="team2_pokepaste"
-                class="block w-full rounded-md bg-white px-3 py-1.5 text-base text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 dark:bg-gray-900 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-indigo-500"
-                v-model="form.team2_pokepaste"
-            />
-            <Link
-                :href="`/teams/form/${props.set.team2.id}`"
+        <div class="sm:col-span-3">
+            <label for="team2_pokepaste" class="block text-sm/6 font-medium text-foreground"
+                >{{ props.set.team2.name }} Pokepaste</label
             >
-                <p class="text-center text-sm text-gray-500">
-                    {{ form.team2_pokepaste }}
-                </p>
-            </Link>
+            <div class="mt-2">
+                <input
+                    type="text"
+                    name="team2_pokepaste"
+                    id="team2_pokepaste"
+                    class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    v-model="form.team2_pokepaste"
+                />
+                <Link :href="`/teams/form/${props.set.team2.id}`">
+                    <p class="text-center text-sm text-muted-foreground transition-colors hover:text-primary">
+                        {{ form.team2_pokepaste }}
+                    </p>
+                </Link>
+            </div>
         </div>
-    </div>
-    <div class="min-h-[38px] sm:col-span-6">
-        <button
-            type="submit"
-            :class="[
-                'rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 focus-visible:outline-offset-2 focus-visible:outline-indigo-600',
-            ]"
-        >
-            Update
-        </button>
-    </div>
+        <div class="min-h-[38px] sm:col-span-6">
+            <button
+                type="submit"
+                class="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            >
+                Update
+            </button>
+        </div>
     </form>
 </template>

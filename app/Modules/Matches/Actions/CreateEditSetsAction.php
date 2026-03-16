@@ -4,6 +4,7 @@ namespace App\Modules\Matches\Actions;
 
 /* Define Models */
 use App\Events\SetUpdatedEvent;
+use App\Modules\League\Models\League;
 use App\Modules\Matches\Models\Pool;
 use App\Modules\Matches\Models\Set;
 use App\Modules\Teams\Models\Team;
@@ -18,6 +19,8 @@ class CreateEditSetsAction
     public function __invoke($data)
     {
         if ($data['command'] == 'create') {
+            $league = League::where('id', $data['league_id'])->select('round_count')->first();
+            $roundCount = $league?->round_count;
             $pools = Pool::where('league_id', $data['league_id'])->where('status', 1)->get();
             foreach ($pools as $pool) {
                 $teams = Team::where('pool_id', $pool->id)->orderBy('seed', 'asc')->get();
@@ -25,7 +28,7 @@ class CreateEditSetsAction
                 if ($oddCheck === true) {
                     $teams->push(null);
                 }
-                $schedule = $this->scheduleSets($teams);
+                $schedule = $this->scheduleSets($teams, $roundCount ?? null);
                 $schedule = $this->cleanSchedule($schedule);
                 foreach ($schedule as $round => $matchups) {
                     foreach ($matchups as $matchup) {
@@ -119,11 +122,11 @@ class CreateEditSetsAction
         }
     }
 
-    protected function scheduleSets($teams)
+    protected function scheduleSets($teams, $roundCount)
     {
         $teams = collect($teams);
         $teamsCount = $teams->count();
-        $rounds = $teamsCount - 1;
+        $rounds = ($roundCount !== null && $roundCount !== 0) ? $roundCount : $teamsCount - 1;
         $matchesPerRound = floor($teamsCount / 2);
         for ($round = 1; $round <= $rounds; $round += 1) {
             $schedule[$round] = collect();

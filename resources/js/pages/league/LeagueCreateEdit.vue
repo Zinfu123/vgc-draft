@@ -1,0 +1,156 @@
+<script setup lang="ts">
+import InputError from '@/components/InputError.vue';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Head, useForm } from '@inertiajs/vue3';
+import { LoaderCircle } from 'lucide-vue-next';
+
+interface Props {
+    command: string;
+    league_id: number;
+    league_name: string;
+    draft_date: string | null;
+    set_start_date: string | null;
+    set_frequency: number;
+    enforce_round_count: boolean;
+    round_count: number | null;
+    draft_points: number;
+    minimum_drafts: number;
+    logo: string | null;
+}
+
+const props = withDefaults(defineProps<Props>(), {
+    league_name: '',
+    draft_date: null,
+    set_start_date: null,
+    set_frequency: 1,
+    enforce_round_count: false,
+    round_count: null,
+    draft_points: 80,
+    minimum_drafts: 10,
+});
+
+function formatDateForInput(value: string | null): string {
+    if (!value) return '';
+    const date = new Date(value);
+    return isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10);
+}
+
+const form = useForm({
+    name: props.league_name,
+    draft_date: formatDateForInput(props.draft_date) || new Date().toISOString().slice(0, 10),
+    set_start_date: formatDateForInput(props.set_start_date) || new Date().toISOString().slice(0, 10),
+    set_frequency: props.set_frequency,
+    enforce_round_count: props.enforce_round_count,
+    round_count: props.round_count,
+    draft_points: props.draft_points,
+    minimum_drafts: props.minimum_drafts,
+    logo: props.logo as File | null,
+});
+
+const frequencyOptions = [
+    { label: 'Daily', value: 1 },
+    { label: 'Twice Weekly', value: 2 },
+    { label: 'Weekly', value: 3 },
+    { label: 'Custom Frequency', value: 4 },
+];
+
+
+const submit = () => {
+    form.post(route('leagues.create'), {
+        forceFormData: true,
+    });
+};
+</script>
+
+<template>
+    <Head :title="props.command === 'create' ? 'Create League' : 'Edit League'" />
+    <AppLayout>
+        <div class="mx-auto mt-8 mb-8 flex max-w-2xl flex-col items-center">
+            <h1 class="mb-8 text-3xl font-bold">{{ props.command === 'create' ? 'Create League' : 'Edit League' }}</h1>
+            <form @submit.prevent="submit" class="w-full max-w-md space-y-6">
+                <div class="grid gap-2">
+                    <Label for="name">League Name</Label>
+                    <Input id="name" type="text" v-model="form.name" placeholder="e.g. Spring 2025 VGC League" required />
+                    <InputError :message="form.errors.name" />
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="draft_date">Draft Date</Label>
+                    <Input id="draft_date" type="date" v-model="form.draft_date" required />
+                    <InputError :message="form.errors.draft_date" />
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="set_start_date">Set Start Date</Label>
+                    <Input id="set_start_date" type="date" v-model="form.set_start_date" required />
+                    <InputError :message="form.errors.set_start_date" />
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="set_frequency">Set Frequency</Label>
+                    <select
+                        id="set_frequency"
+                        v-model.number="form.set_frequency"
+                        class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                        <option v-for="option in frequencyOptions" :key="option.value" :value="option.value">
+                            {{ option.label }}
+                        </option>
+                    </select>
+                    <InputError :message="form.errors.set_frequency" />
+                </div>
+
+                <div class="grid gap-2">
+                    <div class="flex items-center gap-2">
+                        <input
+                            id="enforce_round_count"
+                            type="checkbox"
+                            v-model="form.enforce_round_count"
+                            class="size-4 rounded border-input accent-primary"
+                        />
+                        <Label for="enforce_round_count">Enforce number of rounds</Label>
+                    </div>
+                    <InputError :message="form.errors.enforce_round_count" />
+                </div>
+
+                <div v-if="form.enforce_round_count" class="grid gap-2">
+                    <Label for="round_count">Number of Rounds</Label>
+                    <Input id="round_count" type="number" v-model.number="form.round_count" min="1" required />
+                    <InputError :message="form.errors.round_count" />
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="draft_points">Draft Points</Label>
+                    <Input id="draft_points" type="number" v-model.number="form.draft_points" min="1" required />
+                    <InputError :message="form.errors.draft_points" />
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="minimum_drafts">Minimum Number of Pokemon</Label>
+                    <Input id="minimum_drafts" type="number" v-model.number="form.minimum_drafts" min="1" required />
+                    <InputError :message="form.errors.minimum_drafts" />
+                </div>
+
+
+                <div class="grid gap-2">
+                    <Label for="logo">League Logo (optional)</Label>
+                    <Input
+                        id="logo"
+                        type="file"
+                        accept="image/jpeg,image/png,image/jpg,image/gif,image/svg+xml"
+                        @input="form.logo = ($event.target as HTMLInputElement)?.files?.[0] || null"
+                    />
+                    <InputError :message="form.errors.logo" />
+                </div>
+
+                <Button type="submit" class="w-full" :disabled="form.processing">
+                    <LoaderCircle v-if="form.processing" class="h-4 w-4 shrink-0 animate-spin" />
+                    {{ props.command === 'create' ? 'Create League' : 'Update League' }}
+                </Button>
+            </form>
+        </div>
+    </AppLayout>
+</template>

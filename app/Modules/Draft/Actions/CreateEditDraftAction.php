@@ -22,6 +22,9 @@ class CreateEditDraftAction
                 'pick_number' => 1,
             ]);
             $draft->save();
+            $league = League::where('id', $data['league_id'])->first();
+            $league->open = false;
+            $league->save();
 
             return $draft;
         }
@@ -95,6 +98,9 @@ class CreateEditDraftAction
                 $team->draft_points = $draftPoints;
                 $team->save();
             }
+            $league = League::where('id', $data['league_id'])->first();
+            $league->open = true;
+            $league->save();
         }
     }
 }

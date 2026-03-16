@@ -61,7 +61,8 @@ const submit = () => {
 </script>
 
 <template>
-    <div class="mt-6 mr-4 flex justify-end">
+    <div class="flex flex-col gap-4 md:items-center md:justify-between">
+        <div class="mt-4 mr-14 flex w-full flex-col items-end justify-end">
         <Dialog>
             <DialogTrigger>
                 <Button variant="outline">{{ command === 'create' ? 'Create Team' : 'Edit Team' }} <Plus /></Button>
@@ -91,5 +92,6 @@ const submit = () => {
                 </form>
             </DialogContent>
         </Dialog>
+        </div>
     </div>
 </template>

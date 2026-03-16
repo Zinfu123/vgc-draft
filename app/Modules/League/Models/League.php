@@ -18,8 +18,12 @@ class League extends Model
         'set_start_date',
         'draft_points',
         'minimum_drafts',
+        'open',
+        'maximum_teams',
         'league_owner',
         'status',
+        'enforce_round_count',
+        'round_count',
         'created_at',
         'updated_at',
     ];

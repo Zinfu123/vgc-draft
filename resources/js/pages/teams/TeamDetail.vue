@@ -48,16 +48,16 @@ const breadcrumbs: BreadcrumbItem[] = [
 </script>
 <template>
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col items-center justify-center border-1 border-indigo-600">
+        <div class="flex flex-col items-center justify-center border border-gray-200 dark:border-gray-700">
             <h1 class="flex flex-col items-center justify-center">
                 <img :src="props.team.logo" alt="Team Logo" class="inline h-30 w-30 rounded-full" />
                 <text class="">{{ props.team.name }}</text>
                 <span class="self-bottom"> Coach:{{ props.team.coach }} </span>
             </h1>
         </div>
-        <div class="items-top flex flex-row justify-center border-1 border-green-600">
+        <div class="items-top flex flex-row justify-center border border-gray-200 dark:border-gray-700">
             <div class="flex w-1/3 flex-wrap items-center justify-center">
-                <div class="flex flex-col items-center border-1 border-red-600">
+                <div class="flex flex-col items-center border border-gray-200 dark:border-gray-700">
                     <h2 class="mb-4 object-top text-2xl font-bold">Drafted Pokemon</h2>
                     <div class="flex flex-row flex-wrap items-center justify-center gap-2">
                         <PokemonCard
@@ -68,10 +68,10 @@ const breadcrumbs: BreadcrumbItem[] = [
                     </div>
                 </div>
             </div>
-            <div class="items-top container flex w-1/3 flex-wrap justify-center border-1 border-blue-600">
+            <div class="items-top container flex w-1/3 flex-wrap justify-center border border-gray-200 dark:border-gray-700">
                 <h2 class="object-top text-2xl font-bold">Upcoming Matches</h2>
             </div>
-            <div class="items-top container flex w-1/3 flex-wrap justify-center border-1 border-blue-600">
+            <div class="items-top container flex w-1/3 flex-wrap justify-center border border-gray-200 dark:border-gray-700">
                 <h2 class="object-top text-2xl font-bold">Record</h2>
             </div>
         </div>

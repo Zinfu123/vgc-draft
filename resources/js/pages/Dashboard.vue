@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import LeagueCarousel from '@/components/league/LeagueCarousel.vue';
+import { Card, CardContent } from '@/components/ui/card';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
-import PlaceholderPattern from '../components/PlaceholderPattern.vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -10,27 +11,118 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/dashboard',
     },
 ];
+
+interface League {
+    id: number;
+    name: string;
+    status: number;
+    draft_date: string;
+    set_start_date: string;
+    logo: string | null;
+    winner: string | null;
+}
+
+interface OpenLeague {
+    id: number;
+    name: string;
+    draft_date: string;
+    set_start_date: string;
+    logo: string | null;
+    winner: null;
+}
+
+interface UserStats {
+    league_wins: number;
+    game_wins: number;
+    game_losses: number;
+    set_wins: number;
+    set_losses: number;
+}
+
+function winPct(wins: number, losses: number): string {
+    const total = wins + losses;
+    if (total === 0) {
+        return '—';
+    }
+
+    return (wins / total).toLocaleString('en-US', { style: 'percent', minimumFractionDigits: 1 });
+}
+
+interface Props {
+    userName: string;
+    userStats: UserStats;
+    usersActiveLeagues: League[];
+    usersPastLeagues: League[];
+    openLeagues: OpenLeague[];
+}
+
+const props = defineProps<Props>();
 </script>
 
 <template>
     <Head title="Dashboard" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex h-full flex-1 flex-col gap-4 overflow-x-auto rounded-xl p-4">
-            <div class="grid auto-rows-min gap-4 md:grid-cols-3">
-                <div class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-                    <PlaceholderPattern />
+        <div class="flex flex-col gap-8 p-6">
+            <section>
+                <h2 class="mb-4 text-2xl font-bold">{{ props.userName }}'s Stats</h2>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <Card>
+                        <CardContent class="flex flex-col items-center gap-1 pt-6 text-center">
+                            <span class="text-4xl font-bold">{{ props.userStats.league_wins }}</span>
+                            <span class="text-muted-foreground text-sm">League Wins</span>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardContent class="flex flex-col items-center gap-1 pt-6 text-center">
+                            <span class="text-4xl font-bold tabular-nums"
+                                >{{ props.userStats.game_wins }} – {{ props.userStats.game_losses }}</span
+                            >
+                            <span class="text-muted-foreground text-sm">Game Record</span>
+                            <span class="text-muted-foreground text-xs">{{
+                                winPct(props.userStats.game_wins, props.userStats.game_losses)
+                            }}</span>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardContent class="flex flex-col items-center gap-1 pt-6 text-center">
+                            <span class="text-4xl font-bold tabular-nums"
+                                >{{ props.userStats.set_wins }} – {{ props.userStats.set_losses }}</span
+                            >
+                            <span class="text-muted-foreground text-sm">Set Record</span>
+                            <span class="text-muted-foreground text-xs">{{
+                                winPct(props.userStats.set_wins, props.userStats.set_losses)
+                            }}</span>
+                        </CardContent>
+                    </Card>
                 </div>
-                <div class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-                    <PlaceholderPattern />
-                </div>
-                <div class="relative aspect-video overflow-hidden rounded-xl border border-sidebar-border/70 dark:border-sidebar-border">
-                    <PlaceholderPattern />
-                </div>
+            </section>
+
+            <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
+                <section>
+                    <h2 class="mb-4 text-2xl font-bold">My Active Leagues</h2>
+                    <div v-if="props.usersActiveLeagues.length > 0" class="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-4">
+                        <LeagueCarousel :leagues="props.usersActiveLeagues" />
+                    </div>
+                    <p v-else class="text-muted-foreground">You are not currently in any active leagues.</p>
+                </section>
+
+                <section>
+                    <h2 class="mb-4 text-2xl font-bold">My Past Leagues</h2>
+                    <div v-if="props.usersPastLeagues.length > 0" class="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-4">
+                        <LeagueCarousel :leagues="props.usersPastLeagues" />
+                    </div>
+                    <p v-else class="text-muted-foreground">You have no past leagues.</p>
+                </section>
             </div>
-            <div class="relative min-h-[100vh] flex-1 rounded-xl border border-sidebar-border/70 md:min-h-min dark:border-sidebar-border">
-                <PlaceholderPattern />
-            </div>
+
+            <section>
+                <h2 class="mb-4 text-2xl font-bold">Open Leagues</h2>
+                <div v-if="props.openLeagues.length > 0" class="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-4">
+                    <LeagueCarousel :leagues="props.openLeagues" />
+                </div>
+                <p v-else class="text-muted-foreground">There are no open leagues available to join.</p>
+            </section>
         </div>
     </AppLayout>
 </template>

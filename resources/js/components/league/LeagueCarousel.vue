@@ -8,6 +8,7 @@ interface Leagues {
     draft_date: string;
     set_start_date: string;
     logo: string | null;
+    winner: string | null;
 }
 
 interface props {
@@ -21,7 +22,7 @@ const props = defineProps<props>();
     <Card
         v-for="league in leagues"
         :key="league.id"
-        class="w-full cursor-pointer bg-blue-500/10 text-center hover:bg-blue-600/50"
+        class="w-64 shrink-0 cursor-pointer overflow-hidden text-center transition-colors hover:bg-accent"
         @click="router.get(`/leagues/${league.id}`)"
     >
         <CardHeader>
@@ -29,17 +30,21 @@ const props = defineProps<props>();
                 {{ league.name }}
             </CardTitle>
         </CardHeader>
-        <CardContent class="flex flex-col items-center justify-center gap-4">
-            <div>
-                <p>Draft Date</p>
-                <p>{{ league.draft_date }}</p>
-            </div>
-            <div>
-                <p>Start Date</p>
-                <p>{{ league.set_start_date }}</p>
-            </div>
-            <div v-if="league.logo !== null">
-                <img :src="league.logo" alt="League Logo" class="h-40 w-40" />
+        <CardContent class="flex items-center gap-4">
+            <img v-if="league.logo !== null" :src="league.logo" alt="League Logo" class="h-20 w-20 shrink-0 object-contain" />
+            <div class="flex flex-col gap-2 text-left">
+                <div v-if="league.winner !== null">
+                    <p class="text-muted-foreground text-xs">Winner</p>
+                    <p class="text-sm font-medium">{{ league.winner }}</p>
+                </div>
+                <div v-if="league.winner === null">
+                    <p class="text-muted-foreground text-xs">Draft Date</p>
+                    <p class="text-sm font-medium">{{ league.draft_date }}</p>
+                </div>
+                <div>
+                    <p class="text-muted-foreground text-xs">Start Date</p>
+                    <p class="text-sm font-medium">{{ league.set_start_date }}</p>
+                </div>
             </div>
         </CardContent>
     </Card>
