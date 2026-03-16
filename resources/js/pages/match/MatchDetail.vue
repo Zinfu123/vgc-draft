@@ -261,14 +261,15 @@ const handleSubmit = () => {
                                             v-model="form.team1_pokepaste"
                                             :disabled="!canUpdatePokepaste && disableForm"
                                         />
-                                        <Link
+                                        <a
                                             v-if="disableForm && !canUpdatePokepaste && form.team1_pokepaste != null && form.team1_pokepaste !== ''"
-                                            :href="`/teams/form/${props.set.team1.id}`"
+                                            :href="form.team1_pokepaste"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="block max-w-full truncate text-center text-sm text-muted-foreground transition-colors hover:text-primary"
                                         >
-                                            <p class="text-center text-sm text-muted-foreground transition-colors hover:text-primary">
-                                                {{ form.team1_pokepaste }}
-                                            </p>
-                                        </Link>
+                                            {{ form.team1_pokepaste }}
+                                        </a>
                                     </div>
                                 </div>
                                 <div class="sm:col-span-3">
@@ -285,14 +286,15 @@ const handleSubmit = () => {
                                             v-model="form.team2_pokepaste"
                                             :disabled="!canUpdatePokepaste && disableForm"
                                         />
-                                        <Link
+                                        <a
                                             v-if="disableForm && !canUpdatePokepaste && form.team2_pokepaste != null && form.team2_pokepaste !== ''"
-                                            :href="`/teams/form/${props.set.team2.id}`"
+                                            :href="form.team2_pokepaste"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="block max-w-full truncate text-center text-sm text-muted-foreground transition-colors hover:text-primary"
                                         >
-                                            <p class="text-center text-sm text-muted-foreground transition-colors hover:text-primary">
-                                                {{ form.team2_pokepaste }}
-                                            </p>
-                                        </Link>
+                                            {{ form.team2_pokepaste }}
+                                        </a>
                                     </div>
                                 </div>
                                 <div class="min-h-[38px] sm:col-span-6">

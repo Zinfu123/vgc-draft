@@ -29,7 +29,7 @@ class ReadLeagueAction
             return $league;
         } elseif ($data['command'] == 'league') {
             $league = League::find($data['league_id']);
-            if ($league->logo !== null) {
+            if ($league && $league->logo !== null) {
                 $league->logo = str_replace('\\', '/', Storage::disk('s3-league-logos')->url($league->logo));
             }
 

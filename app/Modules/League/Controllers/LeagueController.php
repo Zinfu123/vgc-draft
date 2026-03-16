@@ -78,6 +78,13 @@ class LeagueController extends Controller
         ]);
     }
 
+    public function showAdmin(League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction)
+    {
+        return Inertia::render('league/LeagueAdmin', [
+            ...$leagueDetailLayoutDataAction($league),
+        ]);
+    }
+
     public function create(Request $request)
     {
         $league = (new CreateEditLeagueAction)->create($request);

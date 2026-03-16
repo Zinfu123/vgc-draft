@@ -123,3 +123,25 @@ it('requires authentication on all detail tabs', function (string $tab) {
 
     $this->get("/leagues/{$league->id}/{$tab}")->assertRedirect('/login');
 })->with(['teams', 'matches', 'standings', 'trades', 'draft']);
+
+it('renders the admin page', function () {
+    $user = User::factory()->create();
+    $league = createLeagueAndTeamForUser($user, adminFlag: 1);
+
+    $response = $this->actingAs($user)->get("/leagues/{$league->id}/admin");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('league/LeagueAdmin')
+        ->has('league')
+        ->has('teams')
+        ->has('matchConfig')
+    );
+});
+
+it('requires authentication on the admin page', function () {
+    $owner = User::factory()->create();
+    $league = createLeagueAndTeamForUser($owner);
+
+    $this->get("/leagues/{$league->id}/admin")->assertRedirect('/login');
+});
