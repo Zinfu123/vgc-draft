@@ -32,7 +32,9 @@ interface OpenLeague {
 }
 
 interface UserStats {
-    league_wins: number;
+    gold_medals: number;
+    silver_medals: number;
+    bronze_medals: number;
     game_wins: number;
     game_losses: number;
     set_wins: number;
@@ -68,9 +70,22 @@ const props = defineProps<Props>();
                 <h2 class="mb-4 text-2xl font-bold">{{ props.userName }}'s Stats</h2>
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     <Card>
-                        <CardContent class="flex flex-col items-center gap-1 pt-6 text-center">
-                            <span class="text-4xl font-bold">{{ props.userStats.league_wins }}</span>
-                            <span class="text-sm text-muted-foreground">League Wins</span>
+                        <CardContent class="flex flex-col items-center gap-2 pt-6 text-center">
+                            <div class="flex items-end gap-4">
+                                <div class="flex flex-col items-center gap-1">
+                                    <span class="text-2xl font-bold tabular-nums">{{ props.userStats.gold_medals }}</span>
+                                    <span class="text-3xl">🥇</span>
+                                </div>
+                                <div class="flex flex-col items-center gap-1">
+                                    <span class="text-2xl font-bold tabular-nums">{{ props.userStats.silver_medals }}</span>
+                                    <span class="text-3xl">🥈</span>
+                                </div>
+                                <div class="flex flex-col items-center gap-1">
+                                    <span class="text-2xl font-bold tabular-nums">{{ props.userStats.bronze_medals }}</span>
+                                    <span class="text-3xl">🥉</span>
+                                </div>
+                            </div>
+                            <span class="text-sm text-muted-foreground">Medals</span>
                         </CardContent>
                     </Card>
                     <Card>

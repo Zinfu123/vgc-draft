@@ -30,14 +30,18 @@ class ReadDashboardAction
         if ($data['command'] == 'userStats') {
             $teams = Team::where('user_id', $data['user_id'])->get();
 
-            $leagueWins = League::where('winner', $data['user_id'])->count();
+            $goldMedals = $teams->where('medal_placement', 1)->count();
+            $silverMedals = $teams->where('medal_placement', 2)->count();
+            $bronzeMedals = $teams->where('medal_placement', 3)->count();
             $gameWins = $teams->sum('game_wins');
             $gameLosses = $teams->sum('game_losses');
             $setWins = $teams->sum('set_wins');
             $setLosses = $teams->sum('set_losses');
 
             return [
-                'league_wins' => $leagueWins,
+                'gold_medals' => $goldMedals,
+                'silver_medals' => $silverMedals,
+                'bronze_medals' => $bronzeMedals,
                 'game_wins' => $gameWins,
                 'game_losses' => $gameLosses,
                 'set_wins' => $setWins,

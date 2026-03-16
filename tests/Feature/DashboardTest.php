@@ -23,12 +23,11 @@ test('dashboard includes user stats with correct totals', function () {
     $user = User::factory()->create();
 
     $league = League::create([
-        'name' => 'Won League',
+        'name' => 'Past League',
         'status' => 0,
         'open' => false,
         'draft_points' => 100,
         'league_owner' => $user->id,
-        'winner' => $user->id,
     ]);
 
     Team::create([
@@ -43,6 +42,7 @@ test('dashboard includes user stats with correct totals', function () {
         'set_losses' => 2,
         'game_wins' => 12,
         'game_losses' => 4,
+        'medal_placement' => 1,
     ]);
 
     $response = $this->actingAs($user)->get('/dashboard');
@@ -51,7 +51,9 @@ test('dashboard includes user stats with correct totals', function () {
     $response->assertInertia(
         fn ($page) => $page
             ->where('userName', $user->name)
-            ->where('userStats.league_wins', 1)
+            ->where('userStats.gold_medals', 1)
+            ->where('userStats.silver_medals', 0)
+            ->where('userStats.bronze_medals', 0)
             ->where('userStats.game_wins', 12)
             ->where('userStats.game_losses', 4)
             ->where('userStats.set_wins', 5)
