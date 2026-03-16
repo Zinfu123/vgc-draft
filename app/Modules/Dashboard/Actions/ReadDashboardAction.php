@@ -27,6 +27,24 @@ class ReadDashboardAction
                 ->map(fn (Team $team) => $this->leagueShape($team));
         }
 
+        if ($data['command'] == 'userStats') {
+            $teams = Team::where('user_id', $data['user_id'])->get();
+
+            $leagueWins = League::where('winner', $data['user_id'])->count();
+            $gameWins = $teams->sum('game_wins');
+            $gameLosses = $teams->sum('game_losses');
+            $setWins = $teams->sum('set_wins');
+            $setLosses = $teams->sum('set_losses');
+
+            return [
+                'league_wins' => $leagueWins,
+                'game_wins' => $gameWins,
+                'game_losses' => $gameLosses,
+                'set_wins' => $setWins,
+                'set_losses' => $setLosses,
+            ];
+        }
+
         if ($data['command'] == 'openLeagues') {
             return League::query()
                 ->where('status', 1)

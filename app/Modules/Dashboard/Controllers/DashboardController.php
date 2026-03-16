@@ -10,9 +10,15 @@ class DashboardController extends Controller
 {
     public function index(ReadDashboardAction $readDashboardAction)
     {
-        $userId = auth()->id();
+        $user = auth()->user();
+        $userId = $user->id;
 
         return Inertia::render('Dashboard', [
+            'userName' => $user->name,
+            'userStats' => $readDashboardAction([
+                'command' => 'userStats',
+                'user_id' => $userId,
+            ]),
             'usersActiveLeagues' => $readDashboardAction([
                 'command' => 'usersActiveLeagues',
                 'user_id' => $userId,

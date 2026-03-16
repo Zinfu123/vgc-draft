@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import LeagueCarousel from '@/components/league/LeagueCarousel.vue';
+import { Card, CardContent } from '@/components/ui/card';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
@@ -30,7 +31,26 @@ interface OpenLeague {
     winner: null;
 }
 
+interface UserStats {
+    league_wins: number;
+    game_wins: number;
+    game_losses: number;
+    set_wins: number;
+    set_losses: number;
+}
+
+function winPct(wins: number, losses: number): string {
+    const total = wins + losses;
+    if (total === 0) {
+        return '—';
+    }
+
+    return (wins / total).toLocaleString('en-US', { style: 'percent', minimumFractionDigits: 1 });
+}
+
 interface Props {
+    userName: string;
+    userStats: UserStats;
     usersActiveLeagues: League[];
     usersPastLeagues: League[];
     openLeagues: OpenLeague[];
@@ -44,6 +64,40 @@ const props = defineProps<Props>();
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex flex-col gap-8 p-6">
+            <section>
+                <h2 class="mb-4 text-2xl font-bold">{{ props.userName }}'s Stats</h2>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                    <Card>
+                        <CardContent class="flex flex-col items-center gap-1 pt-6 text-center">
+                            <span class="text-4xl font-bold">{{ props.userStats.league_wins }}</span>
+                            <span class="text-muted-foreground text-sm">League Wins</span>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardContent class="flex flex-col items-center gap-1 pt-6 text-center">
+                            <span class="text-4xl font-bold tabular-nums"
+                                >{{ props.userStats.game_wins }} – {{ props.userStats.game_losses }}</span
+                            >
+                            <span class="text-muted-foreground text-sm">Game Record</span>
+                            <span class="text-muted-foreground text-xs">{{
+                                winPct(props.userStats.game_wins, props.userStats.game_losses)
+                            }}</span>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardContent class="flex flex-col items-center gap-1 pt-6 text-center">
+                            <span class="text-4xl font-bold tabular-nums"
+                                >{{ props.userStats.set_wins }} – {{ props.userStats.set_losses }}</span
+                            >
+                            <span class="text-muted-foreground text-sm">Set Record</span>
+                            <span class="text-muted-foreground text-xs">{{
+                                winPct(props.userStats.set_wins, props.userStats.set_losses)
+                            }}</span>
+                        </CardContent>
+                    </Card>
+                </div>
+            </section>
+
             <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
                 <section>
                     <h2 class="mb-4 text-2xl font-bold">My Active Leagues</h2>

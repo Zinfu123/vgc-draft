@@ -19,6 +19,46 @@ test('authenticated users can visit the dashboard', function () {
     $response->assertOk();
 });
 
+test('dashboard includes user stats with correct totals', function () {
+    $user = User::factory()->create();
+
+    $league = League::create([
+        'name' => 'Won League',
+        'status' => 0,
+        'open' => false,
+        'draft_points' => 100,
+        'league_owner' => $user->id,
+        'winner' => $user->id,
+    ]);
+
+    Team::create([
+        'name' => 'My Team',
+        'league_id' => $league->id,
+        'user_id' => $user->id,
+        'admin_flag' => 1,
+        'pick_position' => 1,
+        'draft_points' => 100,
+        'victory_points' => 0,
+        'set_wins' => 5,
+        'set_losses' => 2,
+        'game_wins' => 12,
+        'game_losses' => 4,
+    ]);
+
+    $response = $this->actingAs($user)->get('/dashboard');
+
+    $response->assertOk();
+    $response->assertInertia(
+        fn ($page) => $page
+            ->where('userName', $user->name)
+            ->where('userStats.league_wins', 1)
+            ->where('userStats.game_wins', 12)
+            ->where('userStats.game_losses', 4)
+            ->where('userStats.set_wins', 5)
+            ->where('userStats.set_losses', 2)
+    );
+});
+
 test('dashboard includes leagues marked as open that the user has not joined', function () {
     $user = User::factory()->create();
 
