@@ -21,21 +21,30 @@ return new class extends Migration
             $table->timestamps();
         });
 
-        DB::statement("
-            INSERT INTO draft_config (league_id, draft_date, draft_points, minimum_drafts, enforce_round_count, round_count, ban_enabled, created_at, updated_at)
-            SELECT id, draft_date, draft_points, minimum_drafts, enforce_round_count, round_count, ban_enabled, datetime('now'), datetime('now')
-            FROM leagues
-        ");
+        $hasBanEnabled = Schema::hasColumn('leagues', 'ban_enabled');
 
-        Schema::table('leagues', function (Blueprint $table) {
-            $table->dropColumn([
-                'draft_date',
-                'draft_points',
-                'minimum_drafts',
-                'enforce_round_count',
-                'round_count',
-                'ban_enabled',
+        DB::table('leagues')->get()->each(function ($league) use ($hasBanEnabled) {
+            DB::table('draft_config')->insert([
+                'league_id' => $league->id,
+                'draft_date' => $league->draft_date,
+                'draft_points' => $league->draft_points,
+                'minimum_drafts' => $league->minimum_drafts,
+                'enforce_round_count' => $league->enforce_round_count,
+                'round_count' => $league->round_count,
+                'ban_enabled' => $hasBanEnabled ? $league->ban_enabled : false,
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
+        });
+
+        $columnsToDrop = ['draft_date', 'draft_points', 'minimum_drafts', 'enforce_round_count', 'round_count'];
+
+        if ($hasBanEnabled) {
+            $columnsToDrop[] = 'ban_enabled';
+        }
+
+        Schema::table('leagues', function (Blueprint $table) use ($columnsToDrop) {
+            $table->dropColumn($columnsToDrop);
         });
     }
 
@@ -50,16 +59,16 @@ return new class extends Migration
             $table->boolean('ban_enabled')->default(false);
         });
 
-        DB::statement('
-            UPDATE leagues l
-            JOIN draft_config dc ON dc.league_id = l.id
-            SET l.draft_date = dc.draft_date,
-                l.draft_points = dc.draft_points,
-                l.minimum_drafts = dc.minimum_drafts,
-                l.enforce_round_count = dc.enforce_round_count,
-                l.round_count = dc.round_count,
-                l.ban_enabled = dc.ban_enabled
-        ');
+        DB::table('draft_config')->get()->each(function ($config) {
+            DB::table('leagues')->where('id', $config->league_id)->update([
+                'draft_date' => $config->draft_date,
+                'draft_points' => $config->draft_points,
+                'minimum_drafts' => $config->minimum_drafts,
+                'enforce_round_count' => $config->enforce_round_count,
+                'round_count' => $config->round_count,
+                'ban_enabled' => $config->ban_enabled,
+            ]);
+        });
 
         Schema::dropIfExists('draft_config');
     }
