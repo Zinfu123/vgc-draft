@@ -35,6 +35,7 @@ interface Pokemon {
     cost: number;
     banned: number | boolean;
     is_drafted: number | boolean;
+    drafted_by_team_name: string | null;
 }
 
 interface TeamSummary {
@@ -250,6 +251,7 @@ const openActionDialog = (pokemon: Pokemon) => {
 const submitAction = () => {
     if (isSubmitting.value || !selectedPokemon.value) return;
     isSubmitting.value = true;
+    isDialogOpen.value = false;
 
     const routeName = isBanPhase.value ? 'draft.ban' : 'draft.pick';
     const payload = isBanPhase.value
@@ -264,7 +266,6 @@ const submitAction = () => {
     router.post(route(routeName), payload, {
         onSuccess: () => {
             selectedPokemon.value = null;
-            isDialogOpen.value = false;
             router.visit(route('draft.detail', { league_id: props.league.id }), {
                 only: reloadKeys,
                 preserveState: true,
@@ -272,6 +273,7 @@ const submitAction = () => {
             });
         },
         onError: () => {
+            isDialogOpen.value = true;
             isSubmitting.value = false;
         },
         onFinish: () => {
@@ -599,10 +601,12 @@ const submitAction = () => {
                                     <!-- Drafted overlay -->
                                     <div
                                         v-else-if="pokemon.is_drafted"
-                                        class="absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-lg bg-gray-900/60"
+                                        class="absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-lg bg-gray-900/60 px-1"
                                     >
                                         <CheckCircle class="size-7 text-green-400" />
-                                        <span class="text-xs font-bold uppercase tracking-wide text-white">Drafted</span>
+                                        <span class="text-center text-xs font-bold uppercase leading-tight tracking-wide text-white">
+                                            Drafted By<br />{{ pokemon.drafted_by_team_name ?? '' }}
+                                        </span>
                                     </div>
                                 </div>
                             </div>

@@ -46,7 +46,7 @@ class ReadLeaguePokemonAction
             return $pokemon;
         } elseif (($data['command'] ?? null) == 'all_with_status') {
             return LeaguePokemon::where('league_id', $data['league_id'])
-                ->with('pokemon:id,name,sprite_url,type1,type2')
+                ->with(['pokemon:id,name,sprite_url,type1,type2', 'draftedBy:id,name'])
                 ->get()
                 ->map(fn ($lp) => [
                     'id' => $lp->id,
@@ -57,6 +57,7 @@ class ReadLeaguePokemonAction
                     'cost' => (int) $lp->cost,
                     'banned' => (bool) $lp->banned,
                     'is_drafted' => $lp->drafted_by !== null ? 1 : 0,
+                    'drafted_by_team_name' => $lp->draftedBy?->name,
                 ])
                 ->sortBy(fn ($item) => [-$item['cost'], $item['name']])
                 ->values();
