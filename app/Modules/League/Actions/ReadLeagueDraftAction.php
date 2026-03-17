@@ -17,7 +17,7 @@ class ReadLeagueDraftAction
     public function __invoke($data)
     {
 
-        if ($data['command'] ?? null == 'broadcastdraft') {
+        if (($data['command'] ?? null) === 'broadcastdraft') {
             $league_id = $data['league_id'];
             $end_draft = $data['end_draft'];
             DraftDetailEvent::dispatch([

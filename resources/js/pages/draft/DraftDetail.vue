@@ -265,7 +265,6 @@ const submitAction = () => {
         onSuccess: () => {
             selectedPokemon.value = null;
             isDialogOpen.value = false;
-            isSubmitting.value = false;
             router.visit(route('draft.detail', { league_id: props.league.id }), {
                 only: reloadKeys,
                 preserveState: true,

@@ -25,6 +25,10 @@ class DraftPokemonAction
             throw new \Exception('Pokemon not found');
         }
 
+        if ($leaguePokemon->is_drafted || $leaguePokemon->banned) {
+            throw new \Exception('Pokemon is already drafted or banned.');
+        }
+
         /* draft the pokemon */
         $draft = DraftPick::create([
             'draft_id' => $data['draft_id'],
