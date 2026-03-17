@@ -6,6 +6,7 @@ import { ButtonGroup } from '@/components/ui/button-group';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 export type LeagueDetailSection = 'teams' | 'matches' | 'standings' | 'trades' | 'draft' | 'pokemon';
 
@@ -72,6 +73,12 @@ const sections: { value: LeagueDetailSection; label: string; route: string }[] =
     { value: 'draft', label: 'Draft', route: 'leagues.draft' },
     { value: 'pokemon', label: 'Pokemon', route: 'leagues.pokemon' },
 ];
+
+const draftHref = computed(() =>
+    props.draft !== null
+        ? route('draft.detail', { league_id: props.league.id })
+        : route('leagues.draft', { league: props.league.id }),
+);
 </script>
 
 <template>
@@ -107,13 +114,8 @@ const sections: { value: LeagueDetailSection; label: string; route: string }[] =
             <div class="mt-4 flex justify-center">
                 <ButtonGroup>
                     <template v-for="s in sections" :key="s.value">
-                        <Button
-                            v-if="s.value !== 'draft' || props.draft !== null"
-                            size="sm"
-                            :variant="props.section === s.value ? 'default' : 'outline'"
-                            as-child
-                        >
-                            <Link :href="route(s.route, { league: props.league.id })">{{ s.label }}</Link>
+                        <Button size="sm" :variant="props.section === s.value ? 'default' : 'outline'" as-child>
+                            <Link :href="s.value === 'draft' ? draftHref : route(s.route, { league: props.league.id })">{{ s.label }}</Link>
                         </Button>
                     </template>
                 </ButtonGroup>
