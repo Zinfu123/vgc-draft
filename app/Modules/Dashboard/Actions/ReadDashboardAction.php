@@ -14,7 +14,7 @@ class ReadDashboardAction
         if ($data['command'] == 'usersActiveLeagues') {
             return Team::where('user_id', $data['user_id'])
                 ->whereHas('league', fn ($query) => $query->where('status', 1))
-                ->with('league')
+                ->with('league.draftConfig')
                 ->get()
                 ->map(fn (Team $team) => $this->leagueShape($team));
         }
@@ -22,7 +22,7 @@ class ReadDashboardAction
         if ($data['command'] == 'usersPastLeagues') {
             return Team::where('user_id', $data['user_id'])
                 ->whereHas('league', fn ($query) => $query->where('status', 0))
-                ->with('league')
+                ->with('league.draftConfig')
                 ->get()
                 ->map(fn (Team $team) => $this->leagueShape($team));
         }
@@ -54,6 +54,7 @@ class ReadDashboardAction
                 ->where('status', 1)
                 ->where('open', true)
                 ->whereDoesntHave('teams', fn ($query) => $query->where('user_id', $data['user_id']))
+                ->with('draftConfig')
                 ->get()
                 ->map(fn (League $league) => $this->openLeagueShape($league));
         }
@@ -69,7 +70,7 @@ class ReadDashboardAction
         return [
             'id' => $league->id,
             'name' => $league->name,
-            'draft_date' => $league->draft_date,
+            'draft_date' => $league->draftConfig?->draft_date,
             'set_start_date' => $league->set_start_date,
             'logo' => $logo,
             'winner' => null,
@@ -93,7 +94,7 @@ class ReadDashboardAction
             'id' => $league->id,
             'name' => $league->name,
             'status' => $league->status,
-            'draft_date' => $league->draft_date,
+            'draft_date' => $league->draftConfig?->draft_date,
             'set_start_date' => $league->set_start_date,
             'logo' => $logo,
             'winner' => $winner,

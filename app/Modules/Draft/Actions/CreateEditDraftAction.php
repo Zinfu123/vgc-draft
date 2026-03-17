@@ -2,6 +2,8 @@
 
 namespace App\Modules\Draft\Actions;
 
+use App\Modules\Draft\Models\BanOrder;
+use App\Modules\Draft\Models\Bans;
 use App\Modules\Draft\Models\Draft;
 use App\Modules\Draft\Models\DraftOrder;
 use App\Modules\Draft\Models\DraftPick;
@@ -15,10 +17,15 @@ class CreateEditDraftAction
     {
         // Create Draft
         if ($data['command'] == 'create') {
+            if (League::with('draftConfig')->find($data['league_id'])->draftConfig->ban_enabled == true) {
+                $status = 2;
+            } else {
+                $status = 1;
+            }
             $draft = Draft::create([
                 'league_id' => $data['league_id'],
                 'round_number' => 1,
-                'status' => 1,
+                'status' => $status,
                 'pick_number' => 1,
             ]);
             $draft->save();
@@ -27,6 +34,22 @@ class CreateEditDraftAction
             $league->save();
 
             return $draft;
+        }
+        // Create Ban Placeholders
+        elseif ($data['command'] == 'create_ban') {
+            $draftConfig = League::with('draftConfig')->find($data['league_id'])->draftConfig;
+            $teams = Team::where('league_id', $data['league_id'])->get();
+
+            for ($round = 1; $round <= $draftConfig->bans_per_user; $round++) {
+                foreach ($teams as $team) {
+                    Bans::create([
+                        'league_id' => $data['league_id'],
+                        'team_id' => $team->id,
+                        'round_number' => $round,
+                        'status' => 0,
+                    ]);
+                }
+            }
         }
         // Next Round
         elseif ($data['command'] == 'next_round') {
@@ -80,24 +103,39 @@ class CreateEditDraftAction
             foreach ($draftPicks as $draftPick) {
                 $draftPick->delete();
             }
-            $leaguePokemon = LeaguePokemon::where('is_drafted', 1)->where('league_id', $data['league_id'])->get();  // get all the pokemon that were drafted
+
+            $bans = Bans::where('league_id', $data['league_id'])->get();
+            foreach ($bans as $ban) {
+                $ban->delete();
+            }
+
+            $banOrders = BanOrder::where('league_id', $data['league_id'])->get();
+            foreach ($banOrders as $banOrder) {
+                $banOrder->delete();
+            }
+
+            $leaguePokemon = LeaguePokemon::where('league_id', $data['league_id'])
+                ->where(fn ($q) => $q->where('is_drafted', 1)->orWhere('banned', true))
+                ->get();
             foreach ($leaguePokemon as $pokemon) {
                 $pokemon->is_drafted = 0;
                 $pokemon->drafted_by = null;
+                $pokemon->banned = false;
                 $pokemon->save();
             }
+
             $draftOrder = DraftOrder::where('league_id', $data['league_id'])->get();
             foreach ($draftOrder as $order) {
                 $order->delete();
             }
 
-            $draftPoints = League::where('id', $data['league_id'])->first();
-            $draftPoints = $draftPoints->draft_points;
+            $draftPoints = League::with('draftConfig')->find($data['league_id'])->draftConfig->draft_points;
             $teams = Team::where('league_id', $data['league_id'])->get();
             foreach ($teams as $team) {
                 $team->draft_points = $draftPoints;
                 $team->save();
             }
+
             $league = League::where('id', $data['league_id'])->first();
             $league->open = true;
             $league->save();

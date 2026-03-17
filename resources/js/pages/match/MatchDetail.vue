@@ -181,31 +181,27 @@ const handleSubmit = () => {
         <div class="mx-auto mt-8 mb-8 flex max-w-4xl flex-col items-center">
             <h1 class="text-3xl font-bold">{{ props.set.team1.name }} vs {{ props.set.team2.name }}</h1>
         </div>
-        <div class="mt-8 flex flex-row">
-            <div class="mx-auto flex max-w-7xl flex-col sm:px-6 lg:px-8">
-                <div>
-                    <!-- Team 1 -->
-                    <img v-if="props.set.team1.logo" :src="props.set.team1.logo" alt="Team Logo" class="mx-auto h-30 w-30 rounded-full" />
-                    <Link :href="`/teams/${props.set.team1.id}`">
-                        <p class="text-center text-2xl font-bold transition-colors hover:text-primary">
-                            {{ props.set.team1.name }}
-                        </p>
-                        <p class="text-center text-muted-foreground transition-colors hover:text-primary">Coach: {{ props.set.team1.user.name }}</p>
-                    </Link>
-                    <div class="mx-auto flex max-w-7xl flex-col sm:px-6 lg:px-8">
-                        <p class="text-center text-2xl font-bold">Pokemon</p>
-                        <div class="grid grid-cols-2 gap-4">
-                            <PokemonCard
-                                v-for="pokemon in props.set.team1.pokemon"
-                                :key="pokemon.id"
-                                :pokemon="{ ...pokemon.pokemon, cost: pokemon.cost, type2: pokemon.pokemon.type2 || '-' }"
-                            />
-                        </div>
-                    </div>
+        <div class="mt-8 flex flex-row items-start gap-4">
+            <div class="flex min-w-0 flex-1 flex-col">
+                <!-- Team 1 -->
+                <img v-if="props.set.team1.logo" :src="props.set.team1.logo" alt="Team Logo" class="mx-auto h-30 w-30 rounded-full" />
+                <Link :href="`/teams/${props.set.team1.id}`">
+                    <p class="text-center text-2xl font-bold transition-colors hover:text-primary">
+                        {{ props.set.team1.name }}
+                    </p>
+                    <p class="text-center text-muted-foreground transition-colors hover:text-primary">Coach: {{ props.set.team1.user.name }}</p>
+                </Link>
+                <p class="text-center text-2xl font-bold">Pokemon</p>
+                <div class="flex flex-wrap justify-center gap-4">
+                    <PokemonCard
+                        v-for="pokemon in props.set.team1.pokemon"
+                        :key="pokemon.id"
+                        :pokemon="{ ...pokemon.pokemon, cost: pokemon.cost, type2: pokemon.pokemon.type2 || '-' }"
+                    />
                 </div>
             </div>
             <!-- Center Column-->
-            <div class="mx-auto flex max-w-7xl flex-col sm:px-6 lg:px-8">
+            <div class="flex min-w-0 flex-1 flex-col px-4">
                 <form class="top-0" @submit.prevent="handleSubmit">
                     <div class="space-y-12">
                         <div class="border-b border-border pb-12">
@@ -326,25 +322,21 @@ const handleSubmit = () => {
                 </form>
             </div>
             <!-- Team 2 -->
-            <div class="mx-auto flex max-w-7xl flex-col sm:px-6 lg:px-8">
-                <div>
-                    <img v-if="props.set.team2.logo" :src="props.set.team2.logo" alt="Team Logo" class="mx-auto h-30 w-30 rounded-full" />
-                    <Link :href="`/teams/${props.set.team2.id}`">
-                        <p class="text-center text-2xl font-bold transition-colors hover:text-primary">
-                            {{ props.set.team2.name }}
-                        </p>
-                        <p class="text-center text-muted-foreground transition-colors hover:text-primary">Coach: {{ props.set.team2.user.name }}</p>
-                    </Link>
-                    <div class="mx-auto flex max-w-7xl flex-col sm:px-6 lg:px-8">
-                        <p class="text-center text-2xl font-bold">Pokemon</p>
-                        <div class="grid grid-cols-2 gap-4">
-                            <PokemonCard
-                                v-for="pokemon in props.set.team2.pokemon"
-                                :key="pokemon.id"
-                                :pokemon="{ ...pokemon.pokemon, cost: pokemon.cost, type2: pokemon.pokemon.type2 || '-' }"
-                            />
-                        </div>
-                    </div>
+            <div class="flex min-w-0 flex-1 flex-col">
+                <img v-if="props.set.team2.logo" :src="props.set.team2.logo" alt="Team Logo" class="mx-auto h-30 w-30 rounded-full" />
+                <Link :href="`/teams/${props.set.team2.id}`">
+                    <p class="text-center text-2xl font-bold transition-colors hover:text-primary">
+                        {{ props.set.team2.name }}
+                    </p>
+                    <p class="text-center text-muted-foreground transition-colors hover:text-primary">Coach: {{ props.set.team2.user.name }}</p>
+                </Link>
+                <p class="text-center text-2xl font-bold">Pokemon</p>
+                <div class="flex flex-wrap justify-center gap-4">
+                    <PokemonCard
+                        v-for="pokemon in props.set.team2.pokemon"
+                        :key="pokemon.id"
+                        :pokemon="{ ...pokemon.pokemon, cost: pokemon.cost, type2: pokemon.pokemon.type2 || '-' }"
+                    />
                 </div>
             </div>
         </div>

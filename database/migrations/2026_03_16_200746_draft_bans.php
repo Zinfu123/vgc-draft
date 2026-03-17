@@ -28,6 +28,10 @@ return new class extends Migration
             $table->integer('round_number')->nullable();
             $table->timestamps();
         });
+
+        Schema::table('leagues', function (Blueprint $table) {
+            $table->boolean('ban_enabled')->default(false);
+        });
     }
 
     /**
@@ -37,5 +41,8 @@ return new class extends Migration
     {
         Schema::dropIfExists('draft_ban_order');
         Schema::dropIfExists('draft_bans');
+        Schema::table('leagues', function (Blueprint $table) {
+            $table->dropColumn('ban_enabled');
+        });
     }
 };

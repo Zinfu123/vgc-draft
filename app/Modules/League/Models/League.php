@@ -14,22 +14,26 @@ class League extends Model
         'winner',
         'set_frequency',
         'logo',
-        'draft_date',
         'set_start_date',
-        'draft_points',
-        'minimum_drafts',
         'open',
         'maximum_teams',
         'league_owner',
-        'status',
-        'enforce_round_count',
-        'round_count',
         'created_at',
         'updated_at',
     ];
 
-    public function teams()
+    public function teams(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(\App\Modules\Teams\Models\Team::class, 'league_id');
+    }
+
+    public function draftConfig(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(\App\Modules\Draft\Models\DraftConfig::class, 'league_id');
+    }
+
+    public function matchConfig(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(\App\Modules\Matches\Models\MatchConfig::class, 'league_id');
     }
 }

@@ -62,6 +62,7 @@ Route::prefix('draft')->group(function () {
     Route::get('/{league_id}', [DraftController::class, 'index'])->middleware(['auth', 'verified'])->name('draft.detail');
     Route::post('/create', [DraftController::class, 'create'])->middleware(['auth', 'verified'])->name('draft.create');
     Route::post('/', [DraftController::class, 'pick'])->middleware(['auth', 'verified'])->name('draft.pick');
+    Route::post('/ban', [DraftController::class, 'ban'])->middleware(['auth', 'verified'])->name('draft.ban');
     Route::post('/revert-last-pick', [DraftController::class, 'revertLastPick'])->middleware(['auth', 'verified'])->name('draft.revert-last-pick');
     Route::post('/abort-draft', [DraftController::class, 'abortDraft'])->middleware(['auth', 'verified'])->name('draft.abort-draft');
 });
