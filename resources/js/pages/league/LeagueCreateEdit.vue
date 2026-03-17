@@ -18,6 +18,9 @@ interface Props {
     round_count: number | null;
     draft_points: number;
     minimum_drafts: number;
+    ban_enabled: boolean;
+    bans_per_user: number | null;
+    minimum_cost_to_ban: number | null;
     logo: string | null;
 }
 
@@ -30,6 +33,9 @@ const props = withDefaults(defineProps<Props>(), {
     round_count: null,
     draft_points: 80,
     minimum_drafts: 10,
+    ban_enabled: false,
+    bans_per_user: null,
+    minimum_cost_to_ban: null,
 });
 
 function formatDateForInput(value: string | null): string {
@@ -39,6 +45,7 @@ function formatDateForInput(value: string | null): string {
 }
 
 const form = useForm({
+    league_id: props.league_id,
     name: props.league_name,
     draft_date: formatDateForInput(props.draft_date) || new Date().toISOString().slice(0, 10),
     set_start_date: formatDateForInput(props.set_start_date) || new Date().toISOString().slice(0, 10),
@@ -47,6 +54,9 @@ const form = useForm({
     round_count: props.round_count,
     draft_points: props.draft_points,
     minimum_drafts: props.minimum_drafts,
+    ban_enabled: props.ban_enabled,
+    bans_per_user: props.bans_per_user,
+    minimum_cost_to_ban: props.minimum_cost_to_ban,
     logo: props.logo as File | null,
 });
 
@@ -131,6 +141,31 @@ const submit = () => {
                     <Label for="minimum_drafts">Minimum Number of Pokemon</Label>
                     <Input id="minimum_drafts" type="number" v-model.number="form.minimum_drafts" min="1" required />
                     <InputError :message="form.errors.minimum_drafts" />
+                </div>
+
+                <div class="grid gap-2">
+                    <div class="flex items-center gap-2">
+                        <input
+                            id="ban_enabled"
+                            type="checkbox"
+                            v-model="form.ban_enabled"
+                            class="size-4 rounded border-input accent-primary"
+                        />
+                        <Label for="ban_enabled">Enable bans</Label>
+                    </div>
+                    <InputError :message="form.errors.ban_enabled" />
+                </div>
+
+                <div v-if="form.ban_enabled" class="grid gap-2">
+                    <Label for="bans_per_user">Bans Per User</Label>
+                    <Input id="bans_per_user" type="number" v-model.number="form.bans_per_user" min="1" required />
+                    <InputError :message="form.errors.bans_per_user" />
+                </div>
+
+                <div v-if="form.ban_enabled" class="grid gap-2">
+                    <Label for="minimum_cost_to_ban">Minimum Cost to Ban</Label>
+                    <Input id="minimum_cost_to_ban" type="number" v-model.number="form.minimum_cost_to_ban" min="0" required />
+                    <InputError :message="form.errors.minimum_cost_to_ban" />
                 </div>
 
                 <div class="grid gap-2">

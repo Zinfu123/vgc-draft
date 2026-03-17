@@ -44,6 +44,22 @@ class ReadLeaguePokemonAction
                 ->get();
 
             return $pokemon;
+        } elseif (($data['command'] ?? null) == 'all_with_status') {
+            return LeaguePokemon::where('league_id', $data['league_id'])
+                ->with('pokemon:id,name,sprite_url,type1,type2')
+                ->get()
+                ->map(fn ($lp) => [
+                    'id' => $lp->id,
+                    'name' => $lp->pokemon?->name ?? '',
+                    'sprite_url' => $lp->pokemon?->sprite_url ?? '',
+                    'type1' => $lp->pokemon?->type1 ?? '',
+                    'type2' => $lp->pokemon?->type2 ?? '',
+                    'cost' => (int) $lp->cost,
+                    'banned' => (bool) $lp->banned,
+                    'is_drafted' => $lp->drafted_by !== null ? 1 : 0,
+                ])
+                ->sortBy(fn ($item) => [-$item['cost'], $item['name']])
+                ->values();
         } else {
             $pokemon = LeaguePokemon::when($data['league_id'], function ($query) use ($data) {
                 $query->where('league_id', $data['league_id']);

@@ -38,6 +38,8 @@ class LeagueDetailLayoutDataAction
                 'status' => 0,
             ];
         }
+        $league->load('draftConfig');
+
         if ($league->logo !== null) {
             /** @var FilesystemAdapter $disk */
             $disk = Storage::disk('s3-league-logos');

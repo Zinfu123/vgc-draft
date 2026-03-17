@@ -19,8 +19,8 @@ class CreateEditSetsAction
     public function __invoke($data)
     {
         if ($data['command'] == 'create') {
-            $league = League::where('id', $data['league_id'])->select('round_count')->first();
-            $roundCount = $league?->round_count;
+            $league = League::with('matchConfig')->find($data['league_id']);
+            $roundCount = $league?->matchConfig?->round_count;
             $pools = Pool::where('league_id', $data['league_id'])->where('status', 1)->get();
             foreach ($pools as $pool) {
                 $teams = Team::where('pool_id', $pool->id)->orderBy('seed', 'asc')->get();

@@ -87,7 +87,8 @@ class LeagueController extends Controller
 
     public function create(Request $request)
     {
-        $league = (new CreateEditLeagueAction)->create($request);
+        $action = new CreateEditLeagueAction;
+        $league = $request->filled('league_id') ? $action->edit($request) : $action->create($request);
 
         return redirect()->route('leagues.matches', ['league' => $league->id]);
     }
@@ -109,17 +110,23 @@ class LeagueController extends Controller
     {
         $league = $readLeagueAction(['league_id' => $request->league_id, 'command' => 'league']);
 
+        $draftConfig = $league?->draftConfig;
+        $matchConfig = $league?->matchConfig;
+
         return Inertia::render('league/LeagueCreateEdit', [
             'command' => $request->command,
             'league_id' => $request->league_id ?? 0,
             'league_name' => $league->name ?? '',
-            'draft_date' => $league->draft_date ?? null,
+            'draft_date' => $draftConfig?->draft_date ?? null,
             'set_start_date' => $league->set_start_date ?? null,
             'set_frequency' => $league->set_frequency ?? 3,
-            'enforce_round_count' => (bool) ($league->enforce_round_count ?? false),
-            'round_count' => $league->round_count ?? null,
-            'draft_points' => $league->draft_points ?? 80,
-            'minimum_drafts' => $league->minimum_drafts ?? 1,
+            'enforce_round_count' => (bool) ($matchConfig?->enforce_round_count ?? false),
+            'round_count' => $matchConfig?->round_count ?? null,
+            'draft_points' => $draftConfig?->draft_points ?? 80,
+            'minimum_drafts' => $draftConfig?->minimum_drafts ?? 1,
+            'ban_enabled' => (bool) ($draftConfig?->ban_enabled ?? false),
+            'bans_per_user' => $draftConfig?->bans_per_user ?? null,
+            'minimum_cost_to_ban' => $draftConfig?->minimum_cost_to_ban ?? null,
             'logo' => $league->logo ?? null,
         ]);
     }

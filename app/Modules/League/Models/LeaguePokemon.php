@@ -13,7 +13,15 @@ class LeaguePokemon extends Model
         'pokedex_id',
         'name',
         'cost',
+        'banned',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'banned' => 'boolean',
+        ];
+    }
 
     public function league()
     {

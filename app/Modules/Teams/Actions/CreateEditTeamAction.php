@@ -24,12 +24,11 @@ class CreateEditTeamAction
             $logo = null;
         }
         if (team::where('league_id', $request->league_id)->where('user_id', $request->user_id)->exists()) {
-            throw new \Exception('Team already exists');   
+            throw new \Exception('Team already exists');
         } elseif (Team::where('league_id', $request->league_id)->count() >= League::where('id', $request->league_id)->select('maximum_teams')->first()->maximum_teams) {
             throw new \Exception('Maximum number of teams reached');
         } else {
-            $draftPoints = League::where('id', $request->league_id)->select('draft_points')->first();
-            $draftPoints = $draftPoints->draft_points;
+            $draftPoints = League::with('draftConfig')->find($request->league_id)->draftConfig->draft_points;
             $team = Team::create([
                 'name' => $request->name,
                 'league_id' => $request->league_id,

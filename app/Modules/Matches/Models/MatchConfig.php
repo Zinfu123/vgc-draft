@@ -14,5 +14,7 @@ class MatchConfig extends Model
         'frequency_type',
         'frequency_value',
         'status',
+        'enforce_round_count',
+        'round_count',
     ];
 }
