@@ -105,7 +105,7 @@ const authLinkClass =
                     </div>
                 </div>
 
-                <div class="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-4 sm:gap-y-2">
                     <label class="flex cursor-pointer items-center gap-2 text-sm text-foreground">
                         <Checkbox id="remember" v-model:checked="form.remember" :tabindex="3" />
                         <span>Remember me</span>

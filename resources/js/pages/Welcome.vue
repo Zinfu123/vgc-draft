@@ -29,7 +29,7 @@ const features = [
     <Head title="VGC Draft" />
 
     <div
-        class="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-background px-4 py-12 text-foreground sm:px-6 sm:py-16 lg:px-8"
+        class="relative flex min-h-dvh flex-col items-center justify-start overflow-x-hidden bg-background pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(3rem,env(safe-area-inset-bottom))] text-foreground sm:justify-center sm:pl-6 sm:pr-6 sm:pt-16 sm:pb-[max(4rem,env(safe-area-inset-bottom))] lg:pl-8 lg:pr-8"
     >
         <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
             <div
@@ -49,7 +49,7 @@ const features = [
             >
                 Pokémon VGC
             </p>
-            <h1 class="mb-4 text-balance text-3xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
+            <h1 class="mb-4 text-balance text-2xl font-semibold tracking-tight sm:text-4xl lg:text-5xl">
                 Run your league draft from pool to playoffs
             </h1>
             <p class="mb-10 max-w-xl text-pretty text-base text-muted-foreground sm:text-lg">
@@ -57,24 +57,24 @@ const features = [
                 prep, pokepaste validation, and playoff brackets—built for competitive doubles seasons.
             </p>
 
-            <div v-if="$page.props.auth.user" class="flex flex-wrap items-center justify-center gap-3">
+            <div v-if="$page.props.auth.user" class="flex w-full max-w-md flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-center">
                 <Link
                     :href="route('dashboard')"
-                    class="inline-flex min-w-[10rem] items-center justify-center rounded-md bg-[oklch(0.53_0.195_25)] px-6 py-2.5 text-sm font-medium text-[oklch(0.99_0_0)] shadow-sm ring-offset-background transition-colors hover:bg-[oklch(0.48_0.19_25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90"
+                    class="inline-flex w-full min-w-0 items-center justify-center rounded-md bg-[oklch(0.53_0.195_25)] px-6 py-2.5 text-sm font-medium text-[oklch(0.99_0_0)] shadow-sm ring-offset-background transition-colors hover:bg-[oklch(0.48_0.19_25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto sm:min-w-[10rem] dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90"
                 >
                     Go to dashboard
                 </Link>
             </div>
-            <div v-else class="flex flex-wrap items-center justify-center gap-3">
+            <div v-else class="flex w-full max-w-md flex-col gap-3 sm:w-auto sm:flex-row sm:flex-wrap sm:justify-center">
                 <Link
                     :href="route('register')"
-                    class="inline-flex min-w-[10rem] items-center justify-center rounded-md bg-[oklch(0.53_0.195_25)] px-6 py-2.5 text-sm font-medium text-[oklch(0.99_0_0)] shadow-sm ring-offset-background transition-colors hover:bg-[oklch(0.48_0.19_25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90"
+                    class="inline-flex w-full min-w-0 items-center justify-center rounded-md bg-[oklch(0.53_0.195_25)] px-6 py-2.5 text-sm font-medium text-[oklch(0.99_0_0)] shadow-sm ring-offset-background transition-colors hover:bg-[oklch(0.48_0.19_25)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto sm:min-w-[10rem] dark:bg-primary dark:text-primary-foreground dark:hover:bg-primary/90"
                 >
                     Register
                 </Link>
                 <Link
                     :href="route('login')"
-                    class="inline-flex min-w-[10rem] items-center justify-center rounded-md border border-border bg-card px-6 py-2.5 text-sm font-medium text-card-foreground shadow-sm ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    class="inline-flex w-full min-w-0 items-center justify-center rounded-md border border-border bg-card px-6 py-2.5 text-sm font-medium text-card-foreground shadow-sm ring-offset-background transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 sm:w-auto sm:min-w-[10rem]"
                 >
                     Log in
                 </Link>

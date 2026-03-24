@@ -15,7 +15,7 @@
         "laravel/reverb": "^1.0",
         "laravel/socialite": "^5.25",
         "laravel/tinker": "^2.10.1",
-        "league/flysystem-aws-s3-v3": "3.0",
+        "league/flysystem-aws-s3-v3": "^3.29",
         "league/flysystem-path-prefixing": "^3.28",
         "socialiteproviders/discord": "^4.2",
         "tightenco/ziggy": "^2.4"

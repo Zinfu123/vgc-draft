@@ -9,7 +9,7 @@ defineProps<{
 
 <template>
     <div
-        class="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-background px-4 py-12 text-foreground sm:px-6 sm:py-16"
+        class="relative flex min-h-dvh flex-col items-center justify-start overflow-x-hidden bg-background pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(3rem,env(safe-area-inset-bottom))] text-foreground sm:justify-center sm:pl-6 sm:pr-6 sm:pt-16 sm:pb-[max(4rem,env(safe-area-inset-bottom))]"
     >
         <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
             <div
@@ -32,7 +32,7 @@ defineProps<{
                 {{ description }}
             </p>
             <div
-                class="w-full rounded-lg border border-border bg-card p-6 text-card-foreground shadow-sm dark:shadow-none"
+                class="w-full rounded-lg border border-border bg-card p-4 text-card-foreground shadow-sm sm:p-6 dark:shadow-none"
             >
                 <slot />
             </div>
