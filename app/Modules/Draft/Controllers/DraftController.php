@@ -29,7 +29,10 @@ class DraftController extends Controller
         $pokemon = $readLeaguePokemonAction(['league_id' => $league_id, 'command' => 'all_with_status']);
         $costHeaders = $pokemon->unique('cost')->pluck('cost')->sortDesc()->values();
         $teams = $readCurrentDraftAction(['league_id' => $league_id, 'command' => 'teams']);
-        $userTeam = Team::where('user_id', Auth::user()->id)->select('id', 'admin_flag')->where('league_id', $league_id)->first();
+        $user = Auth::user();
+        $userTeam = Team::where('user_id', $user->id)->select('id', 'admin_flag')->where('league_id', $league_id)->first();
+        $canManageDraftAsAdmin = (int) $user->id === (int) $league->league_owner
+            || ($userTeam !== null && (int) $userTeam->admin_flag === 1);
 
         $currentBanner = null;
         $banOrders = collect([]);
@@ -62,6 +65,7 @@ class DraftController extends Controller
             'lastBan' => fn () => $lastBan,
             'allBans' => fn () => $allBans,
             'userTeam' => fn () => $userTeam,
+            'canManageDraftAsAdmin' => fn () => $canManageDraftAsAdmin,
             'teams' => fn () => $teams,
             'draft' => fn () => $draft,
         ]);

@@ -43,7 +43,7 @@ const handleDiscordSubmit = () => {
             <div class="flex flex-col space-y-6">
                 <HeadingSmall
                     title="Discord Notifications"
-                    description="Add Discord webhook URLs to receive notifications for draft start/end and match results."
+                    description="Add Discord webhook URLs to receive notifications for draft start/end, pick/ban turn reminders, and match results."
                 />
 
                 <form @submit.prevent="handleDiscordSubmit" class="flex flex-col gap-4">
@@ -55,7 +55,9 @@ const handleDiscordSubmit = () => {
                             v-model="discordForm.discord_webhook_url"
                             placeholder="https://discord.com/api/webhooks/..."
                         />
-                        <p class="text-xs text-muted-foreground">Receives draft start/end and match result notifications.</p>
+                        <p class="text-xs text-muted-foreground">
+                            Receives draft start/end, next-player pick/ban pings (with draft link), and match result notifications.
+                        </p>
                         <p v-if="discordForm.errors.discord_webhook_url" class="text-sm text-destructive">{{ discordForm.errors.discord_webhook_url }}</p>
                     </div>
                     <div class="flex flex-col gap-1">

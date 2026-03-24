@@ -70,7 +70,7 @@ function calcHeading(calc: MatchPrepCalcPayload, i: number): string {
     <Head :title="`Match prep — ${match.opponent.name}`" />
 
     <AppHeaderLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col gap-6 p-6">
+        <div class="flex w-full max-w-full min-w-0 flex-col gap-6 overflow-x-hidden px-4 pb-10 pt-4 sm:px-6 sm:pt-6">
             <div>
                 <p v-if="league_name" class="text-muted-foreground text-sm">{{ league_name }}</p>
                 <h1 class="text-2xl font-bold tracking-tight">Shared prep vs {{ match.opponent.name }}</h1>

@@ -13,9 +13,21 @@ class LeaguePolicy
      */
     public function admin(User $user, League $league): bool
     {
+        if ((int) $user->id === (int) $league->league_owner) {
+            return true;
+        }
+
         return Team::where('user_id', $user->id)
             ->where('league_id', $league->id)
             ->where('admin_flag', 1)
             ->exists();
+    }
+
+    /**
+     * Determine whether the user owns the league (may manage co-admins).
+     */
+    public function own(User $user, League $league): bool
+    {
+        return (int) $user->id === (int) $league->league_owner;
     }
 }

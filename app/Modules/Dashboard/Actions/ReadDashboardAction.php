@@ -4,6 +4,7 @@ namespace App\Modules\Dashboard\Actions;
 
 use App\Models\User;
 use App\Modules\League\Models\League;
+use App\Modules\Playoffs\Models\PlayoffMatch;
 use App\Modules\Teams\Models\Team;
 use Illuminate\Support\Facades\Storage;
 
@@ -38,6 +39,9 @@ class ReadDashboardAction
             $setWins = $teams->sum('set_wins');
             $setLosses = $teams->sum('set_losses');
 
+            $teamIds = $teams->pluck('id')->all();
+            $playoffStats = $this->aggregatePlayoffStatsForTeamIds($teamIds);
+
             return [
                 'gold_medals' => $goldMedals,
                 'silver_medals' => $silverMedals,
@@ -46,6 +50,10 @@ class ReadDashboardAction
                 'game_losses' => $gameLosses,
                 'set_wins' => $setWins,
                 'set_losses' => $setLosses,
+                'playoff_game_wins' => $playoffStats['playoff_game_wins'],
+                'playoff_game_losses' => $playoffStats['playoff_game_losses'],
+                'playoff_set_wins' => $playoffStats['playoff_set_wins'],
+                'playoff_set_losses' => $playoffStats['playoff_set_losses'],
             ];
         }
 
@@ -60,7 +68,17 @@ class ReadDashboardAction
         }
     }
 
-    /** @return array{id: int, name: string, draft_date: string, set_start_date: string, logo: string|null, winner: null} */
+    /**
+     * @return array{
+     *     id: int,
+     *     name: string,
+     *     draft_date: string,
+     *     set_start_date: string,
+     *     logo: string|null,
+     *     winner: null,
+     *     podium: array{first: null, second: null, third: null}
+     * }
+     */
     private function openLeagueShape(League $league): array
     {
         $logo = $league->logo !== null
@@ -74,10 +92,26 @@ class ReadDashboardAction
             'set_start_date' => $league->set_start_date,
             'logo' => $logo,
             'winner' => null,
+            'podium' => [
+                'first' => null,
+                'second' => null,
+                'third' => null,
+            ],
         ];
     }
 
-    /** @return array{id: int, name: string, status: int, draft_date: string, set_start_date: string, logo: string|null, winner: string|null} */
+    /**
+     * @return array{
+     *     id: int,
+     *     name: string,
+     *     status: int,
+     *     draft_date: string,
+     *     set_start_date: string,
+     *     logo: string|null,
+     *     winner: string|null,
+     *     podium: array{first: string|null, second: string|null, third: string|null}
+     * }
+     */
     private function leagueShape(Team $team): array
     {
         $league = $team->league;
@@ -90,6 +124,10 @@ class ReadDashboardAction
             ? User::find($league->winner)?->name
             : null;
 
+        $first = Team::query()->where('league_id', $league->id)->where('medal_placement', 1)->with('user')->first();
+        $second = Team::query()->where('league_id', $league->id)->where('medal_placement', 2)->with('user')->first();
+        $third = Team::query()->where('league_id', $league->id)->where('medal_placement', 3)->with('user')->first();
+
         return [
             'id' => $league->id,
             'name' => $league->name,
@@ -98,6 +136,67 @@ class ReadDashboardAction
             'set_start_date' => $league->set_start_date,
             'logo' => $logo,
             'winner' => $winner,
+            'podium' => [
+                'first' => $first?->user?->name,
+                'second' => $second?->user?->name,
+                'third' => $third?->user?->name,
+            ],
+        ];
+    }
+
+    /**
+     * @param  list<int>  $teamIds
+     * @return array{playoff_game_wins: int, playoff_game_losses: int, playoff_set_wins: int, playoff_set_losses: int}
+     */
+    private function aggregatePlayoffStatsForTeamIds(array $teamIds): array
+    {
+        if ($teamIds === []) {
+            return [
+                'playoff_game_wins' => 0,
+                'playoff_game_losses' => 0,
+                'playoff_set_wins' => 0,
+                'playoff_set_losses' => 0,
+            ];
+        }
+
+        $playoffGameWins = 0;
+        $playoffGameLosses = 0;
+        $playoffSetWins = 0;
+        $playoffSetLosses = 0;
+
+        $matches = PlayoffMatch::query()
+            ->whereNotNull('winner_team_id')
+            ->whereNotNull('completed_at')
+            ->where(function ($query) use ($teamIds): void {
+                $query->whereIn('team1_id', $teamIds)->orWhereIn('team2_id', $teamIds);
+            })
+            ->get();
+
+        foreach ($matches as $match) {
+            $t1 = (int) $match->team1_id;
+            $t2 = (int) $match->team2_id;
+            $w = (int) $match->winner_team_id;
+            $s1 = (int) ($match->team1_score ?? 0);
+            $s2 = (int) ($match->team2_score ?? 0);
+
+            if (in_array($t1, $teamIds, true)) {
+                $playoffGameWins += $s1;
+                $playoffGameLosses += $s2;
+                $playoffSetWins += $w === $t1 ? 1 : 0;
+                $playoffSetLosses += $w === $t1 ? 0 : 1;
+            } elseif (in_array($t2, $teamIds, true)) {
+                $playoffGameWins += $s2;
+                $playoffGameLosses += $s1;
+                $playoffSetWins += $w === $t2 ? 1 : 0;
+                $playoffSetLosses += $w === $t2 ? 0 : 1;
+            }
+        }
+
+        return [
+            'playoff_game_wins' => $playoffGameWins,
+            'playoff_game_losses' => $playoffGameLosses,
+            'playoff_set_wins' => $playoffSetWins,
+            'playoff_set_losses' => $playoffSetLosses,
         ];
     }
 }

@@ -66,5 +66,7 @@ class BanPokemonAction
 
             (new CreateEditDraftOrderAction)(['league_id' => $leagueId]);
         }
+
+        (new NotifyDraftNextTurnAction)(['league_id' => $leagueId]);
     }
 }

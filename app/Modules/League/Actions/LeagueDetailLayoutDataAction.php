@@ -24,7 +24,8 @@ class LeagueDetailLayoutDataAction
     {
         $teams = ($this->readTeamAction)(['league_id' => $league->id, 'command' => 'league']);
         $user_team = Team::where('user_id', Auth::user()->id)->where('league_id', $league->id)->select('id', 'admin_flag')->first();
-        $adminflag = $user_team ? $user_team->admin_flag : 0;
+        $isOwner = (int) Auth::user()->id === (int) $league->league_owner;
+        $adminflag = $isOwner || ($user_team && (int) $user_team->admin_flag === 1) ? 1 : 0;
         $match_config = MatchConfig::where('league_id', $league->id)->first();
         if ($match_config === null) {
             $match_config = (object) [

@@ -2,17 +2,31 @@
 
 namespace App\Modules\League\Controllers;
 
+use App\Enums\Playoffs\PlayoffFormat;
+use App\Enums\Playoffs\PlayoffStatus;
 use App\Enums\PokemonGame;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Draft\UpdateDraftConfigRequest;
+use App\Http\Requests\Draft\UpdateDraftPickOrderRequest;
+use App\Http\Requests\League\UpdateTeamAdminRequest;
+use App\Http\Requests\Match\ReopenMatchSetRequest;
+use App\Modules\Draft\Models\Draft;
+use App\Modules\Draft\Models\DraftConfig;
 use App\Modules\League\Actions\CreateEditLeagueAction;
 use App\Modules\League\Actions\LeagueDetailLayoutDataAction;
 use App\Modules\League\Actions\ReadLeagueAction;
 use App\Modules\League\Models\League;
+use App\Modules\Matches\Actions\CreateEditSetsAction;
 use App\Modules\Matches\Actions\ShowSetsAction;
+use App\Modules\Playoffs\Controllers\PlayoffController;
+use App\Modules\Playoffs\Services\PlayoffBracketLayoutService;
+use App\Modules\Playoffs\Services\PlayoffBracketService;
 use App\Modules\Teams\Actions\ReadTeamAction;
 use App\Modules\Teams\Models\Team;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class LeagueController extends Controller
@@ -79,6 +93,53 @@ class LeagueController extends Controller
         ]);
     }
 
+    public function showPlayoffs(
+        League $league,
+        LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction,
+        PlayoffBracketService $playoffBracketService,
+        PlayoffBracketLayoutService $playoffBracketLayoutService,
+        PlayoffController $playoffController,
+    ): \Inertia\Response {
+        $data = $leagueDetailLayoutDataAction($league);
+
+        $playoff = $league->playoff()->firstOrCreate(
+            ['league_id' => $league->id],
+            [
+                'format' => PlayoffFormat::SingleElimination,
+                'bracket_size' => 4,
+                'status' => PlayoffStatus::Draft,
+                'seed_order' => null,
+            ]
+        );
+
+        if ($playoff->status === PlayoffStatus::Draft && $playoff->seed_order === null) {
+            $playoff->seed_order = $playoffBracketService->suggestedSeedTeams($league)->pluck('id')->all();
+            $playoff->save();
+        }
+
+        $playoff->load(['matches.team1', 'matches.team2']);
+
+        $teamsById = $data['teams']->keyBy('id');
+        $bracketLayout = $playoffBracketLayoutService->build($playoff, $teamsById);
+
+        $canAdjustPlayoff = Auth::user()?->can('admin', $league) === true
+            && $playoff->status === PlayoffStatus::Draft;
+
+        $canRecordPlayoffResults = Auth::user()?->can('admin', $league) === true
+            && $playoff->status === PlayoffStatus::Active;
+
+        return Inertia::render('league/LeagueDetailPlayoffs', [
+            ...$data,
+            'section' => 'playoffs',
+            'playoff' => $playoffController->playoffPayload($playoff),
+            'bracketLayout' => $bracketLayout,
+            'canAdjustPlayoff' => $canAdjustPlayoff,
+            'canRecordPlayoffResults' => $canRecordPlayoffResults,
+            'allowedBracketSizes' => PlayoffBracketService::allowedBracketSizes(),
+            'doubleEliminationSupported' => false,
+        ]);
+    }
+
     public function showAdmin(League $league): \Illuminate\Http\RedirectResponse
     {
         $this->authorize('admin', $league);
@@ -133,6 +194,131 @@ class LeagueController extends Controller
         ]);
     }
 
+    public function showAdminReopenMatch(League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction): \Inertia\Response
+    {
+        $this->authorize('admin', $league);
+
+        $data = $leagueDetailLayoutDataAction($league);
+
+        return Inertia::render('league/admin/ReopenMatch', [
+            'league' => $data['league'],
+        ]);
+    }
+
+    public function showAdminDraft(League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction): \Inertia\Response
+    {
+        $this->authorize('admin', $league);
+
+        $data = $leagueDetailLayoutDataAction($league);
+
+        DraftConfig::firstOrCreate(
+            ['league_id' => $league->id],
+            [
+                'draft_points' => 80,
+                'minimum_drafts' => 0,
+                'ban_enabled' => false,
+                'bans_per_user' => null,
+                'minimum_cost_to_ban' => null,
+            ]
+        );
+
+        $league->refresh();
+        $league->load('draftConfig');
+
+        $teamsForPicks = $data['teams']->sortBy('pick_position')->values()->all();
+        $canReorderPicks = ! Draft::where('league_id', $league->id)->exists();
+
+        return Inertia::render('league/admin/DraftSettings', [
+            'league' => $data['league'],
+            'draftConfig' => $league->draftConfig,
+            'teams' => $teamsForPicks,
+            'canReorderPicks' => $canReorderPicks,
+        ]);
+    }
+
+    public function updateDraftConfig(UpdateDraftConfigRequest $request, League $league): RedirectResponse
+    {
+        $config = DraftConfig::firstOrCreate(
+            ['league_id' => $league->id],
+            [
+                'draft_points' => 80,
+                'minimum_drafts' => 0,
+                'ban_enabled' => false,
+                'bans_per_user' => null,
+                'minimum_cost_to_ban' => null,
+            ]
+        );
+
+        $validated = $request->validated();
+        $banEnabled = $request->boolean('ban_enabled');
+
+        $config->draft_date = $validated['draft_date'] ?? null;
+        $config->draft_points = (int) $validated['draft_points'];
+        $config->minimum_drafts = (int) $validated['minimum_drafts'];
+        $config->ban_enabled = $banEnabled;
+        $config->bans_per_user = $banEnabled ? (int) $validated['bans_per_user'] : null;
+        $config->minimum_cost_to_ban = $banEnabled ? (int) $validated['minimum_cost_to_ban'] : null;
+        $config->save();
+
+        return back()->with('success', 'Draft configuration saved.');
+    }
+
+    public function updateDraftPickOrder(UpdateDraftPickOrderRequest $request, League $league): RedirectResponse
+    {
+        /** @var list<int> $ids */
+        $ids = array_map(fn ($id) => (int) $id, $request->validated('team_ids'));
+
+        DB::transaction(function () use ($league, $ids): void {
+            foreach ($ids as $index => $teamId) {
+                Team::query()
+                    ->where('league_id', $league->id)
+                    ->where('id', $teamId)
+                    ->update(['pick_position' => $index + 1]);
+            }
+        });
+
+        return back()->with('success', 'Pick order saved.');
+    }
+
+    public function showAdminLeagueAdmins(League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction): \Inertia\Response
+    {
+        $this->authorize('admin', $league);
+
+        $data = $leagueDetailLayoutDataAction($league);
+        $isLeagueOwner = (int) Auth::id() === (int) $league->league_owner;
+
+        return Inertia::render('league/admin/LeagueAdmins', [
+            'league' => $data['league'],
+            'teams' => $data['teams'],
+            'isLeagueOwner' => $isLeagueOwner,
+        ]);
+    }
+
+    public function updateTeamAdmin(UpdateTeamAdminRequest $request, League $league): RedirectResponse
+    {
+        $team = Team::query()
+            ->where('league_id', $league->id)
+            ->where('id', $request->integer('team_id'))
+            ->firstOrFail();
+
+        $team->admin_flag = $request->boolean('admin_flag') ? 1 : 0;
+        $team->save();
+
+        return back()->with('success', 'Admin access updated.');
+    }
+
+    public function reopenMatchSet(ReopenMatchSetRequest $request, League $league, CreateEditSetsAction $createEditSetsAction): \Illuminate\Http\RedirectResponse
+    {
+        $createEditSetsAction([
+            'command' => 'reopen',
+            'set_id' => $request->integer('set_id'),
+        ]);
+
+        return redirect()
+            ->route('leagues.admin.reopen-match', ['league' => $league->id])
+            ->with('success', 'Match reopened. Standings were updated; coaches can submit a new result.');
+    }
+
     public function create(Request $request)
     {
         $action = new CreateEditLeagueAction;
@@ -143,6 +329,8 @@ class LeagueController extends Controller
 
     public function setWinner(Request $request, League $league)
     {
+        $this->authorize('admin', $league);
+
         $request->validate([
             'winner_user_id' => 'required|integer|exists:users,id',
         ]);

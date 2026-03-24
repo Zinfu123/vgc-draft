@@ -18,6 +18,21 @@ class DraftConfig extends Model
         'minimum_cost_to_ban',
     ];
 
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'draft_date' => 'date',
+            'draft_points' => 'integer',
+            'minimum_drafts' => 'integer',
+            'ban_enabled' => 'boolean',
+            'bans_per_user' => 'integer',
+            'minimum_cost_to_ban' => 'integer',
+        ];
+    }
+
     public function league(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(\App\Modules\League\Models\League::class, 'league_id');

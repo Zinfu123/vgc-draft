@@ -93,11 +93,11 @@ function switchVersion(slug: string) {
 <template>
     <Head :title="pokemon.name" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-6">
+        <div class="mx-auto flex w-full max-w-4xl flex-col gap-8 px-4 py-6 pb-10">
             <div class="flex flex-wrap items-center gap-4">
                 <Link
                     :href="route('pokedex.index')"
-                    class="inline-flex h-8 items-center rounded-md border border-input bg-background px-3 text-sm font-medium shadow-xs hover:bg-accent hover:text-accent-foreground"
+                    class="inline-flex min-h-11 items-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium shadow-xs touch-manipulation hover:bg-accent hover:text-accent-foreground"
                 >
                     Back to Pokedex
                 </Link>
@@ -118,7 +118,7 @@ function switchVersion(slug: string) {
                         <select
                             id="game-version"
                             :value="selectedVersionSlug"
-                            class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+                            class="flex h-11 min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none md:h-9 md:min-h-9 md:py-1 md:text-sm"
                             @change="switchVersion(($event.target as HTMLSelectElement).value)"
                         >
                             <option v-for="vg in versionGroups" :key="vg.id" :value="vg.slug">

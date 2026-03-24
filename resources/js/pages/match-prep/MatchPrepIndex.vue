@@ -41,7 +41,7 @@ function onLeagueChange(event: Event): void {
     <Head title="Match prep" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col gap-6 p-6">
+        <div class="flex flex-col gap-6 p-4 pb-10 sm:p-6">
             <div>
                 <h1 class="text-2xl font-bold tracking-tight">Match prep</h1>
                 <p class="text-muted-foreground mt-1 max-w-2xl text-sm">
@@ -55,7 +55,7 @@ function onLeagueChange(event: Event): void {
                         <Label for="league_id">League</Label>
                         <select
                             id="league_id"
-                            class="border-input bg-background h-9 w-full max-w-md rounded-md border px-3 text-sm shadow-xs"
+                            class="border-input bg-background h-11 min-h-11 w-full max-w-md rounded-md border px-3 text-base shadow-xs md:h-9 md:min-h-9 md:text-sm"
                             :value="String(props.selected_league_id)"
                             @change="onLeagueChange"
                         >

@@ -57,14 +57,14 @@ interface Set {
             },
         ];
     };
-    team1_score: number;
-    team2_score: number;
+    team1_score: number | null;
+    team2_score: number | null;
     team1_pokepaste: string | null;
     team2_pokepaste: string | null;
     replay1: string | null;
     replay2: string | null;
     replay3: string | null;
-    winner_id: number;
+    winner_id: number | null;
     winner_name: string;
     winner_logo: string;
     status: number;
@@ -88,6 +88,7 @@ interface props {
     currentUserTeam: CurrentUserTeam | null;
     matchPokepaste: MatchPokepastePayload | null;
     matchPokepasteSides: MatchPokepasteSides;
+    isLeagueAdmin: boolean;
 }
 
 const props = defineProps<props>();
@@ -108,17 +109,22 @@ const replayForm = useForm({
     replay3: props.set.replay3 || '',
 });
 
+const reopenForm = useForm({
+    command: 'reopen' as const,
+    set_id: props.set.id,
+});
+
 type SetModel = {
     id: number;
     league_id: number;
     pool_id: number;
     round: number;
-    team1_score: number;
-    team2_score: number;
+    team1_score: number | null;
+    team2_score: number | null;
     replay1: string | null;
     replay2: string | null;
     replay3: string | null;
-    winner_id: number;
+    winner_id: number | null;
     winner_name: string;
     winner_logo: string;
     status: number;
@@ -199,14 +205,25 @@ const handleSubmit = () => {
 const handleReplaySubmit = () => {
     replayForm.put(route('sets.update-replays'));
 };
+
+const handleReopenMatch = () => {
+    if (
+        !confirm(
+            'Reopen this match? The set result will be cleared, standings will be adjusted to remove this match’s points and win/loss totals, and players can submit a new result.',
+        )
+    ) {
+        return;
+    }
+    reopenForm.put('/match');
+};
 </script>
 <template>
     <AppLayout :breadcrumbs="breadcrumbs">
         <Head :title="`${props.set.team1.name} vs ${props.set.team2.name}`" />
-        <div class="mx-auto mt-8 mb-8 flex max-w-4xl flex-col items-center">
-            <h1 class="text-3xl font-bold">{{ props.set.team1.name }} vs {{ props.set.team2.name }}</h1>
+        <div class="mx-auto mt-6 mb-6 flex max-w-4xl flex-col items-center px-4 sm:mt-8 sm:mb-8">
+            <h1 class="text-center text-2xl font-bold sm:text-3xl">{{ props.set.team1.name }} vs {{ props.set.team2.name }}</h1>
         </div>
-        <div class="mt-8 flex flex-row items-start gap-4">
+        <div class="mt-8 flex w-full flex-col items-stretch gap-10 px-4 lg:flex-row lg:items-start lg:gap-4 lg:px-6">
             <div class="flex min-w-0 flex-1 flex-col">
                 <!-- Team 1 -->
                 <img v-if="props.set.team1.logo" :src="props.set.team1.logo" alt="Team Logo" class="mx-auto h-30 w-30 rounded-full" />
@@ -226,7 +243,7 @@ const handleReplaySubmit = () => {
                 </div>
             </div>
             <!-- Center Column-->
-            <div class="flex min-w-0 flex-1 flex-col px-4">
+            <div class="flex min-w-0 flex-1 flex-col px-0 lg:px-4">
                 <form class="top-0" @submit.prevent="handleSubmit">
                     <div class="space-y-12">
                         <div v-if="props.matchPokepaste && isUserInSet" class="pb-2">
@@ -253,7 +270,7 @@ const handleReplaySubmit = () => {
                                         <select
                                             name="team1_score"
                                             id="team1_score"
-                                            class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+                                            class="block min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none sm:min-h-9 sm:py-1.5 sm:text-sm"
                                             v-model="form.team1_score"
                                             :disabled="disableForm"
                                         >
@@ -271,7 +288,7 @@ const handleReplaySubmit = () => {
                                         <select
                                             name="team2_score"
                                             id="team2_score"
-                                            class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+                                            class="block min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none sm:min-h-9 sm:py-1.5 sm:text-sm"
                                             v-model="form.team2_score"
                                             :disabled="disableForm"
                                         >
@@ -396,12 +413,12 @@ const handleReplaySubmit = () => {
                                     </div>
                                 </div>
 
-                                <div class="flex min-h-[38px] gap-3 sm:col-span-6">
+                                <div class="flex min-h-[44px] flex-col gap-3 sm:col-span-6 sm:flex-row sm:flex-wrap">
                                     <button
                                         v-if="!isSetCompleted && isUserInSet"
                                         type="submit"
                                         :disabled="disableForm || !canSubmitSetResult"
-                                        class="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50"
+                                        class="min-h-11 touch-manipulation rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-9 sm:px-3 sm:py-2"
                                     >
                                         Update
                                     </button>
@@ -409,7 +426,7 @@ const handleReplaySubmit = () => {
                                         v-if="isUserInSet"
                                         type="button"
                                         :disabled="replayForm.processing"
-                                        class="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                                        class="min-h-11 touch-manipulation rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:min-h-9 sm:px-3 sm:py-2"
                                         @click="handleReplaySubmit"
                                     >
                                         Save Replays
@@ -424,6 +441,17 @@ const handleReplaySubmit = () => {
                                 <div class="text-center">
                                     <p class="text-2xl font-bold text-foreground">{{ props.set.winner_name }}</p>
                                     <p v-if="winnerCoach" class="text-lg text-muted-foreground">Coach: {{ winnerCoach }}</p>
+                                </div>
+                                <div v-if="props.isLeagueAdmin && isSetCompleted" class="flex w-full max-w-md flex-col items-center gap-2">
+                                    <p v-if="reopenForm.errors.set_id" class="text-center text-sm text-destructive">{{ reopenForm.errors.set_id }}</p>
+                                    <button
+                                        type="button"
+                                        :disabled="reopenForm.processing"
+                                        class="rounded-md border border-destructive/60 bg-transparent px-3 py-2 text-sm font-semibold text-destructive shadow-sm transition-colors hover:bg-destructive/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-destructive disabled:cursor-not-allowed disabled:opacity-50"
+                                        @click="handleReopenMatch"
+                                    >
+                                        Reopen match (admin)
+                                    </button>
                                 </div>
                             </div>
                         </div>

@@ -86,19 +86,19 @@ function submitFilters() {
             <h1 class="text-2xl font-bold tracking-tight">Pokedex</h1>
 
             <form
-                class="flex flex-col gap-4 rounded-lg border border-border bg-card p-4 shadow-sm md:flex-row md:flex-wrap md:items-end"
+                class="flex max-w-full flex-col gap-4 overflow-x-auto rounded-lg border border-border bg-card p-4 shadow-sm md:flex-row md:flex-wrap md:items-end"
                 @submit.prevent="submitFilters()"
             >
                 <div class="grid min-w-[200px] flex-1 gap-2">
                     <Label for="search">Search</Label>
-                    <Input id="search" v-model="searchDraft" type="search" placeholder="Name…" />
+                    <Input id="search" v-model="searchDraft" type="search" placeholder="Name…" class="min-h-11 text-base md:min-h-9 md:text-sm" />
                 </div>
                 <div class="grid min-w-[140px] gap-2">
                     <Label for="type1">Type (either slot)</Label>
                     <select
                         id="type1"
                         :value="filters.type1"
-                        class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+                        class="flex h-11 min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none md:h-9 md:min-h-9 md:py-1 md:text-sm"
                         @change="applyFilters({ type1: ($event.target as HTMLSelectElement).value })"
                     >
                         <option value="">Any</option>
@@ -110,7 +110,7 @@ function submitFilters() {
                     <select
                         id="type2"
                         :value="filters.type2"
-                        class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+                        class="flex h-11 min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none md:h-9 md:min-h-9 md:py-1 md:text-sm"
                         @change="applyFilters({ type2: ($event.target as HTMLSelectElement).value })"
                     >
                         <option value="">Any</option>
@@ -122,7 +122,7 @@ function submitFilters() {
                     <select
                         id="generation"
                         :value="filters.generation ?? ''"
-                        class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+                        class="flex h-11 min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none md:h-9 md:min-h-9 md:py-1 md:text-sm"
                         @change="
                             applyFilters({
                                 generation:
@@ -141,7 +141,7 @@ function submitFilters() {
                     <select
                         id="per_page"
                         :value="filters.per_page"
-                        class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+                        class="flex h-11 min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none md:h-9 md:min-h-9 md:py-1 md:text-sm"
                         @change="applyFilters({ per_page: Number(($event.target as HTMLSelectElement).value) })"
                     >
                         <option :value="18">18</option>
@@ -149,7 +149,7 @@ function submitFilters() {
                         <option :value="72">72</option>
                     </select>
                 </div>
-                <Button type="submit" variant="secondary" class="md:mb-0">Apply</Button>
+                <Button type="submit" variant="secondary" class="min-h-11 w-full touch-manipulation md:mb-0 md:h-9 md:min-h-9 md:w-auto">Apply</Button>
             </form>
 
             <p v-if="pokemon.total > 0" class="text-sm text-muted-foreground">

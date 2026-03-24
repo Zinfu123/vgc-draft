@@ -45,19 +45,29 @@ const props = defineProps<props>();
 <template>
     <Head title="Leagues" />
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="mt-6 mr-4 flex justify-end">
-            <Button variant="outline" @click="router.get(route('leagues.create-edit'), { command: 'create' })"> Create League </Button>
+        <div class="mt-4 flex justify-end px-4 sm:mt-6 sm:mr-4 sm:px-0">
+            <Button
+                variant="outline"
+                class="min-h-11 w-full touch-manipulation sm:w-auto"
+                @click="router.get(route('leagues.create-edit'), { command: 'create' })"
+            >
+                Create League
+            </Button>
         </div>
-        <div class="mx-auto flex flex-col items-center">
+        <div class="mx-auto flex w-full max-w-7xl flex-col items-center px-4 pb-10 sm:px-6">
             <div class="mb-10">
                 <h1 class="mb-4 text-3xl font-bold">Current Leagues</h1>
-                <LeagueCarousel :leagues="props.currentLeagues" />
+                <div class="flex flex-wrap justify-center gap-4 sm:justify-start">
+                    <LeagueCarousel :leagues="props.currentLeagues" />
+                </div>
             </div>
         </div>
         <div class="mx-auto flex flex-col items-center">
             <div class="mb-10">
                 <h1 class="mb-4 text-3xl font-bold">Past Leagues</h1>
-                <LeagueCarousel :leagues="props.pastLeagues" />
+                <div class="flex flex-wrap justify-center gap-4 sm:justify-start">
+                    <LeagueCarousel :leagues="props.pastLeagues" />
+                </div>
             </div>
         </div>
     </AppLayout>

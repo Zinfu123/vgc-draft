@@ -1,9 +1,7 @@
 <?php
 
 use App\Models\User;
-use App\Modules\Draft\Models\DraftConfig;
 use App\Modules\League\Models\League;
-use App\Modules\Matches\Models\MatchConfig;
 use App\Modules\Matches\Models\Pool;
 use App\Modules\Matches\Models\Set;
 use App\Modules\Teams\Models\Team;
@@ -14,65 +12,6 @@ use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
-
-function createLeagueForDiscordTests(): array
-{
-    $owner = User::factory()->create();
-
-    $league = League::create([
-        'name' => 'Discord League',
-        'status' => 1,
-        'league_owner' => $owner->id,
-        'discord_webhook_url' => 'https://discord.com/api/webhooks/test/token',
-    ]);
-
-    DraftConfig::create([
-        'league_id' => $league->id,
-        'draft_date' => now()->addDay(),
-        'draft_points' => 80,
-        'ban_enabled' => false,
-    ]);
-
-    MatchConfig::create([
-        'league_id' => $league->id,
-        'enforce_round_count' => false,
-    ]);
-
-    $user1 = User::factory()->create();
-    $user2 = User::factory()->create();
-
-    $team1 = Team::create([
-        'name' => 'Team Rocket',
-        'league_id' => $league->id,
-        'user_id' => $user1->id,
-        'admin_flag' => 1,
-        'pick_position' => 1,
-        'seed' => 1,
-        'draft_points' => 80,
-        'victory_points' => 0,
-        'set_wins' => 0,
-        'set_losses' => 0,
-        'game_wins' => 0,
-        'game_losses' => 0,
-    ]);
-
-    $team2 = Team::create([
-        'name' => 'Team Aqua',
-        'league_id' => $league->id,
-        'user_id' => $user2->id,
-        'admin_flag' => 0,
-        'pick_position' => 2,
-        'seed' => 2,
-        'draft_points' => 80,
-        'victory_points' => 0,
-        'set_wins' => 0,
-        'set_losses' => 0,
-        'game_wins' => 0,
-        'game_losses' => 0,
-    ]);
-
-    return [$owner, $league, $team1, $team2, $user1, $user2];
-}
 
 // ── Discord Webhook URL update ───────────────────────────────────────────────
 

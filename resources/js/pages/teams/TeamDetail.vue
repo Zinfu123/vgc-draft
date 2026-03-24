@@ -48,18 +48,18 @@ const breadcrumbs: BreadcrumbItem[] = [
 </script>
 <template>
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col items-center justify-center border border-gray-200 dark:border-gray-700">
-            <h1 class="flex flex-col items-center justify-center">
-                <img :src="props.team.logo" alt="Team Logo" class="inline h-30 w-30 rounded-full" />
-                <text class="">{{ props.team.name }}</text>
-                <span class="self-bottom"> Coach:{{ props.team.coach }} </span>
-            </h1>
-        </div>
-        <div class="items-top flex flex-row justify-center border border-gray-200 dark:border-gray-700">
-            <div class="flex w-1/3 flex-wrap items-center justify-center">
-                <div class="flex flex-col items-center border border-gray-200 dark:border-gray-700">
-                    <h2 class="mb-4 object-top text-2xl font-bold">Drafted Pokemon</h2>
-                    <div class="flex flex-row flex-wrap items-center justify-center gap-2">
+        <div class="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-6 md:px-6">
+            <div class="flex flex-col items-center justify-center rounded-lg border border-gray-200 p-6 dark:border-gray-700">
+                <h1 class="flex flex-col items-center gap-2 text-center">
+                    <img :src="props.team.logo" alt="Team Logo" class="inline size-28 rounded-full object-cover md:size-32" />
+                    <span class="text-2xl font-bold">{{ props.team.name }}</span>
+                    <span class="text-muted-foreground">Coach: {{ props.team.coach }}</span>
+                </h1>
+            </div>
+            <div class="flex flex-col gap-6 lg:flex-row lg:items-stretch lg:justify-center">
+                <div class="flex w-full flex-col items-center rounded-lg border border-gray-200 p-4 dark:border-gray-700 lg:w-1/3">
+                    <h2 class="mb-4 text-xl font-bold md:text-2xl">Drafted Pokemon</h2>
+                    <div class="flex w-full flex-wrap items-center justify-center gap-2">
                         <PokemonCard
                             v-for="pokemon in props.team.pokemon"
                             :key="pokemon.id"
@@ -67,12 +67,12 @@ const breadcrumbs: BreadcrumbItem[] = [
                         />
                     </div>
                 </div>
-            </div>
-            <div class="items-top container flex w-1/3 flex-wrap justify-center border border-gray-200 dark:border-gray-700">
-                <h2 class="object-top text-2xl font-bold">Upcoming Matches</h2>
-            </div>
-            <div class="items-top container flex w-1/3 flex-wrap justify-center border border-gray-200 dark:border-gray-700">
-                <h2 class="object-top text-2xl font-bold">Record</h2>
+                <div class="flex w-full flex-col items-center rounded-lg border border-gray-200 p-4 dark:border-gray-700 lg:w-1/3">
+                    <h2 class="text-xl font-bold md:text-2xl">Upcoming Matches</h2>
+                </div>
+                <div class="flex w-full flex-col items-center rounded-lg border border-gray-200 p-4 dark:border-gray-700 lg:w-1/3">
+                    <h2 class="text-xl font-bold md:text-2xl">Record</h2>
+                </div>
             </div>
         </div>
     </AppLayout>

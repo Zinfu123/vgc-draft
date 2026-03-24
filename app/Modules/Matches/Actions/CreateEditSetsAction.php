@@ -90,6 +90,53 @@ class CreateEditSetsAction
 
                 return true;
             }
+        } elseif ($data['command'] == 'reopen') {
+            $set = Set::where('id', $data['set_id'])->first();
+            if (! $set) {
+                return false;
+            }
+            if ($set->status !== 0) {
+                return false;
+            }
+
+            $team1Score = (int) $set->team1_score;
+            $team2Score = (int) $set->team2_score;
+
+            $team1 = Team::where('id', $set->team1_id)->first();
+            $team2 = Team::where('id', $set->team2_id)->first();
+            if (! $team1 || ! $team2) {
+                return false;
+            }
+
+            $team1points = $this->calculatePoints($team1Score, $team2Score);
+            $team2points = $this->calculatePoints($team2Score, $team1Score);
+            $team1->victory_points -= $team1points;
+            $team2->victory_points -= $team2points;
+
+            $winner = $set->winner_id;
+            if ($winner === $set->team1_id) {
+                $team1->set_wins -= 1;
+                $team2->set_losses -= 1;
+            } elseif ($winner === $set->team2_id) {
+                $team1->set_losses -= 1;
+                $team2->set_wins -= 1;
+            }
+
+            $team1->game_wins -= $team1Score;
+            $team1->game_losses -= $team2Score;
+            $team2->game_wins -= $team2Score;
+            $team2->game_losses -= $team1Score;
+
+            $set->status = 1;
+            $set->winner_id = null;
+            $set->team1_score = null;
+            $set->team2_score = null;
+            $set->save();
+            $team1->save();
+            $team2->save();
+            SetUpdatedEvent::dispatch(['set_id' => $set->id, 'status' => $set->status]);
+
+            return true;
         } elseif ($data['command'] == 'updatePokepaste') {
             $set = Set::where('id', $data['set_id'])->first();
             if (! $set) {

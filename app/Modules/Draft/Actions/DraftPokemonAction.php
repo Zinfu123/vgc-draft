@@ -66,5 +66,7 @@ class DraftPokemonAction
             /* create new draft order */
             (new CreateEditDraftOrderAction)->__invoke(['league_id' => $data['league_id']]);
         }
+
+        (new NotifyDraftNextTurnAction)(['league_id' => $data['league_id']]);
     }
 }

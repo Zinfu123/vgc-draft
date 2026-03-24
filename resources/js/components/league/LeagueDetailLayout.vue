@@ -5,10 +5,13 @@ import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
+import { useMobileLayout } from '@/composables/useMobileLayout';
 import { Head, Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
 
-export type LeagueDetailSection = 'teams' | 'matches' | 'standings' | 'trades' | 'draft' | 'pokemon';
+const { isMobile } = useMobileLayout();
+
+export type LeagueDetailSection = 'teams' | 'matches' | 'standings' | 'trades' | 'draft' | 'pokemon' | 'playoffs';
 
 interface League {
     id: number;
@@ -69,6 +72,7 @@ const sections: { value: LeagueDetailSection; label: string; route: string }[] =
     { value: 'teams', label: 'Teams', route: 'leagues.teams' },
     { value: 'matches', label: 'Matches', route: 'leagues.matches' },
     { value: 'standings', label: 'Standings', route: 'leagues.standings' },
+    { value: 'playoffs', label: 'Playoffs', route: 'leagues.playoffs' },
     { value: 'trades', label: 'Trades', route: 'leagues.trades' },
     { value: 'draft', label: 'Draft', route: 'leagues.draft' },
     { value: 'pokemon', label: 'Pokemon', route: 'leagues.pokemon' },
@@ -111,8 +115,23 @@ const draftHref = computed(() =>
             <div class="mt-6 flex flex-col items-center">
                 <h1 class="text-3xl font-bold">{{ props.league.name }}</h1>
             </div>
-            <div class="mt-4 flex justify-center">
-                <ButtonGroup>
+            <div class="mt-4 w-full md:flex md:justify-center max-md:-mx-4 max-md:px-4">
+                <div
+                    v-if="isMobile"
+                    class="flex w-full max-w-full gap-2 overflow-x-auto overscroll-x-contain pb-2 [scrollbar-width:thin] snap-x snap-mandatory [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30"
+                >
+                    <Button
+                        v-for="s in sections"
+                        :key="s.value"
+                        size="sm"
+                        class="shrink-0 snap-start touch-manipulation"
+                        :variant="props.section === s.value ? 'default' : 'outline'"
+                        as-child
+                    >
+                        <Link :href="s.value === 'draft' ? draftHref : route(s.route, { league: props.league.id })">{{ s.label }}</Link>
+                    </Button>
+                </div>
+                <ButtonGroup v-else class="flex-wrap justify-center">
                     <template v-for="s in sections" :key="s.value">
                         <Button size="sm" :variant="props.section === s.value ? 'default' : 'outline'" as-child>
                             <Link :href="s.value === 'draft' ? draftHref : route(s.route, { league: props.league.id })">{{ s.label }}</Link>

@@ -489,3 +489,271 @@ test('rejects set update when neither team has two wins', function (int $team1Sc
     '1-1' => [1, 1],
     '1-0' => [1, 0],
 ]);
+
+test('league admin can reopen a completed set and reverse team statistics', function () {
+    Event::fake();
+
+    $adminUser = User::factory()->create();
+    $user1 = User::factory()->create();
+    $user2 = User::factory()->create();
+
+    $league = League::create([
+        'name' => 'Test League',
+        'status' => 1,
+        'draft_points' => 100,
+        'league_owner' => $adminUser->id,
+    ]);
+
+    $matchConfig = MatchConfig::create([
+        'league_id' => $league->id,
+        'number_of_pools' => 1,
+        'status' => 1,
+    ]);
+
+    $pool = Pool::create([
+        'league_id' => $league->id,
+        'match_config_id' => $matchConfig->id,
+        'status' => 1,
+    ]);
+
+    Team::create([
+        'name' => 'Admin Team',
+        'league_id' => $league->id,
+        'user_id' => $adminUser->id,
+        'pick_position' => 3,
+        'seed' => 3,
+        'pool_id' => $pool->id,
+        'draft_points' => 100,
+        'victory_points' => 0,
+        'set_wins' => 0,
+        'set_losses' => 0,
+        'game_wins' => 0,
+        'game_losses' => 0,
+        'admin_flag' => 1,
+    ]);
+
+    $team1 = Team::create([
+        'name' => 'Team 1',
+        'league_id' => $league->id,
+        'user_id' => $user1->id,
+        'pick_position' => 1,
+        'seed' => 1,
+        'pool_id' => $pool->id,
+        'draft_points' => 100,
+        'victory_points' => 0,
+        'set_wins' => 0,
+        'set_losses' => 0,
+        'game_wins' => 0,
+        'game_losses' => 0,
+    ]);
+
+    $team2 = Team::create([
+        'name' => 'Team 2',
+        'league_id' => $league->id,
+        'user_id' => $user2->id,
+        'pick_position' => 2,
+        'seed' => 2,
+        'pool_id' => $pool->id,
+        'draft_points' => 100,
+        'victory_points' => 0,
+        'set_wins' => 0,
+        'set_losses' => 0,
+        'game_wins' => 0,
+        'game_losses' => 0,
+    ]);
+
+    $set = Set::create([
+        'league_id' => $league->id,
+        'pool_id' => $pool->id,
+        'round' => 1,
+        'team1_id' => $team1->id,
+        'team2_id' => $team2->id,
+        'status' => 1,
+    ]);
+
+    $this->actingAs($user1)->put('/match', [
+        'set_id' => $set->id,
+        'team1_id' => $team1->id,
+        'team2_id' => $team2->id,
+        'team1_score' => 2,
+        'team2_score' => 1,
+        'command' => 'update',
+    ])->assertRedirect(route('sets.show', ['set_id' => $set->id]));
+
+    $set->refresh();
+    $team1->refresh();
+    $team2->refresh();
+
+    expect($set->status)->toBe(0)
+        ->and($set->winner_id)->toBe($team1->id)
+        ->and($team1->victory_points)->toBe(2)
+        ->and($team2->victory_points)->toBe(1);
+
+    Event::fake();
+
+    $this->actingAs($adminUser)->put('/match', [
+        'command' => 'reopen',
+        'set_id' => $set->id,
+    ])->assertRedirect(route('sets.show', ['set_id' => $set->id]));
+
+    $set->refresh();
+    $team1->refresh();
+    $team2->refresh();
+
+    expect($set->status)->toBe(1)
+        ->and($set->winner_id)->toBeNull()
+        ->and($set->team1_score)->toBeNull()
+        ->and($set->team2_score)->toBeNull()
+        ->and($team1->victory_points)->toBe(0)
+        ->and($team2->victory_points)->toBe(0)
+        ->and($team1->set_wins)->toBe(0)
+        ->and($team1->set_losses)->toBe(0)
+        ->and($team2->set_wins)->toBe(0)
+        ->and($team2->set_losses)->toBe(0)
+        ->and($team1->game_wins)->toBe(0)
+        ->and($team1->game_losses)->toBe(0)
+        ->and($team2->game_wins)->toBe(0)
+        ->and($team2->game_losses)->toBe(0);
+
+    Event::assertDispatched(\App\Events\SetUpdatedEvent::class);
+});
+
+test('non-admin cannot reopen a completed set', function () {
+    $user1 = User::factory()->create();
+    $user2 = User::factory()->create();
+
+    $league = League::create([
+        'name' => 'Test League',
+        'status' => 1,
+        'draft_points' => 100,
+        'league_owner' => $user1->id,
+    ]);
+
+    $matchConfig = MatchConfig::create([
+        'league_id' => $league->id,
+        'number_of_pools' => 1,
+        'status' => 1,
+    ]);
+
+    $pool = Pool::create([
+        'league_id' => $league->id,
+        'match_config_id' => $matchConfig->id,
+        'status' => 1,
+    ]);
+
+    $team1 = Team::create([
+        'name' => 'Team 1',
+        'league_id' => $league->id,
+        'user_id' => $user1->id,
+        'pick_position' => 1,
+        'seed' => 1,
+        'pool_id' => $pool->id,
+        'draft_points' => 100,
+        'victory_points' => 3,
+        'set_wins' => 1,
+        'set_losses' => 0,
+        'game_wins' => 2,
+        'game_losses' => 0,
+    ]);
+
+    $team2 = Team::create([
+        'name' => 'Team 2',
+        'league_id' => $league->id,
+        'user_id' => $user2->id,
+        'pick_position' => 2,
+        'seed' => 2,
+        'pool_id' => $pool->id,
+        'draft_points' => 100,
+        'victory_points' => 0,
+        'set_wins' => 0,
+        'set_losses' => 1,
+        'game_wins' => 0,
+        'game_losses' => 2,
+    ]);
+
+    $set = Set::create([
+        'league_id' => $league->id,
+        'pool_id' => $pool->id,
+        'round' => 1,
+        'team1_id' => $team1->id,
+        'team2_id' => $team2->id,
+        'team1_score' => 2,
+        'team2_score' => 0,
+        'winner_id' => $team1->id,
+        'status' => 0,
+    ]);
+
+    $this->actingAs($user1)->put('/match', [
+        'command' => 'reopen',
+        'set_id' => $set->id,
+    ])->assertForbidden();
+});
+
+test('reopen validation fails when set is not completed', function () {
+    $adminUser = User::factory()->create();
+
+    $league = League::create([
+        'name' => 'Test League',
+        'status' => 1,
+        'draft_points' => 100,
+        'league_owner' => $adminUser->id,
+    ]);
+
+    $matchConfig = MatchConfig::create([
+        'league_id' => $league->id,
+        'number_of_pools' => 1,
+        'status' => 1,
+    ]);
+
+    $pool = Pool::create([
+        'league_id' => $league->id,
+        'match_config_id' => $matchConfig->id,
+        'status' => 1,
+    ]);
+
+    $adminTeam = Team::create([
+        'name' => 'Admin Team',
+        'league_id' => $league->id,
+        'user_id' => $adminUser->id,
+        'pick_position' => 1,
+        'seed' => 1,
+        'pool_id' => $pool->id,
+        'draft_points' => 100,
+        'victory_points' => 0,
+        'set_wins' => 0,
+        'set_losses' => 0,
+        'game_wins' => 0,
+        'game_losses' => 0,
+        'admin_flag' => 1,
+    ]);
+
+    $user2 = User::factory()->create();
+    $team2 = Team::create([
+        'name' => 'Team 2',
+        'league_id' => $league->id,
+        'user_id' => $user2->id,
+        'pick_position' => 2,
+        'seed' => 2,
+        'pool_id' => $pool->id,
+        'draft_points' => 100,
+        'victory_points' => 0,
+        'set_wins' => 0,
+        'set_losses' => 0,
+        'game_wins' => 0,
+        'game_losses' => 0,
+    ]);
+
+    $set = Set::create([
+        'league_id' => $league->id,
+        'pool_id' => $pool->id,
+        'round' => 1,
+        'team1_id' => $adminTeam->id,
+        'team2_id' => $team2->id,
+        'status' => 1,
+    ]);
+
+    $this->actingAs($adminUser)->put('/match', [
+        'command' => 'reopen',
+        'set_id' => $set->id,
+    ])->assertSessionHasErrors('set_id');
+});

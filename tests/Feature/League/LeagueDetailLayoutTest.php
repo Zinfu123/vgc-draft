@@ -188,19 +188,32 @@ it('renders the admin winner page', function () {
     );
 });
 
+it('renders the admin reopen match page', function () {
+    $user = User::factory()->create();
+    $league = createLeagueAndTeamForUser($user, adminFlag: 1);
+
+    $response = $this->actingAs($user)->get("/leagues/{$league->id}/admin/reopen-match");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('league/admin/ReopenMatch')
+        ->has('league')
+    );
+});
+
 it('requires authentication on the admin pages', function (string $path) {
     $owner = User::factory()->create();
     $league = createLeagueAndTeamForUser($owner);
 
     $this->get("/leagues/{$league->id}/{$path}")->assertRedirect('/login');
-})->with(['admin', 'admin/match-config', 'admin/discord', 'admin/trades', 'admin/winner']);
+})->with(['admin', 'admin/match-config', 'admin/discord', 'admin/trades', 'admin/reopen-match', 'admin/winner']);
 
 it('forbids non-admin users from accessing admin pages', function (string $path) {
     $owner = User::factory()->create();
     $league = createLeagueAndTeamForUser($owner, adminFlag: 0);
 
     $this->actingAs($owner)->get("/leagues/{$league->id}/{$path}")->assertForbidden();
-})->with(['admin', 'admin/match-config', 'admin/discord', 'admin/trades', 'admin/winner']);
+})->with(['admin', 'admin/match-config', 'admin/discord', 'admin/trades', 'admin/reopen-match', 'admin/winner']);
 
 it('forbids users not in the league from accessing admin pages', function (string $path) {
     $owner = User::factory()->create();
@@ -209,4 +222,4 @@ it('forbids users not in the league from accessing admin pages', function (strin
     $outsider = User::factory()->create();
 
     $this->actingAs($outsider)->get("/leagues/{$league->id}/{$path}")->assertForbidden();
-})->with(['admin', 'admin/match-config', 'admin/discord', 'admin/trades', 'admin/winner']);
+})->with(['admin', 'admin/match-config', 'admin/discord', 'admin/trades', 'admin/reopen-match', 'admin/winner']);

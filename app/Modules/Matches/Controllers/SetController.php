@@ -4,6 +4,7 @@ namespace App\Modules\Matches\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Match\UpdateSetRequest;
+use App\Modules\League\Models\League;
 use App\Modules\Matches\Actions\CreateEditSetsAction;
 use App\Modules\Matches\Actions\ShowSetsAction;
 use App\Modules\Pokepaste\Actions\ReadMatchPokepastePayloadAction;
@@ -23,6 +24,7 @@ class SetController extends Controller
     }
 
     public function show(
+        Request $request,
         $match_id,
         ShowSetsAction $showSetsAction,
         ReadMatchPokepastePayloadAction $readMatchPokepastePayloadAction,
@@ -55,11 +57,18 @@ class SetController extends Controller
             $matchPokepaste = $readMatchPokepastePayloadAction($set, $currentUserTeam);
         }
 
+        $league = League::query()->find($set->league_id);
+        $user = $request->user();
+        $isLeagueAdmin = $league !== null
+            && $user !== null
+            && $user->can('admin', $league);
+
         return Inertia::render('match/MatchDetail', [
             'set' => fn () => $set,
             'currentUserTeam' => fn () => $currentUserTeam,
             'matchPokepaste' => fn () => $matchPokepaste,
             'matchPokepasteSides' => fn () => $readMatchPokepasteSideSummariesAction($set),
+            'isLeagueAdmin' => fn () => $isLeagueAdmin,
         ]);
     }
 

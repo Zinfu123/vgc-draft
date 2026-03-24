@@ -37,9 +37,9 @@ function createLeagueWithOwnerAndTeam(): array
 }
 
 it('sets the winner and marks the league as completed', function () {
-    [$owner, $league, $teamUser] = createLeagueWithOwnerAndTeam();
+    [, $league, $teamUser] = createLeagueWithOwnerAndTeam();
 
-    $response = $this->actingAs($owner)->post("/leagues/{$league->id}/set-winner", [
+    $response = $this->actingAs($teamUser)->post("/leagues/{$league->id}/set-winner", [
         'winner_user_id' => $teamUser->id,
     ]);
 
@@ -51,21 +51,31 @@ it('sets the winner and marks the league as completed', function () {
 });
 
 it('fails validation when winner_user_id is missing', function () {
-    [$owner, $league] = createLeagueWithOwnerAndTeam();
+    [, $league, $teamUser] = createLeagueWithOwnerAndTeam();
 
-    $response = $this->actingAs($owner)->post("/leagues/{$league->id}/set-winner", []);
+    $response = $this->actingAs($teamUser)->post("/leagues/{$league->id}/set-winner", []);
 
     $response->assertSessionHasErrors('winner_user_id');
 });
 
 it('fails validation when winner_user_id does not exist', function () {
-    [$owner, $league] = createLeagueWithOwnerAndTeam();
+    [, $league, $teamUser] = createLeagueWithOwnerAndTeam();
 
-    $response = $this->actingAs($owner)->post("/leagues/{$league->id}/set-winner", [
+    $response = $this->actingAs($teamUser)->post("/leagues/{$league->id}/set-winner", [
         'winner_user_id' => 99999,
     ]);
 
     $response->assertSessionHasErrors('winner_user_id');
+});
+
+it('forbids non-admin league members from setting a winner', function () {
+    [$owner, $league, $teamUser] = createLeagueWithOwnerAndTeam();
+
+    $response = $this->actingAs($owner)->post("/leagues/{$league->id}/set-winner", [
+        'winner_user_id' => $teamUser->id,
+    ]);
+
+    $response->assertForbidden();
 });
 
 it('requires authentication to set a winner', function () {

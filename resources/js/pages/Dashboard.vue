@@ -12,6 +12,12 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
+interface Podium {
+    first: string | null;
+    second: string | null;
+    third: string | null;
+}
+
 interface League {
     id: number;
     name: string;
@@ -20,6 +26,7 @@ interface League {
     set_start_date: string;
     logo: string | null;
     winner: string | null;
+    podium?: Podium;
 }
 
 interface OpenLeague {
@@ -29,6 +36,7 @@ interface OpenLeague {
     set_start_date: string;
     logo: string | null;
     winner: null;
+    podium?: Podium;
 }
 
 interface UserStats {
@@ -39,6 +47,10 @@ interface UserStats {
     game_losses: number;
     set_wins: number;
     set_losses: number;
+    playoff_game_wins: number;
+    playoff_game_losses: number;
+    playoff_set_wins: number;
+    playoff_set_losses: number;
 }
 
 function winPct(wins: number, losses: number): string {
@@ -65,10 +77,10 @@ const props = defineProps<Props>();
     <Head title="Dashboard" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="flex flex-col gap-8 p-6">
+        <div class="flex flex-col gap-8 p-4 pb-10 sm:p-6">
             <section>
                 <h2 class="mb-4 text-2xl font-bold">{{ props.userName }}'s Stats</h2>
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
                     <Card>
                         <CardContent class="flex flex-col items-center gap-2 pt-6 text-center">
                             <div class="flex items-end gap-4">
@@ -102,13 +114,35 @@ const props = defineProps<Props>();
                             <span class="text-xs text-muted-foreground">{{ winPct(props.userStats.set_wins, props.userStats.set_losses) }}</span>
                         </CardContent>
                     </Card>
+                    <Card>
+                        <CardContent class="flex flex-col items-center gap-1 pt-6 text-center">
+                            <span class="text-4xl font-bold tabular-nums">
+                                {{ props.userStats.playoff_game_wins }} – {{ props.userStats.playoff_game_losses }}
+                            </span>
+                            <span class="text-sm text-muted-foreground">Playoff game record</span>
+                            <span class="text-xs text-muted-foreground">
+                                {{ winPct(props.userStats.playoff_game_wins, props.userStats.playoff_game_losses) }}
+                            </span>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardContent class="flex flex-col items-center gap-1 pt-6 text-center">
+                            <span class="text-4xl font-bold tabular-nums">
+                                {{ props.userStats.playoff_set_wins }} – {{ props.userStats.playoff_set_losses }}
+                            </span>
+                            <span class="text-sm text-muted-foreground">Playoff set record</span>
+                            <span class="text-xs text-muted-foreground">
+                                {{ winPct(props.userStats.playoff_set_wins, props.userStats.playoff_set_losses) }}
+                            </span>
+                        </CardContent>
+                    </Card>
                 </div>
             </section>
 
             <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
                 <section>
                     <h2 class="mb-4 text-2xl font-bold">My Active Leagues</h2>
-                    <div v-if="props.usersActiveLeagues.length > 0" class="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-4">
+                    <div v-if="props.usersActiveLeagues.length > 0" class="grid grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-4">
                         <LeagueCarousel :leagues="props.usersActiveLeagues" />
                     </div>
                     <p v-else class="text-muted-foreground">You are not currently in any active leagues.</p>
@@ -116,7 +150,7 @@ const props = defineProps<Props>();
 
                 <section>
                     <h2 class="mb-4 text-2xl font-bold">My Past Leagues</h2>
-                    <div v-if="props.usersPastLeagues.length > 0" class="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-4">
+                    <div v-if="props.usersPastLeagues.length > 0" class="grid grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-4">
                         <LeagueCarousel :leagues="props.usersPastLeagues" />
                     </div>
                     <p v-else class="text-muted-foreground">You have no past leagues.</p>
@@ -125,7 +159,7 @@ const props = defineProps<Props>();
 
             <section>
                 <h2 class="mb-4 text-2xl font-bold">Open Leagues</h2>
-                <div v-if="props.openLeagues.length > 0" class="grid grid-cols-[repeat(auto-fill,minmax(16rem,1fr))] gap-4">
+                <div v-if="props.openLeagues.length > 0" class="grid grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-4">
                     <LeagueCarousel :leagues="props.openLeagues" />
                 </div>
                 <p v-else class="text-muted-foreground">There are no open leagues available to join.</p>

@@ -12,17 +12,20 @@ use App\Modules\Draft\Models\DraftOrder;
 use App\Modules\League\Models\League;
 use App\Modules\League\Models\LeaguePokemon;
 use App\Modules\Teams\Models\Team;
+use App\Notifications\DraftNextTurnNotification;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 
 uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-function createLeagueWithBans(int $bansPerUser = 2, int $minimumCostToBan = 3, int $teamCount = 3): array
+function createLeagueWithBans(int $bansPerUser = 2, int $minimumCostToBan = 3, int $teamCount = 3, ?string $discordWebhookUrl = null): array
 {
     $league = League::create([
         'name' => 'Test League',
         'status' => 1,
         'open' => true,
         'league_owner' => User::factory()->create()->id,
+        'discord_webhook_url' => $discordWebhookUrl,
     ]);
 
     DraftConfig::create([
@@ -238,6 +241,31 @@ test('LeaguePokemon banned field defaults to false', function () {
     ]);
 
     expect($pokemon->fresh()->banned)->toBeFalse();
+});
+
+test('BanPokemonAction sends DraftNextTurnNotification when discord webhook is set', function () {
+    Notification::fake();
+
+    [$league, $teams] = createLeagueWithBans(bansPerUser: 1, minimumCostToBan: 3, teamCount: 2, discordWebhookUrl: 'https://discord.com/api/webhooks/test/token');
+
+    $secondTeamCoach = User::find($teams[1]->user_id);
+    $secondTeamCoach?->update(['discord_id' => '555666777888999000']);
+
+    $user = User::factory()->create();
+    $this->actingAs($user)->post(route('draft.create'), ['league_id' => $league->id]);
+
+    $pokedexId = DB::table('pokedex')->insertGetId(['nationaldex_id' => 1, 'name' => 'Bulbasaur', 'type1' => 'Grass', 'created_at' => now(), 'updated_at' => now()]);
+    $pokemon = LeaguePokemon::create(['league_id' => $league->id, 'pokedex_id' => $pokedexId, 'name' => 'Bulbasaur', 'cost' => 5]);
+
+    $firstBanOrder = BanOrder::where('league_id', $league->id)->where('status', 1)->orderBy('round_number')->orderBy('ban_number')->first();
+
+    (new BanPokemonAction)(['league_id' => $league->id, 'team_id' => $firstBanOrder->team_id, 'pokemon_id' => $pokemon->id]);
+
+    Notification::assertSentTo($league, DraftNextTurnNotification::class, function (DraftNextTurnNotification $notification) use ($secondTeamCoach): bool {
+        return $notification->phase === 'ban'
+            && $secondTeamCoach !== null
+            && $notification->nextUser->is($secondTeamCoach);
+    });
 });
 
 test('BanPokemonAction bans pokemon, updates Bans record, and marks BanOrder done', function () {

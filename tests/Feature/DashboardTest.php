@@ -58,6 +58,10 @@ test('dashboard includes user stats with correct totals', function () {
             ->where('userStats.game_losses', 4)
             ->where('userStats.set_wins', 5)
             ->where('userStats.set_losses', 2)
+            ->where('userStats.playoff_game_wins', 0)
+            ->where('userStats.playoff_game_losses', 0)
+            ->where('userStats.playoff_set_wins', 0)
+            ->where('userStats.playoff_set_losses', 0)
     );
 });
 

@@ -7,6 +7,11 @@ import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import Tabs from '@/components/ui/tabs/Tabs.vue';
+import TabsContent from '@/components/ui/tabs/TabsContent.vue';
+import TabsList from '@/components/ui/tabs/TabsList.vue';
+import TabsTrigger from '@/components/ui/tabs/TabsTrigger.vue';
+import { useMobileLayout } from '@/composables/useMobileLayout';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/vue3';
@@ -172,12 +177,15 @@ interface Props {
     currentPicker: CurrentPicker | null;
     currentBanner: CurrentBanner | null;
     userTeam: UserTeam | null;
+    canManageDraftAsAdmin?: boolean;
     lastPick: LastPick | null;
     lastBan: LastBan | null;
     allBans: BanEntry[];
 }
 
 const props = defineProps<Props>();
+
+const { isMobile } = useMobileLayout();
 
 const filters = ref<PokemonFilters>({ name: '', minCost: undefined, maxCost: undefined });
 const selectedPokemon = ref<Pokemon | null>(null);
@@ -222,7 +230,19 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Draft', href: `/draft/${props.league.id}` },
 ];
 
-const reloadKeys = ['banOrders', 'draftOrders', 'pokemon', 'costHeaders', 'teams', 'currentBanner', 'currentPicker', 'lastBan', 'lastPick', 'draft'];
+const reloadKeys = [
+    'banOrders',
+    'draftOrders',
+    'pokemon',
+    'costHeaders',
+    'teams',
+    'currentBanner',
+    'currentPicker',
+    'lastBan',
+    'lastPick',
+    'draft',
+    'canManageDraftAsAdmin',
+];
 
 useEchoPublic(`draft.detail.${props.league.id}`, 'DraftDetailEvent', () => {
     router.visit(route('draft.detail', { league_id: props.league.id }), {
@@ -313,18 +333,316 @@ const submitAction = () => {
                         {{ userTeamData.name }} &mdash; {{ userTeamData.draft_points }} pts
                     </span>
                 </div>
-                <div class="flex items-center gap-2">
+                <div v-if="!isMobile" class="flex flex-wrap items-center gap-2">
                     <DraftPicksPanel :teams="props.teams" :bans="props.allBans" />
                     <DraftTeamsPanel :teams="props.teams" :bans="props.allBans" />
-                    <ButtonGroup v-if="props.userTeam?.admin_flag === 1">
+                    <ButtonGroup v-if="props.canManageDraftAsAdmin === true">
                         <Button variant="outline" size="sm" @click="revertLastPick">Revert Last Pick</Button>
                         <Button variant="destructive" size="sm" @click="abortDraft">Abort Draft</Button>
                     </ButtonGroup>
                 </div>
             </div>
 
-            <!-- Status Cards -->
-            <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <Tabs v-if="isMobile" default-value="board" class="w-full gap-4">
+                <TabsList class="grid h-auto w-full grid-cols-3 gap-1 p-1">
+                    <TabsTrigger value="overview" class="touch-manipulation px-1 text-xs sm:text-sm">Overview</TabsTrigger>
+                    <TabsTrigger value="board" class="touch-manipulation px-1 text-xs sm:text-sm">Board</TabsTrigger>
+                    <TabsTrigger value="teams" class="touch-manipulation px-1 text-xs sm:text-sm">Teams</TabsTrigger>
+                </TabsList>
+                <TabsContent value="overview" class="mt-4 space-y-4">
+                    <div class="grid grid-cols-1 gap-4">
+                        <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-800/50">
+                            <div class="border-b border-gray-100 px-5 py-3 dark:border-white/10">
+                                <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                    {{ isBanPhase ? 'Currently Banning' : 'Currently Picking' }}
+                                </h2>
+                            </div>
+                            <div class="flex items-center gap-4 px-5 py-4">
+                                <template v-if="isBanPhase">
+                                    <img
+                                        v-if="props.currentBanner?.team?.logo"
+                                        :src="props.currentBanner.team.logo"
+                                        class="size-14 rounded-full bg-gray-200 object-cover ring-2 ring-orange-400 dark:bg-gray-700"
+                                        alt=""
+                                    />
+                                    <div
+                                        v-else
+                                        class="flex size-14 shrink-0 items-center justify-center rounded-full bg-orange-100 ring-2 ring-orange-400 dark:bg-orange-900/30"
+                                    >
+                                        <ShieldBan class="size-6 text-orange-500" />
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="truncate text-base font-semibold text-gray-900 dark:text-white">
+                                            {{ props.currentBanner?.team?.name ?? 'N/A' }}
+                                        </p>
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                                            Ban {{ props.currentBanner?.ban_number }} &mdash; Round {{ props.currentBanner?.round_number }} of
+                                            {{ props.draftConfig?.bans_per_user }}
+                                        </p>
+                                    </div>
+                                </template>
+                                <template v-else>
+                                    <img
+                                        v-if="props.currentPicker?.team?.logo"
+                                        :src="props.currentPicker.team.logo"
+                                        class="size-14 rounded-full bg-gray-200 object-cover ring-2 ring-blue-400 dark:bg-gray-700"
+                                        alt=""
+                                    />
+                                    <div
+                                        v-else
+                                        class="flex size-14 shrink-0 items-center justify-center rounded-full bg-blue-100 ring-2 ring-blue-400 dark:bg-blue-900/30"
+                                    >
+                                        <Swords class="size-6 text-blue-500" />
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="truncate text-base font-semibold text-gray-900 dark:text-white">
+                                            {{ props.currentPicker?.team?.name ?? 'N/A' }}
+                                        </p>
+                                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                                            Round {{ props.currentPicker?.round_number }} &mdash; Pick {{ props.draft?.pick_number }}
+                                        </p>
+                                    </div>
+                                </template>
+                                <span
+                                    v-if="isMyTurn"
+                                    class="shrink-0 animate-pulse rounded-full px-3 py-1 text-xs font-bold"
+                                    :class="
+                                        isBanPhase
+                                            ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+                                            : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                                    "
+                                >
+                                    YOUR TURN
+                                </span>
+                            </div>
+                        </div>
+                        <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-800/50">
+                            <div class="border-b border-gray-100 px-5 py-3 dark:border-white/10">
+                                <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Last Action</h2>
+                            </div>
+                            <div v-if="isBanPhase && props.lastBan" class="flex items-center gap-4 px-5 py-4">
+                                <img
+                                    v-if="props.lastBan.team?.logo"
+                                    :src="props.lastBan.team.logo"
+                                    class="size-12 rounded-full bg-gray-200 object-cover dark:bg-gray-700"
+                                    alt=""
+                                />
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-white">{{ props.lastBan.team?.name }}</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">banned</p>
+                                    <p class="font-semibold capitalize text-red-600 dark:text-red-400">{{ props.lastBan.pokedex?.name }}</p>
+                                </div>
+                                <img
+                                    v-if="props.lastBan.pokedex"
+                                    :src="'https://raw.githubusercontent.com/Autumnchi/coloured-home-sprites/main/' + props.lastBan.pokedex.name + '.png'"
+                                    :alt="props.lastBan.pokedex.name"
+                                    class="size-16 rounded-lg bg-gray-100 object-contain dark:bg-gray-700"
+                                />
+                            </div>
+                            <div v-else-if="!isBanPhase && props.lastPick" class="flex items-center gap-4 px-5 py-4">
+                                <img
+                                    v-if="props.lastPick.team?.logo"
+                                    :src="props.lastPick.team.logo"
+                                    class="size-12 rounded-full bg-gray-200 object-cover dark:bg-gray-700"
+                                    alt=""
+                                />
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-white">{{ props.lastPick.team?.name }}</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">picked</p>
+                                    <p class="font-semibold capitalize text-blue-600 dark:text-blue-400">
+                                        {{ props.lastPick.league_pokemon.pokemon.name }}
+                                    </p>
+                                </div>
+                                <div class="shrink-0 origin-right scale-75">
+                                    <PokemonCard
+                                        :pokemon="{
+                                            ...props.lastPick.league_pokemon.pokemon,
+                                            cost: props.lastPick.league_pokemon.cost,
+                                        }"
+                                    />
+                                </div>
+                            </div>
+                            <div v-else class="flex items-center justify-center px-5 py-8 text-sm text-gray-400 dark:text-gray-500">No actions yet</div>
+                        </div>
+                    </div>
+                    <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-800/50">
+                        <div class="border-b border-gray-100 px-5 py-3 dark:border-white/10">
+                            <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                                <span v-if="isBanPhase">Ban Order &mdash; Round {{ props.banOrders[0]?.round_number ?? 1 }}</span>
+                                <span v-else>Draft Order &mdash; Round {{ props.draft?.round_number ?? 1 }}</span>
+                            </h2>
+                        </div>
+                        <ScrollArea class="w-full">
+                            <div class="flex gap-3 px-5 py-4">
+                                <template v-if="isBanPhase">
+                                    <div
+                                        v-for="banOrder in props.banOrders"
+                                        :key="banOrder.id"
+                                        class="flex min-w-[90px] flex-col items-center gap-1.5 rounded-lg p-3 text-center transition-colors"
+                                        :class="{
+                                            'opacity-50 bg-gray-100 dark:bg-gray-700/50': banOrder.status === 0,
+                                            'bg-orange-50 ring-2 ring-orange-400 dark:bg-orange-900/20':
+                                                banOrder.status === 1 && banOrder.team?.id === props.currentBanner?.team?.id,
+                                            'bg-gray-50 dark:bg-gray-800/30':
+                                                banOrder.status === 1 && banOrder.team?.id !== props.currentBanner?.team?.id,
+                                        }"
+                                    >
+                                        <img
+                                            v-if="banOrder.team?.logo"
+                                            :src="banOrder.team.logo"
+                                            class="size-10 rounded-full bg-gray-200 object-cover dark:bg-gray-700"
+                                            alt=""
+                                        />
+                                        <div v-else class="size-10 rounded-full bg-gray-200 dark:bg-gray-700" />
+                                        <p class="w-full truncate text-xs font-medium text-gray-900 dark:text-white">{{ banOrder.team?.name }}</p>
+                                        <span class="text-xs text-gray-500 dark:text-gray-400">{{ banOrder.team?.draft_points }} pts</span>
+                                        <span v-if="banOrder.status === 0" class="text-xs text-gray-400 dark:text-gray-500">✓ Done</span>
+                                        <span
+                                            v-else-if="banOrder.team?.id === props.currentBanner?.team?.id"
+                                            class="text-xs font-bold text-orange-600 dark:text-orange-400"
+                                            >Banning</span
+                                        >
+                                        <span v-else class="text-xs text-gray-400 dark:text-gray-500">Waiting</span>
+                                    </div>
+                                </template>
+                                <template v-else>
+                                    <div
+                                        v-for="draftOrder in props.draftOrders"
+                                        :key="draftOrder.id"
+                                        class="flex min-w-[90px] flex-col items-center gap-1.5 rounded-lg p-3 text-center transition-colors"
+                                        :class="{
+                                            'opacity-50 bg-gray-100 dark:bg-gray-700/50': draftOrder.status === 0,
+                                            'bg-blue-50 ring-2 ring-blue-400 dark:bg-blue-900/20':
+                                                draftOrder.status === 1 && draftOrder.team?.id === props.currentPicker?.team?.id,
+                                            'bg-gray-50 dark:bg-gray-800/30':
+                                                draftOrder.status === 1 && draftOrder.team?.id !== props.currentPicker?.team?.id,
+                                        }"
+                                    >
+                                        <img
+                                            v-if="draftOrder.team?.logo"
+                                            :src="draftOrder.team.logo"
+                                            class="size-10 rounded-full bg-gray-200 object-cover dark:bg-gray-700"
+                                            alt=""
+                                        />
+                                        <div v-else class="size-10 rounded-full bg-gray-200 dark:bg-gray-700" />
+                                        <p class="w-full truncate text-xs font-medium text-gray-900 dark:text-white">{{ draftOrder.team?.name }}</p>
+                                        <span class="text-xs text-gray-500 dark:text-gray-400">{{ draftOrder.team?.draft_points }} pts</span>
+                                        <span v-if="draftOrder.status === 0" class="text-xs text-gray-400 dark:text-gray-500">✓ Done</span>
+                                        <span
+                                            v-else-if="draftOrder.team?.id === props.currentPicker?.team?.id"
+                                            class="text-xs font-bold text-blue-600 dark:text-blue-400"
+                                            >Picking</span
+                                        >
+                                        <span v-else class="text-xs text-gray-400 dark:text-gray-500">Waiting</span>
+                                    </div>
+                                </template>
+                            </div>
+                        </ScrollArea>
+                    </div>
+                </TabsContent>
+                <TabsContent value="board" class="mt-4 space-y-4">
+                    <PokemonFilter
+                        v-model="filters"
+                        :pokemon="props.pokemon"
+                        :is-ban-phase="isBanPhase"
+                        :min-cost-to-ban="minCostToBan"
+                    />
+                    <div
+                        v-if="props.draft"
+                        class="overflow-hidden rounded-xl border-2 shadow-sm"
+                        :class="isBanPhase ? 'border-orange-400 dark:border-orange-600' : 'border-blue-400 dark:border-blue-600'"
+                    >
+                        <div
+                            v-if="isMyTurn"
+                            class="px-5 py-3"
+                            :class="isBanPhase ? 'bg-orange-50 dark:bg-orange-900/20' : 'bg-blue-50 dark:bg-blue-900/20'"
+                        >
+                            <h2
+                                class="flex items-center gap-2 font-semibold"
+                                :class="isBanPhase ? 'text-orange-800 dark:text-orange-300' : 'text-blue-800 dark:text-blue-300'"
+                            >
+                                <ShieldBan v-if="isBanPhase" class="size-5" />
+                                <Swords v-else class="size-5" />
+                                <span v-if="isBanPhase">Your turn to ban &mdash; tap a Pokémon (min cost: {{ minCostToBan }})</span>
+                                <span v-else>Your turn to pick &mdash; tap a Pokémon to draft it</span>
+                            </h2>
+                        </div>
+                        <div
+                            v-else
+                            class="px-5 py-3"
+                            :class="isBanPhase ? 'bg-orange-50 dark:bg-orange-900/20' : 'bg-blue-50 dark:bg-blue-900/20'"
+                        >
+                            <p
+                                class="text-sm"
+                                :class="isBanPhase ? 'text-orange-700 dark:text-orange-400' : 'text-blue-700 dark:text-blue-400'"
+                            >
+                                Waiting for
+                                <span class="font-semibold">
+                                    {{ isBanPhase ? (props.currentBanner?.team?.name ?? 'N/A') : (props.currentPicker?.team?.name ?? 'N/A') }}
+                                </span>
+                                to {{ isBanPhase ? 'ban' : 'pick' }}...
+                            </p>
+                        </div>
+                        <div class="bg-white p-4 dark:bg-gray-900/20">
+                            <div v-if="filteredPokemon.length === 0" class="py-10 text-center text-sm text-gray-400 dark:text-gray-500">
+                                No Pokémon match your filters.
+                            </div>
+                            <div v-else class="flex flex-col gap-6">
+                                <div v-for="costHeader in filteredCostHeaders" :key="costHeader" class="flex flex-col gap-3">
+                                    <div
+                                        class="sticky top-0 z-10 rounded-md border border-gray-200 bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 dark:border-white/10 dark:bg-gray-800 dark:text-gray-300"
+                                    >
+                                        Cost: {{ costHeader }}
+                                        <span
+                                            v-if="isBanPhase && costHeader < minCostToBan"
+                                            class="ml-2 text-xs font-normal text-orange-500 dark:text-orange-400"
+                                            >(not eligible to ban)</span
+                                        >
+                                    </div>
+                                    <div class="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                                        <div
+                                            v-for="pokemon in filteredPokemon.filter((p) => p.cost === costHeader)"
+                                            :key="pokemon.id"
+                                            class="relative overflow-hidden rounded-lg"
+                                            :class="isClickable(pokemon) ? 'cursor-pointer transition-all active:scale-[0.98] sm:hover:scale-105 sm:hover:shadow-md' : 'cursor-default'"
+                                            @click="openActionDialog(pokemon)"
+                                        >
+                                            <PokemonCard :pokemon="pokemon" />
+                                            <div
+                                                v-if="pokemon.banned"
+                                                class="absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-lg bg-red-900/75"
+                                            >
+                                                <Ban class="size-7 text-white" />
+                                                <span class="text-xs font-bold uppercase tracking-wide text-white">Banned</span>
+                                            </div>
+                                            <div
+                                                v-else-if="pokemon.is_drafted"
+                                                class="absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-lg bg-gray-900/60 px-1"
+                                            >
+                                                <CheckCircle class="size-7 text-green-400" />
+                                                <span class="text-center text-xs font-bold uppercase leading-tight tracking-wide text-white">
+                                                    Drafted By<br />{{ pokemon.drafted_by_team_name ?? '' }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </TabsContent>
+                <TabsContent value="teams" class="mt-4 flex flex-col gap-3">
+                    <DraftPicksPanel :teams="props.teams" :bans="props.allBans" />
+                    <DraftTeamsPanel :teams="props.teams" :bans="props.allBans" />
+                    <ButtonGroup v-if="props.canManageDraftAsAdmin === true" class="flex flex-col gap-2 sm:flex-row">
+                        <Button variant="outline" size="sm" class="min-h-11 touch-manipulation" @click="revertLastPick">Revert Last Pick</Button>
+                        <Button variant="destructive" size="sm" class="min-h-11 touch-manipulation" @click="abortDraft">Abort Draft</Button>
+                    </ButtonGroup>
+                </TabsContent>
+            </Tabs>
+
+            <!-- Status Cards (desktop) -->
+            <div v-if="!isMobile" class="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <!-- Current Actor -->
                 <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-800/50">
                     <div class="border-b border-gray-100 px-5 py-3 dark:border-white/10">
@@ -445,8 +763,8 @@ const submitAction = () => {
                 </div>
             </div>
 
-            <!-- Order Row -->
-            <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-800/50">
+            <!-- Order Row (desktop) -->
+            <div v-if="!isMobile" class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-800/50">
                 <div class="border-b border-gray-100 px-5 py-3 dark:border-white/10">
                     <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                         <span v-if="isBanPhase">Ban Order &mdash; Round {{ props.banOrders[0]?.round_number ?? 1 }}</span>
@@ -519,17 +837,18 @@ const submitAction = () => {
                 </ScrollArea>
             </div>
 
-            <!-- Shared Pokémon Filter -->
+            <!-- Shared Pokémon Filter (desktop) -->
             <PokemonFilter
+                v-if="!isMobile"
                 v-model="filters"
                 :pokemon="props.pokemon"
                 :is-ban-phase="isBanPhase"
                 :min-cost-to-ban="minCostToBan"
             />
 
-            <!-- Pokémon Section -->
+            <!-- Pokémon Section (desktop) -->
             <div
-                v-if="props.draft"
+                v-if="!isMobile && props.draft"
                 class="overflow-hidden rounded-xl border-2 shadow-sm"
                 :class="isBanPhase ? 'border-orange-400 dark:border-orange-600' : 'border-blue-400 dark:border-blue-600'"
             >

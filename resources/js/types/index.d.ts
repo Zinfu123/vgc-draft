@@ -29,6 +29,9 @@ export type AppPageProps<T extends Record<string, unknown> = Record<string, unkn
     ziggy: Config & { location: string };
     sidebarOpen: boolean;
     awsUrl?: string | null;
+    flash?: {
+        success?: string | null;
+    };
 };
 
 export interface User {

@@ -66,7 +66,7 @@ const rightNavItems: NavItem[] = [
                 <div class="lg:hidden">
                     <Sheet>
                         <SheetTrigger :as-child="true">
-                            <Button variant="ghost" size="icon" class="mr-2 h-9 w-9">
+                            <Button variant="ghost" size="icon" class="mr-2 size-11 min-h-11 min-w-11 touch-manipulation">
                                 <Menu class="h-5 w-5" />
                             </Button>
                         </SheetTrigger>
