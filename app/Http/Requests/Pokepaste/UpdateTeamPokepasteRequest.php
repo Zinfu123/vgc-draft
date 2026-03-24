@@ -4,6 +4,7 @@ namespace App\Http\Requests\Pokepaste;
 
 use App\Enums\PokemonNature;
 use App\Modules\Pokepaste\Models\SetTeamPokepaste;
+use App\Modules\Pokepaste\Services\AuthorizePokepasteEditor;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -41,12 +42,7 @@ class UpdateTeamPokepasteRequest extends FormRequest
             return false;
         }
 
-        $pokepaste->loadMissing(['team', 'set']);
-
-        return $pokepaste->team !== null
-            && (int) $pokepaste->team->user_id === (int) $this->user()->id
-            && $pokepaste->set !== null
-            && in_array((int) $pokepaste->team_id, [(int) $pokepaste->set->team1_id, (int) $pokepaste->set->team2_id], true);
+        return app(AuthorizePokepasteEditor::class)->userMayEdit($pokepaste, $this->user());
     }
 
     /**

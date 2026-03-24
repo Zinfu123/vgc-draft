@@ -4,7 +4,6 @@ import { ButtonGroup } from '@/components/ui/button-group';
 import { Link } from '@inertiajs/vue3';
 import StartDraft from '../draft/StartDraft.vue';
 import EditLeague from './EditLeague.vue';
-import ImportLeaguePokemon from './ImportLeaguePokemon.vue';
 
 interface League {
     id: number;
@@ -27,7 +26,9 @@ const props = defineProps<{
         <div class="mt-4 mr-14 flex w-full flex-col items-end justify-end">
             <ButtonGroup>
                 <EditLeague :league="props.league" />
-                <ImportLeaguePokemon :league="props.league" />
+                <Button variant="outline" as-child>
+                    <Link :href="route('leagues.admin.pokemon-pool', { league: props.league.id })">Pokémon pool</Link>
+                </Button>
                 <StartDraft :league="props.league" :command="{ command: 'create' }" v-if="props.draft === null" />
                 <Button variant="outline" as-child>
                     <Link :href="route('leagues.admin', { league: props.league.id })">Admin Settings</Link>

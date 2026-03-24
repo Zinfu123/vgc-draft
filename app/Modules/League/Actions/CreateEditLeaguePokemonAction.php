@@ -2,49 +2,21 @@
 
 namespace App\Modules\League\Actions;
 
-/* Define Models */
-use App\Modules\League\Models\LeaguePokemon;
-use App\Modules\Pokedex\Models\Pokedex;
-
-/* End Define Models */
-
-/* Define Dependencies */
-/* End Define Dependencies */
+use App\Modules\League\Services\ImportLeaguePokemonToLeagueFromCsvService;
+use Illuminate\Http\UploadedFile;
 
 class CreateEditLeaguePokemonAction
 {
-    public function __invoke($data)
-    {
-        $league_id = $data['league_id'];
-        $file = $data['csv_file'];
-        $handle = fopen($file->getRealPath(), 'r');
-        $header = fgetcsv($handle);
-        if (! is_numeric($header[0])) {
-            // If first column is not numeric, assume it's a header
-            $rows = [];
-        } else {
-            // If first column is numeric, it's data
-            $rows = [$header];
-        }
-        while (($row = fgetcsv($handle)) !== false) {
-            $rows[] = $row;
-        }
-        fclose($handle);
+    public function __construct(
+        private ImportLeaguePokemonToLeagueFromCsvService $importCsv,
+    ) {}
 
-        foreach ($rows as $row) {
-            $nationaldex_id = $row[0];
-            $pokemon = Pokedex::where('nationaldex_id', $nationaldex_id)->first();
-            $cost = $row[1];
-            if (! $pokemon) {
-            } else {
-                $pokedex_id = $pokemon->id;
-                $pokemon = LeaguePokemon::create([
-                    'league_id' => $league_id,
-                    'pokedex_id' => $pokedex_id,
-                    'cost' => $cost,
-                    'name' => $pokemon->name,
-                ]);
-            }
-        }
+    /**
+     * @param  array{league_id: int, csv_file: UploadedFile}  $data
+     * @return array{upserted: int, skipped_unknown_dex: int}
+     */
+    public function __invoke(array $data): array
+    {
+        return $this->importCsv->import((int) $data['league_id'], $data['csv_file']);
     }
 }

@@ -21,15 +21,18 @@ class ReadPokepastePageAction
      */
     public function __invoke(SetTeamPokepaste $pokepaste): array
     {
-        $pokepaste->loadMissing(['set.league', 'team']);
-        $viewCards = ($this->buildViewCards)($pokepaste);
-        $set = $pokepaste->set;
+        $pokepaste->loadMissing(['team', 'matchable']);
         $team = $pokepaste->team;
-        $league = $set?->league;
+        $league = $pokepaste->resolveLeague();
+        $set = $pokepaste->setModel();
+        $playoffMatch = $pokepaste->playoffMatch();
+
+        $viewCards = ($this->buildViewCards)($pokepaste);
 
         if ($league === null || $team === null) {
             return [
                 'set' => null,
+                'playoff_match' => null,
                 'league' => null,
                 'team' => null,
                 'roster' => [],
@@ -71,12 +74,28 @@ class ReadPokepastePageAction
         $generation = $versionGroup?->generation ?? $league->pokemon_game->generation();
         $allTeraTypes = PokemonTeraType::allValuesForGeneration($generation);
 
-        return [
-            'set' => [
+        $setPayload = null;
+        if ($set !== null) {
+            $setPayload = [
                 'id' => $set->id,
                 'league_id' => $set->league_id,
                 'round' => $set->round,
-            ],
+            ];
+        }
+
+        $playoffMatchPayload = null;
+        if ($playoffMatch !== null) {
+            $playoffMatchPayload = [
+                'id' => $playoffMatch->id,
+                'slot' => $playoffMatch->slot,
+                'round_index' => $playoffMatch->round_index,
+                'league_id' => $league->id,
+            ];
+        }
+
+        return [
+            'set' => $setPayload,
+            'playoff_match' => $playoffMatchPayload,
             'league' => [
                 'id' => $league->id,
                 'name' => $league->name,

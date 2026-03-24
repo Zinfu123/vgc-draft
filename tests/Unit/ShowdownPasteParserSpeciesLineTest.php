@@ -1,5 +1,6 @@
 <?php
 
+use App\Modules\Pokepaste\Services\ShowdownFormatHelper;
 use App\Modules\Pokepaste\Services\ShowdownPasteParser;
 
 function showdownBlock(string $speciesLine): string
@@ -27,6 +28,21 @@ it('uses species inside parentheses for unquoted nicknames', function () {
     expect($result['blocks'])->toHaveCount(6);
     expect($result['blocks'][0]['species_raw'])->toBe('PasteMon1');
     expect($result['blocks'][2]['species_raw'])->toBe('PasteMon3');
+});
+
+it('parses tatsugiri form in parentheses for roster matching', function () {
+    $parser = new ShowdownPasteParser;
+    $paste = implode("\n\n", array_map(
+        fn (int $i) => showdownBlock($i === 1
+            ? 'Dinner (Tatsugiri-Stretchy) @ Sitrus Berry'
+            : "Nick (PasteMon{$i}) @ Leftovers {$i}"),
+        range(1, 6),
+    ));
+
+    $result = $parser->parse($paste);
+    expect($result['errors'])->toBeEmpty();
+    expect($result['blocks'][0]['species_raw'])->toBe('Tatsugiri-Stretchy');
+    expect(ShowdownFormatHelper::speciesToMatchKey($result['blocks'][0]['species_raw']))->toBe('tatsugiri');
 });
 
 it('parses hyphenated species in parentheses', function () {

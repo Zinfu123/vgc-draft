@@ -24,7 +24,8 @@ class ReadMatchPokepasteSideSummariesAction
     private function forTeam(int $setId, int $teamId): ?array
     {
         $record = SetTeamPokepaste::query()
-            ->where('set_id', $setId)
+            ->where('matchable_type', Set::class)
+            ->where('matchable_id', $setId)
             ->where('team_id', $teamId)
             ->first();
 

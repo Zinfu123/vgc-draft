@@ -14,6 +14,7 @@ const props = defineProps<{
     edit_mode: boolean;
     paste_has_data: boolean;
     set: { id: number; league_id: number; round: number } | null;
+    playoff_match: { id: number; slot: string; round_index: number; league_id: number } | null;
     league: { id: number; name: string } | null;
     team: { id: number; name: string } | null;
     roster: RosterOption[];
@@ -41,6 +42,11 @@ const breadcrumbs = computed<BreadcrumbItemType[]>(() => {
     }
     if (props.set) {
         items.push({ title: 'Match', href: route('sets.show', { set_id: props.set.id }) });
+    } else if (props.playoff_match) {
+        items.push({
+            title: 'Playoffs',
+            href: route('leagues.playoffs', { league: props.playoff_match.league_id }),
+        });
     }
     items.push({ title: 'Team paste', href: route('pokepaste.show', { pokepaste: props.pokepaste_public_id }) });
     return items;

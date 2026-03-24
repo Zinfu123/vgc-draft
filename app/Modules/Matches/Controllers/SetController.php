@@ -57,7 +57,7 @@ class SetController extends Controller
             $matchPokepaste = $readMatchPokepastePayloadAction($set, $currentUserTeam);
         }
 
-        $league = League::query()->find($set->league_id);
+        $league = League::query()->with('matchConfig')->find($set->league_id);
         $user = $request->user();
         $isLeagueAdmin = $league !== null
             && $user !== null
@@ -69,6 +69,7 @@ class SetController extends Controller
             'matchPokepaste' => fn () => $matchPokepaste,
             'matchPokepasteSides' => fn () => $readMatchPokepasteSideSummariesAction($set),
             'isLeagueAdmin' => fn () => $isLeagueAdmin,
+            'requireTeamMatchPokepasteBeforeResults' => fn () => (bool) ($league?->matchConfig?->require_team_match_pokepaste_before_results ?? false),
         ]);
     }
 

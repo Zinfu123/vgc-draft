@@ -7,6 +7,7 @@ use App\Enums\Playoffs\PlayoffStatus;
 use App\Modules\League\Models\League;
 use App\Modules\Playoffs\Models\Playoff;
 use App\Modules\Playoffs\Models\PlayoffMatch;
+use App\Modules\Pokepaste\Services\EnforceTeamMatchPokepasteChecker;
 use App\Modules\Teams\Models\Team;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -150,6 +151,14 @@ class PlayoffBracketService
     {
         if ($match->team1_id === null || $match->team2_id === null) {
             throw new InvalidArgumentException('Both teams must be assigned before recording a result.');
+        }
+
+        $league = $match->playoff?->league;
+        $league?->loadMissing('matchConfig');
+        if ($league?->matchConfig?->require_team_match_pokepaste_before_results === true) {
+            if (! app(EnforceTeamMatchPokepasteChecker::class)->playoffMatchBothSidesHaveData($match)) {
+                throw new InvalidArgumentException('Both teams must submit their match teamsheet (Pokepaste) before a playoff result can be recorded.');
+            }
         }
 
         $winnerId = $this->calculateWinnerTeamId($match->team1_id, $match->team2_id, $team1Score, $team2Score);

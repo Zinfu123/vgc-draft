@@ -619,6 +619,7 @@ test('league admin can reopen a completed set and reverse team statistics', func
 });
 
 test('non-admin cannot reopen a completed set', function () {
+    $owner = User::factory()->create();
     $user1 = User::factory()->create();
     $user2 = User::factory()->create();
 
@@ -626,7 +627,7 @@ test('non-admin cannot reopen a completed set', function () {
         'name' => 'Test League',
         'status' => 1,
         'draft_points' => 100,
-        'league_owner' => $user1->id,
+        'league_owner' => $owner->id,
     ]);
 
     $matchConfig = MatchConfig::create([

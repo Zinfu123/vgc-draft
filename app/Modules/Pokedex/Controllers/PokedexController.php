@@ -6,13 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Modules\Pokedex\Models\Pokedex;
 use App\Modules\Pokedex\Models\PokemonGameData;
 use App\Modules\Pokedex\Models\VersionGroup;
+use App\Modules\Pokedex\Services\PokedexFilterService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class PokedexController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request, PokedexFilterService $pokedexFilterService): Response
     {
         $validated = $request->validate([
             'search' => ['sometimes', 'nullable', 'string', 'max:100'],
@@ -28,29 +29,12 @@ class PokedexController extends Controller
         $type2 = isset($validated['type2']) ? trim((string) $validated['type2']) : '';
         $generation = $validated['generation'] ?? null;
 
-        $pokemon = Pokedex::query()
-            ->select('pokedex.id', 'pokedex.name', 'pokedex.sprite_url', 'pokedex.type1', 'pokedex.type2', 'pokedex.nationaldex_id')
-            ->when($search !== '', function ($query) use ($search) {
-                $query->where('pokedex.name', 'like', '%'.$search.'%');
-            })
-            ->when($type1 !== '', function ($query) use ($type1) {
-                $query->where(function ($q) use ($type1) {
-                    $q->where('pokedex.type1', $type1)->orWhere('pokedex.type2', $type1);
-                });
-            })
-            ->when($type2 !== '', function ($query) use ($type2) {
-                $query->where(function ($q) use ($type2) {
-                    $q->where('pokedex.type1', $type2)->orWhere('pokedex.type2', $type2);
-                });
-            })
-            ->when($generation !== null, function ($query) use ($generation) {
-                $query->whereHas('gameData.versionGroup', function ($q) use ($generation) {
-                    $q->where('generation', $generation);
-                });
-            })
-            ->orderBy('pokedex.name')
-            ->paginate($perPage)
-            ->withQueryString();
+        $pokemon = $pokedexFilterService->paginate($perPage, [
+            'search' => $search,
+            'type1' => $type1,
+            'type2' => $type2,
+            'generation' => $generation,
+        ]);
 
         return Inertia::render('pokedex/PokedexIndex', [
             'pokemon' => $pokemon,
@@ -62,7 +46,7 @@ class PokedexController extends Controller
                 'per_page' => $perPage,
             ],
             'typeOptions' => $this->typeOptions(),
-            'generationFilterOptions' => $this->generationFilterOptions(),
+            'generationFilterOptions' => PokedexFilterService::generationFilterOptionInts(),
         ]);
     }
 
@@ -141,17 +125,5 @@ class PokedexController extends Controller
             'Steel',
             'Water',
         ];
-    }
-
-    /**
-     * @return list<int>
-     */
-    private function generationFilterOptions(): array
-    {
-        return VersionGroup::query()
-            ->distinct()
-            ->orderBy('generation')
-            ->pluck('generation')
-            ->all();
     }
 }

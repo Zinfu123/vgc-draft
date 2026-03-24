@@ -2,6 +2,8 @@
 
 namespace App\Modules\Pokepaste\Actions;
 
+use App\Modules\Matches\Models\Set;
+use App\Modules\Playoffs\Models\PlayoffMatch;
 use App\Modules\Pokepaste\Models\SetTeamPokepaste;
 use App\Modules\Pokepaste\Services\PokepasteSlotValidator;
 use App\Modules\Pokepaste\Services\ShowdownFormatHelper;
@@ -21,8 +23,17 @@ class ParseShowdownPasteAction
 
     public function __invoke(SetTeamPokepaste $pokepaste, string $paste): JsonResponse
     {
-        $pokepaste->loadMissing(['set.league', 'team']);
-        $league = $pokepaste->set?->league;
+        $pokepaste->loadMissing(['matchable', 'team']);
+        $matchable = $pokepaste->matchable;
+        if ($matchable instanceof Set) {
+            $matchable->loadMissing('league');
+            $league = $matchable->league;
+        } elseif ($matchable instanceof PlayoffMatch) {
+            $matchable->loadMissing('playoff.league');
+            $league = $matchable->playoff?->league;
+        } else {
+            $league = null;
+        }
         $team = $pokepaste->team;
 
         if ($league === null || $team === null) {

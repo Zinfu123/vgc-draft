@@ -89,6 +89,7 @@ interface props {
     matchPokepaste: MatchPokepastePayload | null;
     matchPokepasteSides: MatchPokepasteSides;
     isLeagueAdmin: boolean;
+    requireTeamMatchPokepasteBeforeResults?: boolean;
 }
 
 const props = defineProps<props>();
@@ -163,10 +164,16 @@ const isSetCompleted = computed((): boolean => {
     return echoEvent.value.status === 0 || props.set.status === 0;
 });
 
+const bothSidesPasteReady = computed((): boolean => {
+    return !!(props.matchPokepasteSides.team1?.has_data && props.matchPokepasteSides.team2?.has_data);
+});
+
 const disableForm = computed((): boolean => {
     if (echoEvent.value.status === 0 || props.set.status === 0) {
         return true;
     } else if (!isUserInSet.value) {
+        return true;
+    } else if (props.requireTeamMatchPokepasteBeforeResults && !bothSidesPasteReady.value) {
         return true;
     } else {
         return false;
@@ -301,6 +308,14 @@ const handleReopenMatch = () => {
 
                                 <p v-if="form.errors.set_result" class="text-destructive sm:col-span-6 text-sm">
                                     {{ form.errors.set_result }}
+                                </p>
+                                <p
+                                    v-else-if="!isSetCompleted && isUserInSet && requireTeamMatchPokepasteBeforeResults && !bothSidesPasteReady"
+                                    class="text-amber-700 sm:col-span-6 text-sm dark:text-amber-400"
+                                >
+                                    Both teams must submit their match team paste before set results can be entered.
+                                    <span v-if="!matchPokepasteSides.team1?.has_data" class="block">Missing paste: {{ props.set.team1.name }}</span>
+                                    <span v-if="!matchPokepasteSides.team2?.has_data" class="block">Missing paste: {{ props.set.team2.name }}</span>
                                 </p>
                                 <p
                                     v-else-if="!isSetCompleted && isUserInSet && !canSubmitSetResult"

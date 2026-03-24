@@ -30,6 +30,10 @@ class CreateEditMatchConfigAction
             }
             $matchConfig->number_of_pools = $data['number_of_pools'];
             $matchConfig->frequency_type = $data['frequency_type'];
+            $matchConfig->require_team_match_pokepaste_before_results = filter_var(
+                $data['require_team_match_pokepaste_before_results'] ?? false,
+                FILTER_VALIDATE_BOOLEAN
+            );
             $matchConfig->save();
             redirect()->route('leagues.detail', ['league' => $data['league_id']]);
 

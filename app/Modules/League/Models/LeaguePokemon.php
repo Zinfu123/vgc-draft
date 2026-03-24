@@ -15,12 +15,14 @@ class LeaguePokemon extends Model
         'cost',
         'banned',
         'drafted_by',
+        'is_drafted',
     ];
 
     protected function casts(): array
     {
         return [
             'banned' => 'boolean',
+            'is_drafted' => 'boolean',
         ];
     }
 

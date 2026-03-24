@@ -4,7 +4,9 @@
 use App\Modules\Dashboard\Controllers\DashboardController;
 use App\Modules\Draft\Controllers\DraftController;
 use App\Modules\League\Controllers\LeagueController;
+use App\Modules\League\Controllers\LeaguePokemonAdminController;
 use App\Modules\League\Controllers\LeaguePokemonController;
+use App\Modules\League\Controllers\PoolTemplateCatalogController;
 use App\Modules\Matches\Controllers\MatchConfigController;
 use App\Modules\Matches\Controllers\PoolController;
 use App\Modules\Matches\Controllers\SetController;
@@ -12,6 +14,7 @@ use App\Modules\MatchPrep\Controllers\MatchPrepController;
 use App\Modules\Playoffs\Controllers\PlayoffController;
 use App\Modules\Pokedex\Controllers\PokedexController;
 use App\Modules\Pokepaste\Controllers\PokepasteController;
+use App\Modules\Stats\Controllers\PokemonUsageStatsController;
 use App\Modules\Teams\Controllers\TeamController;
 use App\Modules\Trade\Controllers\TradeController;
 /* End Define Controllers */
@@ -37,6 +40,14 @@ Route::get('/match-prep/share/{share_uuid}', [MatchPrepController::class, 'showS
 // Pokemon Routes
 Route::get('pokedex', [PokedexController::class, 'index'])->middleware(['auth', 'verified'])->name('pokedex.index');
 Route::get('pokedex/{pokedex}', [PokedexController::class, 'show'])->middleware(['auth', 'verified'])->name('pokedex.show');
+
+Route::get('pool-templates', [PoolTemplateCatalogController::class, 'index'])->middleware(['auth', 'verified'])->name('pool-templates.index');
+Route::get('pool-templates/{slug}/preview', [PoolTemplateCatalogController::class, 'preview'])
+    ->middleware(['auth', 'verified'])
+    ->where('slug', '[a-z0-9\-]+')
+    ->name('pool-templates.preview');
+
+Route::get('usage-stats', [PokemonUsageStatsController::class, 'index'])->middleware(['auth', 'verified'])->name('usage-stats.index');
 
 // League Routes
 Route::prefix('leagues')->group(function () {
@@ -74,6 +85,15 @@ Route::prefix('leagues')->group(function () {
     Route::post('/{league}/admin/playoffs/rollback', [PlayoffController::class, 'rollback'])->middleware(['auth', 'verified'])->name('leagues.admin.playoffs.rollback');
     Route::post('/{league}/admin/playoffs/close', [PlayoffController::class, 'close'])->middleware(['auth', 'verified'])->name('leagues.admin.playoffs.close');
     Route::post('/{league}/admin/playoffs/reset', [PlayoffController::class, 'reset'])->middleware(['auth', 'verified'])->name('leagues.admin.playoffs.reset');
+    Route::get('/{league}/admin/pokemon-pool', [LeaguePokemonAdminController::class, 'show'])->middleware(['auth', 'verified'])->name('leagues.admin.pokemon-pool');
+    Route::get('/{league}/admin/pokemon-templates', [LeaguePokemonAdminController::class, 'templatesIndex'])->middleware(['auth', 'verified'])->name('leagues.admin.pokemon-templates.index');
+    Route::get('/{league}/admin/pokemon-templates/{template}/preview', [LeaguePokemonAdminController::class, 'templatePreview'])->middleware(['auth', 'verified'])->name('leagues.admin.pokemon-templates.preview');
+    Route::post('/{league}/admin/pokemon-templates/{template}/apply', [LeaguePokemonAdminController::class, 'applyTemplate'])->middleware(['auth', 'verified'])->name('leagues.admin.pokemon-templates.apply');
+    Route::patch('/{league}/admin/pokemon-pool/{leaguePokemon}', [LeaguePokemonAdminController::class, 'updatePokemon'])->middleware(['auth', 'verified'])->name('leagues.admin.pokemon-pool.update');
+    Route::delete('/{league}/admin/pokemon-pool/{leaguePokemon}', [LeaguePokemonAdminController::class, 'destroy'])->middleware(['auth', 'verified'])->name('leagues.admin.pokemon-pool.destroy');
+    Route::post('/{league}/admin/pokemon-pool', [LeaguePokemonAdminController::class, 'store'])->middleware(['auth', 'verified'])->name('leagues.admin.pokemon-pool.store');
+    Route::post('/{league}/admin/pokemon-pool/import-csv', [LeaguePokemonAdminController::class, 'importCsv'])->middleware(['auth', 'verified'])->name('leagues.admin.pokemon-pool.import-csv');
+    Route::get('/{league}/admin/pokedex-search', [LeaguePokemonAdminController::class, 'pokedexSearch'])->middleware(['auth', 'verified'])->name('leagues.admin.pokedex-search');
     Route::get('/{league}/pokemon', [LeaguePokemonController::class, 'read'])->middleware(['auth', 'verified'])->name('leagues.pokemon');
     Route::post('/pokemon', [LeaguePokemonController::class, 'create'])->middleware(['auth', 'verified'])->name('leagues.pokemon.create');
     Route::get('/{league}/pools', [PoolController::class, 'index'])->middleware(['auth', 'verified'])->name('leagues.pools');

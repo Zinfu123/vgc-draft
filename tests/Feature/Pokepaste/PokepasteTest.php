@@ -198,7 +198,8 @@ function coachPokepasteRecord(array $data): SetTeamPokepaste
 {
     $paste = SetTeamPokepaste::query()->firstOrCreate(
         [
-            'set_id' => $data['set']->id,
+            'matchable_type' => Set::class,
+            'matchable_id' => $data['set']->id,
             'team_id' => $data['team']->id,
         ],
     );
@@ -418,7 +419,8 @@ it('saves a valid six-mon paste for the match and team', function () {
         ->assertRedirect(route('pokepaste.show', ['pokepaste' => $pokepaste->public_id]));
 
     $saved = SetTeamPokepaste::query()
-        ->where('set_id', $data['set']->id)
+        ->where('matchable_type', Set::class)
+        ->where('matchable_id', $data['set']->id)
         ->where('team_id', $data['team']->id)
         ->first();
     expect($saved)->not->toBeNull();

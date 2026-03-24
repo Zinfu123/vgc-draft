@@ -2,9 +2,11 @@
 
 namespace App\Modules\Playoffs\Models;
 
+use App\Modules\Pokepaste\Models\SetTeamPokepaste;
 use App\Modules\Teams\Models\Team;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class PlayoffMatch extends Model
 {
@@ -57,6 +59,14 @@ class PlayoffMatch extends Model
     public function winnerTeam(): BelongsTo
     {
         return $this->belongsTo(Team::class, 'winner_team_id');
+    }
+
+    /**
+     * @return MorphMany<SetTeamPokepaste, $this>
+     */
+    public function teamPokepastes(): MorphMany
+    {
+        return $this->morphMany(SetTeamPokepaste::class, 'matchable');
     }
 
     public function isComplete(): bool

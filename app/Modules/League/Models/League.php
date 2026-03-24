@@ -72,6 +72,14 @@ class League extends Model
         return $this->hasOne(\App\Modules\Playoffs\Models\Playoff::class, 'league_id');
     }
 
+    /**
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<\App\Modules\League\Models\LeaguePokemon, $this>
+     */
+    public function leaguePokemon(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(LeaguePokemon::class, 'league_id');
+    }
+
     public function versionGroup(): ?VersionGroup
     {
         return VersionGroup::query()->where('slug', $this->pokemon_game->versionGroupSlug())->first();

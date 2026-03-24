@@ -82,13 +82,36 @@ interface BracketLayout {
     rounds: BracketRound[];
 }
 
+interface PlayoffPokepasteSides {
+    team1: { public_id: string; has_data: boolean } | null;
+    team2: { public_id: string; has_data: boolean } | null;
+}
+
+interface PlayoffMatchPayload {
+    id: number;
+    slot: string;
+    round_index: number;
+    sort_order: number;
+    is_bronze: boolean;
+    team1_id: number | null;
+    team2_id: number | null;
+    team1_name?: string | null;
+    team2_name?: string | null;
+    team1_score: number | null;
+    team2_score: number | null;
+    winner_team_id: number | null;
+    completed_at: string | null;
+    pokepaste_sides?: PlayoffPokepasteSides;
+}
+
 interface PlayoffPayload {
     id: number;
     format: string;
     bracket_size: number;
     status: string;
     seed_order: number[];
-    matches: unknown[];
+    matches: PlayoffMatchPayload[];
+    require_team_match_pokepaste_before_results?: boolean;
 }
 
 type DragPayload =
@@ -365,13 +388,34 @@ function canOpenPlayoffMatchDialog(match: BracketMatchRow): boolean {
     return props.canRecordPlayoffResults && props.bracketLayout.mode === 'live' && match.id !== null;
 }
 
+function playoffPayloadMatch(match: BracketMatchRow): PlayoffMatchPayload | undefined {
+    if (match.id === null) {
+        return undefined;
+    }
+    return props.playoff.matches.find((m) => m.id === match.id);
+}
+
+function playoffPasteBothReady(match: BracketMatchRow): boolean {
+    const row = playoffPayloadMatch(match);
+    if (!row?.pokepaste_sides) {
+        return false;
+    }
+    return !!(row.pokepaste_sides.team1?.has_data && row.pokepaste_sides.team2?.has_data);
+}
+
 function canRecordThisMatch(match: BracketMatchRow): boolean {
-    return (
+    const base =
         match.top.team_id != null &&
         match.bottom.team_id != null &&
         match.winner_team_id == null &&
-        !match.complete
-    );
+        !match.complete;
+    if (!base) {
+        return false;
+    }
+    if (props.playoff.require_team_match_pokepaste_before_results && !playoffPasteBothReady(match)) {
+        return false;
+    }
+    return true;
 }
 
 function openPlayoffMatchDialog(round: BracketRound, match: BracketMatchRow): void {
@@ -689,6 +733,20 @@ function submitPlayoffRollback(): void {
                                 >Seed {{ selectedRoundAndMatch.match.bottom.seed_number }}</span
                             >
                         </div>
+                    </div>
+
+                    <div
+                        v-if="
+                            playoff.require_team_match_pokepaste_before_results &&
+                            selectedRoundAndMatch.match.top.team_id != null &&
+                            selectedRoundAndMatch.match.bottom.team_id != null &&
+                            !selectedRoundAndMatch.match.complete &&
+                            !playoffPasteBothReady(selectedRoundAndMatch.match)
+                        "
+                        class="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-900 dark:text-amber-100"
+                    >
+                        Both teams must submit their playoff team paste before you can record a result. Team paste status is visible only to each coach
+                        (and admins see a ready flag without roster details).
                     </div>
 
                     <template v-if="canRecordThisMatch(selectedRoundAndMatch.match)">

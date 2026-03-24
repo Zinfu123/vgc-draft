@@ -6,6 +6,7 @@ use App\Events\SetUpdatedEvent;
 use App\Modules\League\Models\League;
 use App\Modules\Matches\Models\Pool;
 use App\Modules\Matches\Models\Set;
+use App\Modules\Pokepaste\Services\EnforceTeamMatchPokepasteChecker;
 use App\Modules\Teams\Models\Team;
 use App\Notifications\MatchReplaysNotification;
 use App\Notifications\MatchResultNotification;
@@ -50,6 +51,13 @@ class CreateEditSetsAction
             if ($set->status == 0) {
                 return;
             } else {
+                $leagueForPaste = League::with('matchConfig')->find($set->league_id);
+                if ($leagueForPaste?->matchConfig?->require_team_match_pokepaste_before_results === true) {
+                    if (! app(EnforceTeamMatchPokepasteChecker::class)->poolSetBothSidesHaveData($set)) {
+                        return false;
+                    }
+                }
+
                 $winner = $this->CalculateWinner($data);
                 $team1points = $this->calculatePoints($data['team1_score'], $data['team2_score']);
                 $team2points = $this->calculatePoints($data['team2_score'], $data['team1_score']);

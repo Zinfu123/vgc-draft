@@ -128,10 +128,12 @@ class LeagueController extends Controller
         $canRecordPlayoffResults = Auth::user()?->can('admin', $league) === true
             && $playoff->status === PlayoffStatus::Active;
 
+        $league->loadMissing('matchConfig');
+
         return Inertia::render('league/LeagueDetailPlayoffs', [
             ...$data,
             'section' => 'playoffs',
-            'playoff' => $playoffController->playoffPayload($playoff),
+            'playoff' => $playoffController->playoffPayloadWithPokepaste($playoff, $league, Auth::user()),
             'bracketLayout' => $bracketLayout,
             'canAdjustPlayoff' => $canAdjustPlayoff,
             'canRecordPlayoffResults' => $canRecordPlayoffResults,

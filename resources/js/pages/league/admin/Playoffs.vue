@@ -28,6 +28,11 @@ interface Team {
     user_id: number;
 }
 
+interface PlayoffPokepasteSides {
+    team1: { public_id: string; has_data: boolean } | null;
+    team2: { public_id: string; has_data: boolean } | null;
+}
+
 interface PlayoffMatchRow {
     id: number;
     slot: string;
@@ -42,6 +47,7 @@ interface PlayoffMatchRow {
     team2_score: number | null;
     winner_team_id: number | null;
     completed_at: string | null;
+    pokepaste_sides?: PlayoffPokepasteSides;
 }
 
 interface PlayoffPayload {
@@ -51,6 +57,7 @@ interface PlayoffPayload {
     status: string;
     seed_order: number[];
     matches: PlayoffMatchRow[];
+    require_team_match_pokepaste_before_results?: boolean;
 }
 
 const props = defineProps<{
@@ -225,8 +232,22 @@ function submitRollback(match: PlayoffMatchRow): void {
     });
 }
 
+function playoffPasteBothReady(match: PlayoffMatchRow): boolean {
+    if (!match.pokepaste_sides) {
+        return false;
+    }
+    return !!(match.pokepaste_sides.team1?.has_data && match.pokepaste_sides.team2?.has_data);
+}
+
 function canRecord(match: PlayoffMatchRow): boolean {
-    return match.team1_id !== null && match.team2_id !== null && match.winner_team_id === null;
+    const base = match.team1_id !== null && match.team2_id !== null && match.winner_team_id === null;
+    if (!base) {
+        return false;
+    }
+    if (props.playoff.require_team_match_pokepaste_before_results && !playoffPasteBothReady(match)) {
+        return false;
+    }
+    return true;
 }
 </script>
 
@@ -345,6 +366,12 @@ function canRecord(match: PlayoffMatchRow): boolean {
                                     </div>
                                 </div>
 
+                                <div
+                                    v-if="isActive && m.team1_id !== null && m.team2_id !== null && m.winner_team_id === null && playoff.require_team_match_pokepaste_before_results && !playoffPasteBothReady(m)"
+                                    class="mt-3 rounded-md border border-amber-500/40 bg-amber-500/10 p-2 text-xs text-amber-900 dark:text-amber-100"
+                                >
+                                    Both teams must submit playoff team paste before recording (you can see ready status only, not rosters).
+                                </div>
                                 <div v-if="isActive && canRecord(m)" class="mt-3 flex flex-col gap-3">
                                     <Button
                                         v-if="selectedMatchId !== m.id"

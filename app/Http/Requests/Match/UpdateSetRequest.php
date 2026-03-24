@@ -4,6 +4,7 @@ namespace App\Http\Requests\Match;
 
 use App\Modules\League\Models\League;
 use App\Modules\Matches\Models\Set;
+use App\Modules\Pokepaste\Services\EnforceTeamMatchPokepasteChecker;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -79,14 +80,32 @@ class UpdateSetRequest extends FormRequest
             $team1Score = (int) $this->input('team1_score');
             $team2Score = (int) $this->input('team2_score');
 
-            if (($team1Score === 2 && $team2Score <= 1) || ($team2Score === 2 && $team1Score <= 1)) {
+            $scoreOk = ($team1Score === 2 && $team2Score <= 1) || ($team2Score === 2 && $team1Score <= 1);
+            if (! $scoreOk) {
+                $validator->errors()->add(
+                    'set_result',
+                    'One team must reach 2 game wins before the set can be submitted (2-0 or 2-1).'
+                );
+
                 return;
             }
 
-            $validator->errors()->add(
-                'set_result',
-                'One team must reach 2 game wins before the set can be submitted (2-0 or 2-1).'
-            );
+            $set = Set::query()->find((int) $this->input('set_id'));
+            if ($set === null) {
+                return;
+            }
+
+            $league = League::query()->with('matchConfig')->find($set->league_id);
+            if ($league?->matchConfig?->require_team_match_pokepaste_before_results !== true) {
+                return;
+            }
+
+            if (! app(EnforceTeamMatchPokepasteChecker::class)->poolSetBothSidesHaveData($set)) {
+                $validator->errors()->add(
+                    'set_result',
+                    'Both teams must submit their match teamsheet (Pokepaste) before results can be saved.'
+                );
+            }
         });
     }
 }

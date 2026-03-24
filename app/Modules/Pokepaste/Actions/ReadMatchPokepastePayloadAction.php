@@ -20,7 +20,8 @@ class ReadMatchPokepastePayloadAction
     {
         $record = SetTeamPokepaste::query()->firstOrCreate(
             [
-                'set_id' => $set->id,
+                'matchable_type' => Set::class,
+                'matchable_id' => $set->id,
                 'team_id' => $team->id,
             ],
         );

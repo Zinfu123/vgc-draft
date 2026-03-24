@@ -21,6 +21,7 @@ const props = defineProps<{
 
 const sidebarNavItems = computed(() => [
     { title: 'Match Config', href: `/leagues/${props.leagueId}/admin/match-config` },
+    { title: 'Pokémon pool', href: `/leagues/${props.leagueId}/admin/pokemon-pool` },
     { title: 'Draft', href: `/leagues/${props.leagueId}/admin/draft` },
     { title: 'League admins', href: `/leagues/${props.leagueId}/admin/league-admins` },
     { title: 'Playoffs', href: `/leagues/${props.leagueId}/admin/playoffs` },

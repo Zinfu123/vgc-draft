@@ -56,7 +56,7 @@ class ReadLeaguePokemonAction
                     'type2' => $lp->pokemon?->type2 ?? '',
                     'cost' => (int) $lp->cost,
                     'banned' => (bool) $lp->banned,
-                    'is_drafted' => $lp->drafted_by !== null ? 1 : 0,
+                    'is_drafted' => ($lp->is_drafted || $lp->drafted_by !== null) ? 1 : 0,
                     'drafted_by_team_name' => $lp->draftedBy?->name,
                 ])
                 ->sortBy(fn ($item) => [-$item['cost'], $item['name']])

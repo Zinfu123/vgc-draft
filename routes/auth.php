@@ -16,6 +16,10 @@ Route::get('auth/discord', [DiscordController::class, 'redirect'])->name('discor
 Route::get('auth/discord/callback', [DiscordController::class, 'callback'])->name('discord.callback');
 Route::post('auth/discord/disconnect', [DiscordController::class, 'disconnect'])->middleware('auth')->name('discord.disconnect');
 
+Route::middleware(['guest', 'throttle:6,1'])->group(function () {
+    Route::post('auth/discord/prepare-link', [DiscordController::class, 'prepareLink'])->name('discord.prepare-link');
+});
+
 Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])
         ->name('register');

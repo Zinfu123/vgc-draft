@@ -15,7 +15,9 @@ use App\Modules\League\Models\League;
 use App\Modules\Playoffs\Models\Playoff;
 use App\Modules\Playoffs\Models\PlayoffMatch;
 use App\Modules\Playoffs\Services\PlayoffBracketService;
+use App\Modules\Pokepaste\Actions\ReadPlayoffMatchPokepasteSideSummariesAction;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
 use InvalidArgumentException;
@@ -45,10 +47,12 @@ class PlayoffController extends Controller
 
         $playoff->load(['matches.team1', 'matches.team2']);
 
+        $league->loadMissing('matchConfig');
+
         return Inertia::render('league/admin/Playoffs', [
             'league' => $data['league'],
             'teams' => $data['teams'],
-            'playoff' => $this->playoffPayload($playoff),
+            'playoff' => $this->playoffPayloadWithPokepaste($playoff, $league, Auth::user()),
             'allowedBracketSizes' => PlayoffBracketService::allowedBracketSizes(),
             'doubleEliminationSupported' => false,
         ]);
@@ -198,5 +202,29 @@ class PlayoffController extends Controller
                 'completed_at' => $m->completed_at?->toIso8601String(),
             ])->values()->all(),
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function playoffPayloadWithPokepaste(Playoff $playoff, League $league, ?\App\Models\User $viewer): array
+    {
+        $payload = $this->playoffPayload($playoff);
+        $isAdmin = $viewer !== null && $viewer->can('admin', $league);
+        /** @var ReadPlayoffMatchPokepasteSideSummariesAction $summariesAction */
+        $summariesAction = app(ReadPlayoffMatchPokepasteSideSummariesAction::class);
+
+        $matches = [];
+        foreach ($payload['matches'] as $row) {
+            $m = $playoff->matches->firstWhere('id', $row['id']);
+            if ($m instanceof PlayoffMatch) {
+                $row['pokepaste_sides'] = $summariesAction($m, $viewer, $isAdmin);
+            }
+            $matches[] = $row;
+        }
+        $payload['matches'] = $matches;
+        $payload['require_team_match_pokepaste_before_results'] = (bool) ($league->matchConfig?->require_team_match_pokepaste_before_results ?? false);
+
+        return $payload;
     }
 }

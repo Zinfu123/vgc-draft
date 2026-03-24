@@ -7,7 +7,7 @@ use App\Modules\Pokepaste\Models\SetTeamPokepaste;
 use App\Modules\Teams\Models\Team;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Set extends Model
 {
@@ -45,8 +45,8 @@ class Set extends Model
         return $this->belongsTo(League::class, 'league_id');
     }
 
-    public function setTeamPokepastes(): HasMany
+    public function setTeamPokepastes(): MorphMany
     {
-        return $this->hasMany(SetTeamPokepaste::class, 'set_id');
+        return $this->morphMany(SetTeamPokepaste::class, 'matchable');
     }
 }

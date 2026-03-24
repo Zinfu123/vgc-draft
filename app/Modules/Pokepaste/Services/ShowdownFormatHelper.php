@@ -6,6 +6,17 @@ use Illuminate\Support\Str;
 
 class ShowdownFormatHelper
 {
+    /**
+     * Showdown uses separate species strings per form; our dex stores one row (e.g. `tatsugiri`).
+     *
+     * @var array<string, string>
+     */
+    private const SPECIES_MATCH_KEY_ALIASES = [
+        'tatsugiri-curly' => 'tatsugiri',
+        'tatsugiri-droopy' => 'tatsugiri',
+        'tatsugiri-stretchy' => 'tatsugiri',
+    ];
+
     public static function moveSlugToDisplay(string $slug): string
     {
         return Str::title(str_replace('-', ' ', strtolower(trim($slug))));
@@ -28,8 +39,9 @@ class ShowdownFormatHelper
     public static function speciesToMatchKey(string $species): string
     {
         $s = str_replace(['♀', '♂', '.'], ['', '', ''], $species);
+        $key = Str::slug($s, '-');
 
-        return Str::slug($s, '-');
+        return self::SPECIES_MATCH_KEY_ALIASES[$key] ?? $key;
     }
 
     /**
