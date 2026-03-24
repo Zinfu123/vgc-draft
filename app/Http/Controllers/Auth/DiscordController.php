@@ -12,7 +12,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
 use Laravel\Socialite\Facades\Socialite;
+use Symfony\Component\HttpFoundation\Response;
 
 class DiscordController extends Controller
 {
@@ -48,7 +50,7 @@ class DiscordController extends Controller
     /**
      * Verify email/password for an existing account, then continue to Discord OAuth to link.
      */
-    public function prepareLink(PrepareDiscordLinkRequest $request): RedirectResponse
+    public function prepareLink(PrepareDiscordLinkRequest $request): RedirectResponse|Response
     {
         $email = $request->validated('link_email');
         $password = $request->validated('link_password');
@@ -72,7 +74,13 @@ class DiscordController extends Controller
 
         $request->session()->put(self::DISCORD_LINK_USER_ID_KEY, $user->id);
 
-        return redirect()->route('discord.redirect', ['intent' => 'link']);
+        $next = route('discord.redirect', ['intent' => 'link']);
+
+        if ($request->header('X-Inertia')) {
+            return Inertia::location($next);
+        }
+
+        return redirect()->to($next);
     }
 
     /**

@@ -95,6 +95,24 @@ it('prepare link stores user id and redirects toward discord oauth', function ()
     $this->assertGuest();
 });
 
+it('prepare link uses inertia location for inertia requests so oauth is not followed via xhr', function () {
+    $user = User::factory()->create(['email' => 'trainer@example.com']);
+
+    $expectedLocation = route('discord.redirect', ['intent' => 'link']);
+
+    $response = $this->post(route('discord.prepare-link'), [
+        'link_email' => 'trainer@example.com',
+        'link_password' => 'password',
+    ], [
+        'X-Inertia' => 'true',
+    ]);
+
+    $response->assertStatus(409);
+    expect($response->headers->get('X-Inertia-Location'))->toBe($expectedLocation);
+    expect(session()->get('discord_link_user_id'))->toBe($user->id);
+    $this->assertGuest();
+});
+
 // ── Callback: link account (logged in) ───────────────────────────────────────
 
 it('links discord to an existing logged-in account', function () {

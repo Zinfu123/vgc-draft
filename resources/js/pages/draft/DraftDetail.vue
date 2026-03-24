@@ -13,6 +13,7 @@ import TabsList from '@/components/ui/tabs/TabsList.vue';
 import TabsTrigger from '@/components/ui/tabs/TabsTrigger.vue';
 import { useMobileLayout } from '@/composables/useMobileLayout';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { isReverbBroadcastClientConfigured } from '@/lib/broadcasting';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/vue3';
 import { useEchoPublic } from '@laravel/echo-vue';
@@ -244,20 +245,22 @@ const reloadKeys = [
     'canManageDraftAsAdmin',
 ];
 
-useEchoPublic(`draft.detail.${props.league.id}`, 'DraftDetailEvent', () => {
-    router.visit(route('draft.detail', { league_id: props.league.id }), {
-        only: reloadKeys,
-        preserveState: true,
-        preserveScroll: true,
+if (isReverbBroadcastClientConfigured) {
+    useEchoPublic(`draft.detail.${props.league.id}`, 'DraftDetailEvent', () => {
+        router.visit(route('draft.detail', { league_id: props.league.id }), {
+            only: reloadKeys,
+            preserveState: true,
+            preserveScroll: true,
+        });
     });
-});
 
-useEchoPublic(`end.draft.${props.draft?.id ?? 0}`, 'EndDraftEvent', () => {
-    router.visit(route('leagues.detail', { league: props.league.id }), {
-        preserveState: true,
-        preserveScroll: true,
+    useEchoPublic(`end.draft.${props.draft?.id ?? 0}`, 'EndDraftEvent', () => {
+        router.visit(route('leagues.detail', { league: props.league.id }), {
+            preserveState: true,
+            preserveScroll: true,
+        });
     });
-});
+}
 
 const revertLastPick = () => router.post(route('draft.revert-last-pick'), { league_id: props.league.id });
 const abortDraft = () => router.post(route('draft.abort-draft'), { league_id: props.league.id });

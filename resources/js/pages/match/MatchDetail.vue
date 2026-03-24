@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import PokemonCard from '@/components/pokemon/PokemonCard.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { isReverbBroadcastClientConfigured } from '@/lib/broadcasting';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm } from '@inertiajs/vue3';
 import { useEchoPublic } from '@laravel/echo-vue';
@@ -132,15 +133,11 @@ type SetModel = {
 };
 const echoEvent = ref<{ id: SetModel['id']; status: SetModel['status'] }>({ id: form.set_id, status: props.set.status });
 
-useEchoPublic<SetModel>(`set_updated.${setId}`, 'SetUpdatedEvent', (e) => {
-    console.log(e);
-    echoEvent.value = { id: e.id, status: e.status };
-    // router.visit(route('sets.show', { set_id: e.id }), {
-    //     only: ['set'],
-    //     preserveState: true,
-    //     preserveScroll: true,
-    // });
-});
+if (isReverbBroadcastClientConfigured) {
+    useEchoPublic<SetModel>(`set_updated.${setId}`, 'SetUpdatedEvent', (e) => {
+        echoEvent.value = { id: e.id, status: e.status };
+    });
+}
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
