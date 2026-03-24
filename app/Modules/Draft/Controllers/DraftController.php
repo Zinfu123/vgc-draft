@@ -15,6 +15,7 @@ use App\Modules\League\Actions\ReadLeagueDraftAction;
 use App\Modules\League\Actions\ReadLeaguePokemonAction;
 use App\Modules\League\Models\League;
 use App\Modules\Teams\Models\Team;
+use App\Notifications\DraftStartedNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -69,13 +70,18 @@ class DraftController extends Controller
     public function create(Request $request, CreateEditDraftAction $createEditDraftAction, CreateEditDraftOrderAction $createEditDraftOrderAction)
     {
         $leagueid = $request->league_id;
+        $league = League::with('draftConfig')->find($leagueid);
+
         $createEditDraftAction(['league_id' => $leagueid, 'command' => 'create']);
-        if (League::with('draftConfig')->find($leagueid)->draftConfig->ban_enabled == true) {
+
+        if ($league->draftConfig->ban_enabled == true) {
             $createEditDraftAction(['league_id' => $leagueid, 'command' => 'create_ban']);
             $createEditDraftOrderAction(['league_id' => $leagueid, 'command' => 'create_ban_order']);
         } else {
             $createEditDraftOrderAction(['league_id' => $leagueid]);
         }
+
+        $league->notify(new DraftStartedNotification($league));
 
         return redirect()->route('draft.detail', ['league_id' => $request->league_id]);
     }

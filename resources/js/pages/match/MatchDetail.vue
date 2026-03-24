@@ -59,8 +59,11 @@ interface Set {
     };
     team1_score: number;
     team2_score: number;
-    team1_pokepaste: string;
-    team2_pokepaste: string;
+    team1_pokepaste: string | null;
+    team2_pokepaste: string | null;
+    replay1: string | null;
+    replay2: string | null;
+    replay3: string | null;
     winner_id: number;
     winner_name: string;
     winner_logo: string;
@@ -71,9 +74,20 @@ interface CurrentUserTeam {
     id: number;
 }
 
+interface MatchPokepastePayload {
+    pokepaste_public_id: string;
+}
+
+interface MatchPokepasteSides {
+    team1: { public_id: string; has_data: boolean } | null;
+    team2: { public_id: string; has_data: boolean } | null;
+}
+
 interface props {
     set: Set;
-    currentUserTeam: CurrentUserTeam;
+    currentUserTeam: CurrentUserTeam | null;
+    matchPokepaste: MatchPokepastePayload | null;
+    matchPokepasteSides: MatchPokepasteSides;
 }
 
 const props = defineProps<props>();
@@ -84,9 +98,14 @@ const form = useForm({
     team2_score: props.set.team2_score || 0,
     team1_id: props.set.team1.id,
     team2_id: props.set.team2.id,
-    team1_pokepaste: props.set.team1_pokepaste || null,
-    team2_pokepaste: props.set.team2_pokepaste || null,
     command: 'update',
+});
+
+const replayForm = useForm({
+    set_id: props.set.id,
+    replay1: props.set.replay1 || '',
+    replay2: props.set.replay2 || '',
+    replay3: props.set.replay3 || '',
 });
 
 type SetModel = {
@@ -96,8 +115,9 @@ type SetModel = {
     round: number;
     team1_score: number;
     team2_score: number;
-    team1_pokepaste: string;
-    team2_pokepaste: string;
+    replay1: string | null;
+    replay2: string | null;
+    replay3: string | null;
     winner_id: number;
     winner_name: string;
     winner_logo: string;
@@ -127,15 +147,14 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const isUserInSet = computed((): boolean => {
-    return props.set.team1.user.id === props.currentUserTeam.id || props.set.team2.user.id === props.currentUserTeam.id;
+    if (!props.currentUserTeam) {
+        return false;
+    }
+    return props.set.team1.id === props.currentUserTeam.id || props.set.team2.id === props.currentUserTeam.id;
 });
 
 const isSetCompleted = computed((): boolean => {
     return echoEvent.value.status === 0 || props.set.status === 0;
-});
-
-const canUpdatePokepaste = computed((): boolean => {
-    return isSetCompleted.value && isUserInSet.value;
 });
 
 const disableForm = computed((): boolean => {
@@ -146,6 +165,12 @@ const disableForm = computed((): boolean => {
     } else {
         return false;
     }
+});
+
+const canSubmitSetResult = computed((): boolean => {
+    const a = Number(form.team1_score);
+    const b = Number(form.team2_score);
+    return (a === 2 && b <= 1) || (b === 2 && a <= 1);
 });
 
 const winnerCoach = computed((): string | null => {
@@ -167,12 +192,12 @@ const winnerLogo = computed((): string | null => {
 });
 
 const handleSubmit = () => {
-    if (isSetCompleted.value && isUserInSet.value) {
-        form.command = 'updatePokepaste';
-    } else {
-        form.command = 'update';
-    }
+    form.command = 'update';
     form.put('/match');
+};
+
+const handleReplaySubmit = () => {
+    replayForm.put(route('sets.update-replays'));
 };
 </script>
 <template>
@@ -204,6 +229,19 @@ const handleSubmit = () => {
             <div class="flex min-w-0 flex-1 flex-col px-4">
                 <form class="top-0" @submit.prevent="handleSubmit">
                     <div class="space-y-12">
+                        <div v-if="props.matchPokepaste && isUserInSet" class="pb-2">
+                            <h2 class="text-lg font-semibold text-foreground">Match team paste</h2>
+                            <p class="text-muted-foreground mt-1 text-sm">
+                                Build and save your six in the editor (Showdown-style). Only you can open your paste.
+                            </p>
+                            <Link
+                                :href="'/pokepaste/' + props.matchPokepaste.pokepaste_public_id"
+                                class="bg-primary text-primary-foreground mt-4 inline-flex rounded-md px-4 py-2 text-sm font-semibold shadow-sm transition-colors hover:bg-primary/90"
+                            >
+                                Open team paste editor
+                            </Link>
+                        </div>
+
                         <div class="border-b border-border pb-12">
                             <h2 class="mb-6 text-center text-base/7 font-semibold text-foreground">Set Result</h2>
                             <div class="grid max-w-2xl grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6 md:col-span-2">
@@ -243,67 +281,138 @@ const handleSubmit = () => {
                                         </select>
                                     </div>
                                 </div>
-                                <div class="sm:col-span-3">
-                                    <label for="team1_pokepaste" class="block text-sm/6 font-medium text-foreground"
-                                        >{{ props.set.team1.name }} Pokepaste</label
-                                    >
+
+                                <p v-if="form.errors.set_result" class="text-destructive sm:col-span-6 text-sm">
+                                    {{ form.errors.set_result }}
+                                </p>
+                                <p
+                                    v-else-if="!isSetCompleted && isUserInSet && !canSubmitSetResult"
+                                    class="text-muted-foreground sm:col-span-6 text-sm"
+                                >
+                                    Choose a final set score: one side must have 2 wins (2-0 or 2-1).
+                                </p>
+
+                                <template v-if="isSetCompleted">
+                                    <div class="sm:col-span-3">
+                                        <p class="block text-sm/6 font-medium text-foreground">{{ props.set.team1.name }} team paste</p>
+                                        <div class="mt-2">
+                                            <Link
+                                                v-if="props.matchPokepasteSides.team1?.has_data"
+                                                :href="'/pokepaste/' + props.matchPokepasteSides.team1.public_id"
+                                                class="text-primary text-sm font-medium hover:underline"
+                                            >
+                                                View team paste
+                                            </Link>
+                                            <p v-else class="text-muted-foreground text-sm">No team paste saved for this match.</p>
+                                        </div>
+                                    </div>
+                                    <div class="sm:col-span-3">
+                                        <p class="block text-sm/6 font-medium text-foreground">{{ props.set.team2.name }} team paste</p>
+                                        <div class="mt-2">
+                                            <Link
+                                                v-if="props.matchPokepasteSides.team2?.has_data"
+                                                :href="'/pokepaste/' + props.matchPokepasteSides.team2.public_id"
+                                                class="text-primary text-sm font-medium hover:underline"
+                                            >
+                                                View team paste
+                                            </Link>
+                                            <p v-else class="text-muted-foreground text-sm">No team paste saved for this match.</p>
+                                        </div>
+                                    </div>
+                                </template>
+
+                                <!-- Replay 1 -->
+                                <div class="sm:col-span-6">
+                                    <label for="replay1" class="block text-sm/6 font-medium text-foreground">Game 1 Replay</label>
                                     <div class="mt-2">
                                         <input
-                                            v-if="!disableForm || canUpdatePokepaste"
-                                            type="text"
-                                            name="team1_pokepaste"
-                                            id="team1_pokepaste"
+                                            v-if="isUserInSet"
+                                            type="url"
+                                            id="replay1"
+                                            placeholder="https://replay.pokemonshowdown.com/..."
                                             class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
-                                            v-model="form.team1_pokepaste"
-                                            :disabled="!canUpdatePokepaste && disableForm"
+                                            v-model="replayForm.replay1"
                                         />
                                         <a
-                                            v-if="disableForm && !canUpdatePokepaste && form.team1_pokepaste != null && form.team1_pokepaste !== ''"
-                                            :href="form.team1_pokepaste"
+                                            v-if="!isUserInSet && replayForm.replay1"
+                                            :href="replayForm.replay1"
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             class="block max-w-full truncate text-center text-sm text-muted-foreground transition-colors hover:text-primary"
                                         >
-                                            {{ form.team1_pokepaste }}
+                                            {{ replayForm.replay1 }}
                                         </a>
+                                        <p v-if="replayForm.errors.replay1" class="mt-1 text-sm text-destructive">{{ replayForm.errors.replay1 }}</p>
                                     </div>
                                 </div>
-                                <div class="sm:col-span-3">
-                                    <label for="team2_pokepaste" class="block text-sm/6 font-medium text-foreground"
-                                        >{{ props.set.team2.name }} Pokepaste</label
-                                    >
+
+                                <!-- Replay 2 -->
+                                <div class="sm:col-span-6">
+                                    <label for="replay2" class="block text-sm/6 font-medium text-foreground">Game 2 Replay</label>
                                     <div class="mt-2">
                                         <input
-                                            v-if="!disableForm || canUpdatePokepaste"
-                                            type="text"
-                                            name="team2_pokepaste"
-                                            id="team2_pokepaste"
+                                            v-if="isUserInSet"
+                                            type="url"
+                                            id="replay2"
+                                            placeholder="https://replay.pokemonshowdown.com/..."
                                             class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
-                                            v-model="form.team2_pokepaste"
-                                            :disabled="!canUpdatePokepaste && disableForm"
+                                            v-model="replayForm.replay2"
                                         />
                                         <a
-                                            v-if="disableForm && !canUpdatePokepaste && form.team2_pokepaste != null && form.team2_pokepaste !== ''"
-                                            :href="form.team2_pokepaste"
+                                            v-if="!isUserInSet && replayForm.replay2"
+                                            :href="replayForm.replay2"
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             class="block max-w-full truncate text-center text-sm text-muted-foreground transition-colors hover:text-primary"
                                         >
-                                            {{ form.team2_pokepaste }}
+                                            {{ replayForm.replay2 }}
                                         </a>
+                                        <p v-if="replayForm.errors.replay2" class="mt-1 text-sm text-destructive">{{ replayForm.errors.replay2 }}</p>
                                     </div>
                                 </div>
-                                <div class="min-h-[38px] sm:col-span-6">
+
+                                <!-- Replay 3 -->
+                                <div class="sm:col-span-6">
+                                    <label for="replay3" class="block text-sm/6 font-medium text-foreground">Game 3 Replay</label>
+                                    <div class="mt-2">
+                                        <input
+                                            v-if="isUserInSet"
+                                            type="url"
+                                            id="replay3"
+                                            placeholder="https://replay.pokemonshowdown.com/..."
+                                            class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
+                                            v-model="replayForm.replay3"
+                                        />
+                                        <a
+                                            v-if="!isUserInSet && replayForm.replay3"
+                                            :href="replayForm.replay3"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            class="block max-w-full truncate text-center text-sm text-muted-foreground transition-colors hover:text-primary"
+                                        >
+                                            {{ replayForm.replay3 }}
+                                        </a>
+                                        <p v-if="replayForm.errors.replay3" class="mt-1 text-sm text-destructive">{{ replayForm.errors.replay3 }}</p>
+                                    </div>
+                                </div>
+
+                                <div class="flex min-h-[38px] gap-3 sm:col-span-6">
                                     <button
+                                        v-if="!isSetCompleted && isUserInSet"
                                         type="submit"
-                                        :class="[
-                                            'rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary',
-                                            !canUpdatePokepaste &&
-                                                (props.set.status == 0 || !(isUserInSet && (form.team1_score == 2 || form.team2_score == 2))) &&
-                                                'pointer-events-none invisible',
-                                        ]"
+                                        :disabled="disableForm || !canSubmitSetResult"
+                                        class="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50"
                                     >
                                         Update
+                                    </button>
+                                    <button
+                                        v-if="isUserInSet"
+                                        type="button"
+                                        :disabled="replayForm.processing"
+                                        class="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                                        @click="handleReplaySubmit"
+                                    >
+                                        Save Replays
                                     </button>
                                 </div>
                             </div>

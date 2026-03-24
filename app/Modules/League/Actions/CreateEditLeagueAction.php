@@ -2,12 +2,16 @@
 
 namespace App\Modules\League\Actions;
 
+use App\Enums\PokemonGame;
 use App\Modules\Draft\Models\DraftConfig;
 use App\Modules\League\Models\League;
 use App\Modules\Matches\Models\MatchConfig;
+use App\Modules\Matches\Models\Pool;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class CreateEditLeagueAction
 {
@@ -22,6 +26,11 @@ class CreateEditLeagueAction
 
     public function create(Request $request)
     {
+        $request->mergeIfMissing([
+            'pokemon_generation' => (int) config('pokemon.default_league_generation'),
+            'pokemon_game' => (string) config('pokemon.default_league_game'),
+        ]);
+
         $request->validate([
             'name' => 'required|string|max:255',
             'draft_date' => 'required|date',
@@ -34,7 +43,11 @@ class CreateEditLeagueAction
             'ban_enabled' => 'boolean',
             'bans_per_user' => 'nullable|integer|min:1',
             'minimum_cost_to_ban' => 'nullable|integer|min:0',
+            'pokemon_generation' => ['required', 'integer', 'min:1', 'max:99'],
+            'pokemon_game' => ['required', Rule::enum(PokemonGame::class)],
         ]);
+
+        $this->assertPokemonGameMatchesGeneration($request);
         if ($request->hasFile('logo')) {
             $logo = (new LeagueLogoUploadAction)->upload($request);
         } else {
@@ -46,6 +59,8 @@ class CreateEditLeagueAction
             'set_frequency' => $request->set_frequency,
             'logo' => $logo,
             'league_owner' => Auth::user()->id,
+            'pokemon_generation' => $request->integer('pokemon_generation'),
+            'pokemon_game' => $request->string('pokemon_game')->toString(),
         ]);
 
         DraftConfig::create([
@@ -57,13 +72,18 @@ class CreateEditLeagueAction
             'minimum_cost_to_ban' => $request->ban_enabled ? $request->minimum_cost_to_ban : null,
         ]);
 
-        MatchConfig::updateOrCreate(
+        $matchConfig = MatchConfig::updateOrCreate(
             ['league_id' => $league->id],
             [
                 'enforce_round_count' => $request->boolean('enforce_round_count'),
                 'round_count' => $request->enforce_round_count ? $request->round_count : null,
             ]
         );
+
+        Pool::create([
+            'match_config_id' => $matchConfig->id,
+            'league_id' => $league->id,
+        ]);
 
         return $league;
     }
@@ -83,7 +103,11 @@ class CreateEditLeagueAction
             'ban_enabled' => 'boolean',
             'bans_per_user' => 'nullable|integer|min:1',
             'minimum_cost_to_ban' => 'nullable|integer|min:0',
+            'pokemon_generation' => ['required', 'integer', 'min:1', 'max:99'],
+            'pokemon_game' => ['required', Rule::enum(PokemonGame::class)],
         ]);
+
+        $this->assertPokemonGameMatchesGeneration($request);
         $league = League::where('id', $request->league_id)->first();
         if ($request->hasFile('logo')) {
             $oldlogo = $league->logo;
@@ -96,6 +120,8 @@ class CreateEditLeagueAction
         $league->set_start_date = $request->set_start_date;
         $league->set_frequency = $request->set_frequency;
         $league->logo = $logo ?? $league->logo;
+        $league->pokemon_generation = $request->integer('pokemon_generation');
+        $league->pokemon_game = $request->string('pokemon_game')->toString();
         $league->save();
 
         $league->draftConfig()->updateOrCreate(
@@ -119,5 +145,15 @@ class CreateEditLeagueAction
         );
 
         return $league;
+    }
+
+    private function assertPokemonGameMatchesGeneration(Request $request): void
+    {
+        $game = PokemonGame::tryFrom($request->string('pokemon_game')->toString());
+        if ($game === null || $game->generation() !== $request->integer('pokemon_generation')) {
+            throw ValidationException::withMessages([
+                'pokemon_game' => ['The selected game must match the generation.'],
+            ]);
+        }
     }
 }

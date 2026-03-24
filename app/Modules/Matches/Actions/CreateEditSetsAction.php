@@ -2,17 +2,14 @@
 
 namespace App\Modules\Matches\Actions;
 
-/* Define Models */
 use App\Events\SetUpdatedEvent;
 use App\Modules\League\Models\League;
 use App\Modules\Matches\Models\Pool;
 use App\Modules\Matches\Models\Set;
 use App\Modules\Teams\Models\Team;
-
-/* End Define Models */
-
-/* Define Dependencies */
-/* End Define Dependencies */
+use App\Notifications\MatchReplaysNotification;
+use App\Notifications\MatchResultNotification;
+use Illuminate\Support\Facades\Auth;
 
 class CreateEditSetsAction
 {
@@ -58,8 +55,7 @@ class CreateEditSetsAction
                 $team2points = $this->calculatePoints($data['team2_score'], $data['team1_score']);
                 $set->team1_score = $data['team1_score'];
                 $set->team2_score = $data['team2_score'];
-                $set->team1_pokepaste = ! empty($data['team1_pokepaste']) ? $data['team1_pokepaste'] : null;
-                $set->team2_pokepaste = ! empty($data['team2_pokepaste']) ? $data['team2_pokepaste'] : null;
+                $this->applyPokepasteUrlsFromSubmitter($data, $set);
                 $set->winner_id = $winner;
                 $set->status = 0;
                 $set->save();
@@ -88,15 +84,68 @@ class CreateEditSetsAction
                 $team2->save();
                 SetUpdatedEvent::dispatch(['set_id' => $set->id, 'status' => $set->status]);
 
+                $league = League::find($set->league_id);
+                $set->load(['team1', 'team2']);
+                $league->notify(new MatchResultNotification($set));
+
                 return true;
             }
         } elseif ($data['command'] == 'updatePokepaste') {
             $set = Set::where('id', $data['set_id'])->first();
-            $set->team1_pokepaste = ! empty($data['team1_pokepaste']) ? $data['team1_pokepaste'] : null;
-            $set->team2_pokepaste = ! empty($data['team2_pokepaste']) ? $data['team2_pokepaste'] : null;
+            if (! $set) {
+                return false;
+            }
+            $this->applyPokepasteUrlsFromSubmitter($data, $set);
             $set->save();
 
             return true;
+        } elseif ($data['command'] == 'updateReplays') {
+            $set = Set::where('id', $data['set_id'])->first();
+            if (! $set) {
+                return false;
+            }
+
+            $set->replay1 = ! empty($data['replay1']) ? $data['replay1'] : null;
+            $set->replay2 = ! empty($data['replay2']) ? $data['replay2'] : null;
+            $set->replay3 = ! empty($data['replay3']) ? $data['replay3'] : null;
+            $set->save();
+
+            $hasReplays = $set->replay1 || $set->replay2 || $set->replay3;
+            if ($hasReplays) {
+                $league = League::find($set->league_id);
+                $set->load(['team1', 'team2']);
+                $league->notify(new MatchReplaysNotification($set));
+            }
+
+            return true;
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    protected function applyPokepasteUrlsFromSubmitter(array $data, Set $set): void
+    {
+        $userId = Auth::id();
+        if ($userId === null) {
+            return;
+        }
+
+        $submitter = Team::query()
+            ->where('user_id', $userId)
+            ->where('league_id', $set->league_id)
+            ->first();
+
+        if ($submitter === null) {
+            return;
+        }
+
+        if ($submitter->id === $set->team1_id && array_key_exists('team1_pokepaste', $data)) {
+            $set->team1_pokepaste = ! empty($data['team1_pokepaste']) ? $data['team1_pokepaste'] : null;
+        }
+
+        if ($submitter->id === $set->team2_id && array_key_exists('team2_pokepaste', $data)) {
+            $set->team2_pokepaste = ! empty($data['team2_pokepaste']) ? $data['team2_pokepaste'] : null;
         }
     }
 

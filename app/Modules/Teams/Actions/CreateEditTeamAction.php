@@ -40,8 +40,9 @@ class CreateEditTeamAction
             $teamcount = Team::where('league_id', $request->league_id)->count();
             if ($teamcount == 1) {
                 $team->admin_flag = 1;
-                $team->save();
             }
+
+            $team->save();
             if (Team::where('league_id', $request->league_id)->count() == League::where('id', $request->league_id)->select('maximum_teams')->first()->maximum_teams) {
                 $league = League::where('id', $request->league_id)->first();
                 $league->open = false;

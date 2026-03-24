@@ -2,8 +2,13 @@
 
 namespace App\Providers;
 
+use App\Modules\League\Models\League;
+use App\Policies\LeaguePolicy;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
+use SocialiteProviders\Manager\SocialiteWasCalled;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -23,7 +28,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // AutoEagerLoad
         Model::automaticallyEagerLoadRelationships();
+
+        Gate::policy(League::class, LeaguePolicy::class);
+
+        Event::listen(SocialiteWasCalled::class, \SocialiteProviders\Discord\DiscordExtendSocialite::class);
     }
 }

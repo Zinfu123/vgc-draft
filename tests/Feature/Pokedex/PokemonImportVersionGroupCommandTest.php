@@ -1,0 +1,55 @@
+<?php
+
+use App\Modules\Pokedex\Models\PokemonGameData;
+use App\Modules\Pokedex\Models\VersionGroup;
+use Illuminate\Support\Facades\DB;
+
+uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+
+it('does nothing when only-missing and the only pokedex row already has game data', function () {
+    $versionGroup = VersionGroup::query()->where('slug', 'scarlet-violet')->firstOrFail();
+    $pokedexId = DB::table('pokedex')->insertGetId([
+        'nationaldex_id' => 1,
+        'name' => 'bulbasaur',
+        'type1' => 'Grass',
+        'type2' => 'Poison',
+        'sprite_url' => null,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+    PokemonGameData::factory()->create([
+        'pokedex_id' => $pokedexId,
+        'version_group_id' => $versionGroup->id,
+    ]);
+
+    $this->artisan('pokemon:import-version-group', [
+        'slug' => 'scarlet-violet',
+        '--only-missing' => true,
+    ])
+        ->expectsOutputToContain('Nothing to import')
+        ->assertExitCode(0);
+});
+
+it('still imports a row when only-missing and game data is absent', function () {
+    $versionGroup = VersionGroup::query()->where('slug', 'scarlet-violet')->firstOrFail();
+    DB::table('pokedex')->insertGetId([
+        'nationaldex_id' => 999,
+        'name' => 'bulbasaur',
+        'type1' => 'Grass',
+        'type2' => 'Poison',
+        'sprite_url' => null,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $this->partialMock(\App\Modules\Pokedex\Services\PokeApiPokemonGameDataImporter::class, function ($mock) {
+        $mock->shouldReceive('import')->once()->andReturn(true);
+    });
+
+    $this->artisan('pokemon:import-version-group', [
+        'slug' => 'scarlet-violet',
+        '--only-missing' => true,
+    ])
+        ->expectsOutputToContain('Importing 1 species')
+        ->assertExitCode(0);
+});

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\ConfirmablePasswordController;
+use App\Http\Controllers\Auth\DiscordController;
 use App\Http\Controllers\Auth\EmailVerificationNotificationController;
 use App\Http\Controllers\Auth\EmailVerificationPromptController;
 use App\Http\Controllers\Auth\NewPasswordController;
@@ -9,6 +10,11 @@ use App\Http\Controllers\Auth\PasswordResetLinkController;
 use App\Http\Controllers\Auth\RegisteredUserController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use Illuminate\Support\Facades\Route;
+
+// Discord OAuth — accessible to both guests (login) and authenticated users (link/disconnect)
+Route::get('auth/discord', [DiscordController::class, 'redirect'])->name('discord.redirect');
+Route::get('auth/discord/callback', [DiscordController::class, 'callback'])->name('discord.callback');
+Route::post('auth/discord/disconnect', [DiscordController::class, 'disconnect'])->middleware('auth')->name('discord.disconnect');
 
 Route::middleware('guest')->group(function () {
     Route::get('register', [RegisteredUserController::class, 'create'])

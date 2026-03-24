@@ -14,6 +14,7 @@ class LeaguePokemon extends Model
         'name',
         'cost',
         'banned',
+        'drafted_by',
     ];
 
     protected function casts(): array

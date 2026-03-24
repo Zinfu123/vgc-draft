@@ -1,6 +1,11 @@
 #!/usr/bin/env php
 <?php
 
+if (PHP_SAPI === 'cli' && function_exists('ini_set')) {
+    $limit = getenv('PHP_CLI_MEMORY_LIMIT') ?: '512M';
+    ini_set('memory_limit', $limit);
+}
+
 use Illuminate\Foundation\Application;
 use Symfony\Component\Console\Input\ArgvInput;
 

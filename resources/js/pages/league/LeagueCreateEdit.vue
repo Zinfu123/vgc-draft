@@ -6,6 +6,13 @@ import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { Head, useForm } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
+import { computed, watch } from 'vue';
+
+interface PokemonGameOption {
+    value: string;
+    label: string;
+    generation: number;
+}
 
 interface Props {
     command: string;
@@ -22,6 +29,10 @@ interface Props {
     bans_per_user: number | null;
     minimum_cost_to_ban: number | null;
     logo: string | null;
+    pokemon_generation: number;
+    pokemon_game: string;
+    pokemon_game_options: PokemonGameOption[];
+    pokemon_generation_options: number[];
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -36,6 +47,10 @@ const props = withDefaults(defineProps<Props>(), {
     ban_enabled: false,
     bans_per_user: null,
     minimum_cost_to_ban: null,
+    pokemon_generation: 9,
+    pokemon_game: 'scarlet_violet',
+    pokemon_game_options: () => [],
+    pokemon_generation_options: () => [9],
 });
 
 function formatDateForInput(value: string | null): string {
@@ -58,7 +73,23 @@ const form = useForm({
     bans_per_user: props.bans_per_user,
     minimum_cost_to_ban: props.minimum_cost_to_ban,
     logo: props.logo as File | null,
+    pokemon_generation: props.pokemon_generation,
+    pokemon_game: props.pokemon_game,
 });
+
+const gamesForSelectedGeneration = computed(() =>
+    props.pokemon_game_options.filter((g) => g.generation === form.pokemon_generation),
+);
+
+watch(
+    () => form.pokemon_generation,
+    () => {
+        const ok = gamesForSelectedGeneration.value.some((g) => g.value === form.pokemon_game);
+        if (!ok && gamesForSelectedGeneration.value[0]) {
+            form.pokemon_game = gamesForSelectedGeneration.value[0].value;
+        }
+    },
+);
 
 const frequencyOptions = [
     { label: 'Daily', value: 1 },
@@ -110,6 +141,32 @@ const submit = () => {
                         </option>
                     </select>
                     <InputError :message="form.errors.set_frequency" />
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="pokemon_generation">Pokémon generation</Label>
+                    <select
+                        id="pokemon_generation"
+                        v-model.number="form.pokemon_generation"
+                        class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+                    >
+                        <option v-for="g in pokemon_generation_options" :key="g" :value="g">Generation {{ g }}</option>
+                    </select>
+                    <InputError :message="form.errors.pokemon_generation" />
+                </div>
+
+                <div class="grid gap-2">
+                    <Label for="pokemon_game">Ruleset (main series game)</Label>
+                    <select
+                        id="pokemon_game"
+                        v-model="form.pokemon_game"
+                        class="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none"
+                    >
+                        <option v-for="opt in gamesForSelectedGeneration" :key="opt.value" :value="opt.value">
+                            {{ opt.label }}
+                        </option>
+                    </select>
+                    <InputError :message="form.errors.pokemon_game" />
                 </div>
 
                 <div class="grid gap-2">

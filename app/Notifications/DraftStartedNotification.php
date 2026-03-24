@@ -1,0 +1,37 @@
+<?php
+
+namespace App\Notifications;
+
+use App\Modules\League\Models\League;
+use App\Notifications\Channels\DiscordChannel;
+use Illuminate\Notifications\Notification;
+
+class DraftStartedNotification extends Notification
+{
+    public function __construct(public readonly League $league) {}
+
+    /**
+     * @return array<int, string>
+     */
+    public function via(mixed $notifiable): array
+    {
+        return [DiscordChannel::class];
+    }
+
+    /**
+     * @return array{embeds: array<int, mixed>}
+     */
+    public function toDiscord(mixed $notifiable): array
+    {
+        return [
+            'embeds' => [
+                [
+                    'title' => '🎉 Draft Started!',
+                    'description' => "The draft for **{$this->league->name}** has begun. Head over and make your picks!",
+                    'color' => 0x5865F2,
+                    'footer' => ['text' => 'VGC Draft'],
+                ],
+            ],
+        ];
+    }
+}

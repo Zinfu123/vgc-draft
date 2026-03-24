@@ -13,7 +13,7 @@ class ReadTeamAction
     {
         if ($data['command'] == 'league') {
             $teams = Team::where('league_id', $data['league_id'])
-                ->select('id', 'league_id', 'name', 'logo', 'user_id', 'admin_flag', 'set_wins', 'set_losses', 'victory_points')
+                ->select('id', 'league_id', 'name', 'logo', 'user_id', 'admin_flag', 'set_wins', 'set_losses', 'victory_points', 'trades')
                 ->with('user')
                 ->get();
 

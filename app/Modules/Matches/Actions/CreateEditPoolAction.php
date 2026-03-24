@@ -22,8 +22,8 @@ class CreateEditPoolAction
         }
 
         $poolcount = Pool::where('league_id', $data['league_id'])->count();
-        if ($poolcount == $matchConfig->number_of_pools) {
-            throw new \Exception('Pool count is equal to number of pools');
+        if ($poolcount >= $matchConfig->number_of_pools) {
+            throw new \Exception('All pools already created for this league.');
         }
         $numberOfPools = $matchConfig->number_of_pools - $poolcount;
         $match_config_id = $matchConfig->id;

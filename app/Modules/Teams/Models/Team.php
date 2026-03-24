@@ -2,11 +2,24 @@
 
 namespace App\Modules\Teams\Models;
 
+use App\Modules\Matches\Models\Pool;
 use Illuminate\Database\Eloquent\Model;
 
 class Team extends Model
 {
     protected $table = 'teams';
+
+    protected static function booted(): void
+    {
+        static::creating(function (Team $team) {
+            if ($team->pool_id === null && $team->league_id) {
+                $firstPool = Pool::where('league_id', $team->league_id)->orderBy('id')->first();
+                if ($firstPool) {
+                    $team->pool_id = $firstPool->id;
+                }
+            }
+        });
+    }
 
     protected $fillable = [
         'name',

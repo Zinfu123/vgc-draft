@@ -124,24 +124,89 @@ it('requires authentication on all detail tabs', function (string $tab) {
     $this->get("/leagues/{$league->id}/{$tab}")->assertRedirect('/login');
 })->with(['teams', 'matches', 'standings', 'trades', 'draft']);
 
-it('renders the admin page', function () {
+it('redirects the admin page to match-config', function () {
     $user = User::factory()->create();
     $league = createLeagueAndTeamForUser($user, adminFlag: 1);
 
     $response = $this->actingAs($user)->get("/leagues/{$league->id}/admin");
 
+    $response->assertRedirect("/leagues/{$league->id}/admin/match-config");
+});
+
+it('renders the admin match-config page', function () {
+    $user = User::factory()->create();
+    $league = createLeagueAndTeamForUser($user, adminFlag: 1);
+
+    $response = $this->actingAs($user)->get("/leagues/{$league->id}/admin/match-config");
+
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
-        ->component('league/LeagueAdmin')
+        ->component('league/admin/MatchConfig')
         ->has('league')
-        ->has('teams')
         ->has('matchConfig')
     );
 });
 
-it('requires authentication on the admin page', function () {
+it('renders the admin discord page', function () {
+    $user = User::factory()->create();
+    $league = createLeagueAndTeamForUser($user, adminFlag: 1);
+
+    $response = $this->actingAs($user)->get("/leagues/{$league->id}/admin/discord");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('league/admin/Discord')
+        ->has('league')
+    );
+});
+
+it('renders the admin trades page', function () {
+    $user = User::factory()->create();
+    $league = createLeagueAndTeamForUser($user, adminFlag: 1);
+
+    $response = $this->actingAs($user)->get("/leagues/{$league->id}/admin/trades");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('league/admin/Trades')
+        ->has('league')
+        ->has('teams')
+    );
+});
+
+it('renders the admin winner page', function () {
+    $user = User::factory()->create();
+    $league = createLeagueAndTeamForUser($user, adminFlag: 1);
+
+    $response = $this->actingAs($user)->get("/leagues/{$league->id}/admin/winner");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('league/admin/Winner')
+        ->has('league')
+        ->has('teams')
+    );
+});
+
+it('requires authentication on the admin pages', function (string $path) {
     $owner = User::factory()->create();
     $league = createLeagueAndTeamForUser($owner);
 
-    $this->get("/leagues/{$league->id}/admin")->assertRedirect('/login');
-});
+    $this->get("/leagues/{$league->id}/{$path}")->assertRedirect('/login');
+})->with(['admin', 'admin/match-config', 'admin/discord', 'admin/trades', 'admin/winner']);
+
+it('forbids non-admin users from accessing admin pages', function (string $path) {
+    $owner = User::factory()->create();
+    $league = createLeagueAndTeamForUser($owner, adminFlag: 0);
+
+    $this->actingAs($owner)->get("/leagues/{$league->id}/{$path}")->assertForbidden();
+})->with(['admin', 'admin/match-config', 'admin/discord', 'admin/trades', 'admin/winner']);
+
+it('forbids users not in the league from accessing admin pages', function (string $path) {
+    $owner = User::factory()->create();
+    $league = createLeagueAndTeamForUser($owner, adminFlag: 1);
+
+    $outsider = User::factory()->create();
+
+    $this->actingAs($outsider)->get("/leagues/{$league->id}/{$path}")->assertForbidden();
+})->with(['admin', 'admin/match-config', 'admin/discord', 'admin/trades', 'admin/winner']);

@@ -18,13 +18,13 @@ function createLeagueWithTeams(int $teamCount, ?int $roundCount = null): array
         'status' => 1,
         'draft_points' => 100,
         'league_owner' => $owner->id,
-        'round_count' => $roundCount,
     ]);
 
     $matchConfig = MatchConfig::create([
         'league_id' => $league->id,
         'number_of_pools' => 1,
         'status' => 1,
+        'round_count' => $roundCount,
     ]);
 
     $pool = Pool::create([

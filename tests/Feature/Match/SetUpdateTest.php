@@ -404,3 +404,88 @@ test('updating a completed set does not update team statistics again', function 
     // Event should not be dispatched
     Event::assertNotDispatched(\App\Events\SetUpdatedEvent::class);
 });
+
+test('rejects set update when neither team has two wins', function (int $team1Score, int $team2Score) {
+    Event::fake();
+
+    $user1 = User::factory()->create();
+    $user2 = User::factory()->create();
+
+    $league = League::create([
+        'name' => 'Test League',
+        'status' => 1,
+        'draft_points' => 100,
+        'league_owner' => $user1->id,
+    ]);
+
+    $matchConfig = MatchConfig::create([
+        'league_id' => $league->id,
+        'number_of_pools' => 1,
+        'status' => 1,
+    ]);
+
+    $pool = Pool::create([
+        'league_id' => $league->id,
+        'match_config_id' => $matchConfig->id,
+        'status' => 1,
+    ]);
+
+    $team1 = Team::create([
+        'name' => 'Team 1',
+        'league_id' => $league->id,
+        'user_id' => $user1->id,
+        'pick_position' => 1,
+        'seed' => 1,
+        'pool_id' => $pool->id,
+        'draft_points' => 100,
+        'victory_points' => 0,
+        'set_wins' => 0,
+        'set_losses' => 0,
+        'game_wins' => 0,
+        'game_losses' => 0,
+    ]);
+
+    $team2 = Team::create([
+        'name' => 'Team 2',
+        'league_id' => $league->id,
+        'user_id' => $user2->id,
+        'pick_position' => 2,
+        'seed' => 2,
+        'pool_id' => $pool->id,
+        'draft_points' => 100,
+        'victory_points' => 0,
+        'set_wins' => 0,
+        'set_losses' => 0,
+        'game_wins' => 0,
+        'game_losses' => 0,
+    ]);
+
+    $set = Set::create([
+        'league_id' => $league->id,
+        'pool_id' => $pool->id,
+        'round' => 1,
+        'team1_id' => $team1->id,
+        'team2_id' => $team2->id,
+        'status' => 1,
+    ]);
+
+    $response = $this->actingAs($user1)->put('/match', [
+        'set_id' => $set->id,
+        'team1_id' => $team1->id,
+        'team2_id' => $team2->id,
+        'team1_score' => $team1Score,
+        'team2_score' => $team2Score,
+        'command' => 'update',
+    ]);
+
+    $response->assertSessionHasErrors('set_result');
+
+    $set->refresh();
+    expect($set->status)->toBe(1);
+
+    Event::assertNotDispatched(\App\Events\SetUpdatedEvent::class);
+})->with([
+    '0-0' => [0, 0],
+    '1-1' => [1, 1],
+    '1-0' => [1, 0],
+]);

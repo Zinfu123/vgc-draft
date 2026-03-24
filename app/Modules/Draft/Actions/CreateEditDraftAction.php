@@ -10,6 +10,7 @@ use App\Modules\Draft\Models\DraftPick;
 use App\Modules\League\Models\League;
 use App\Modules\League\Models\LeaguePokemon;
 use App\Modules\Teams\Models\Team;
+use App\Notifications\DraftEndedNotification;
 
 class CreateEditDraftAction
 {
@@ -66,6 +67,9 @@ class CreateEditDraftAction
             $draft = Draft::where('league_id', $data['league_id'])->first();
             $draft->status = 0;
             $draft->save();
+
+            $league = League::find($data['league_id']);
+            $league->notify(new DraftEndedNotification($league));
         } elseif ($data['command'] == 'revert_last_pick') {
             /* Revert the last picked pokemon */
             $lastPickedPokemonID = DraftPick::where('league_id', $data['league_id'])->orderBy('round_number', 'desc')->orderBy('pick_number', 'desc')->first()->league_pokemon_id;

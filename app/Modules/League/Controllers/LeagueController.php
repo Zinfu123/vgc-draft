@@ -2,6 +2,7 @@
 
 namespace App\Modules\League\Controllers;
 
+use App\Enums\PokemonGame;
 use App\Http\Controllers\Controller;
 use App\Modules\League\Actions\CreateEditLeagueAction;
 use App\Modules\League\Actions\LeagueDetailLayoutDataAction;
@@ -78,10 +79,57 @@ class LeagueController extends Controller
         ]);
     }
 
-    public function showAdmin(League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction)
+    public function showAdmin(League $league): \Illuminate\Http\RedirectResponse
     {
-        return Inertia::render('league/LeagueAdmin', [
-            ...$leagueDetailLayoutDataAction($league),
+        $this->authorize('admin', $league);
+
+        return redirect()->route('leagues.admin.match-config', ['league' => $league->id]);
+    }
+
+    public function showAdminMatchConfig(League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction): \Inertia\Response
+    {
+        $this->authorize('admin', $league);
+
+        $data = $leagueDetailLayoutDataAction($league);
+
+        return Inertia::render('league/admin/MatchConfig', [
+            'league' => $data['league'],
+            'matchConfig' => $data['matchConfig'],
+        ]);
+    }
+
+    public function showAdminDiscord(League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction): \Inertia\Response
+    {
+        $this->authorize('admin', $league);
+
+        $data = $leagueDetailLayoutDataAction($league);
+
+        return Inertia::render('league/admin/Discord', [
+            'league' => $data['league'],
+        ]);
+    }
+
+    public function showAdminTrades(League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction): \Inertia\Response
+    {
+        $this->authorize('admin', $league);
+
+        $data = $leagueDetailLayoutDataAction($league);
+
+        return Inertia::render('league/admin/Trades', [
+            'league' => $data['league'],
+            'teams' => $data['teams'],
+        ]);
+    }
+
+    public function showAdminWinner(League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction): \Inertia\Response
+    {
+        $this->authorize('admin', $league);
+
+        $data = $leagueDetailLayoutDataAction($league);
+
+        return Inertia::render('league/admin/Winner', [
+            'league' => $data['league'],
+            'teams' => $data['teams'],
         ]);
     }
 
@@ -106,6 +154,20 @@ class LeagueController extends Controller
         return back();
     }
 
+    public function updateDiscordWebhook(Request $request, League $league)
+    {
+        $request->validate([
+            'discord_webhook_url' => 'nullable|url|max:500',
+            'discord_replay_webhook_url' => 'nullable|url|max:500',
+        ]);
+
+        $league->discord_webhook_url = $request->discord_webhook_url ?: null;
+        $league->discord_replay_webhook_url = $request->discord_replay_webhook_url ?: null;
+        $league->save();
+
+        return back();
+    }
+
     public function createEditShow(Request $request, ReadLeagueAction $readLeagueAction)
     {
         $league = $readLeagueAction(['league_id' => $request->league_id, 'command' => 'league']);
@@ -116,10 +178,10 @@ class LeagueController extends Controller
         return Inertia::render('league/LeagueCreateEdit', [
             'command' => $request->command,
             'league_id' => $request->league_id ?? 0,
-            'league_name' => $league->name ?? '',
+            'league_name' => $league?->name ?? '',
             'draft_date' => $draftConfig?->draft_date ?? null,
-            'set_start_date' => $league->set_start_date ?? null,
-            'set_frequency' => $league->set_frequency ?? 3,
+            'set_start_date' => $league?->set_start_date ?? null,
+            'set_frequency' => $league?->set_frequency ?? 3,
             'enforce_round_count' => (bool) ($matchConfig?->enforce_round_count ?? false),
             'round_count' => $matchConfig?->round_count ?? null,
             'draft_points' => $draftConfig?->draft_points ?? 80,
@@ -127,7 +189,20 @@ class LeagueController extends Controller
             'ban_enabled' => (bool) ($draftConfig?->ban_enabled ?? false),
             'bans_per_user' => $draftConfig?->bans_per_user ?? null,
             'minimum_cost_to_ban' => $draftConfig?->minimum_cost_to_ban ?? null,
-            'logo' => $league->logo ?? null,
+            'logo' => $league?->logo ?? null,
+            'pokemon_generation' => $league?->pokemon_generation ?? (int) config('pokemon.default_league_generation'),
+            'pokemon_game' => $league?->pokemon_game instanceof PokemonGame
+                ? $league->pokemon_game->value
+                : (string) config('pokemon.default_league_game'),
+            'pokemon_game_options' => collect(PokemonGame::cases())->map(fn (PokemonGame $game) => [
+                'value' => $game->value,
+                'label' => $game->label(),
+                'generation' => $game->generation(),
+            ])->values()->all(),
+            'pokemon_generation_options' => collect(range(1, 9))
+                ->filter(fn (int $generation) => count(PokemonGame::forGeneration($generation)) > 0)
+                ->values()
+                ->all(),
         ]);
     }
 }
