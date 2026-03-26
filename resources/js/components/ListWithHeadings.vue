@@ -27,7 +27,7 @@ interface Set {
             user: {
                 name: string;
             };
-        };
+        } | null;
     }>;
 }
 interface props {
@@ -74,18 +74,21 @@ const props = defineProps<props>();
                                     </p>
                                 </div>
                                 <div class="flex flex-col items-center justify-center">
-                                    <p class="text-sm/6 font-semibold text-gray-900 dark:text-white">VS</p>
+                                    <p class="text-sm/6 font-semibold text-gray-900 dark:text-white">{{ item.team2 ? 'VS' : 'Bye' }}</p>
                                 </div>
-                                <img
-                                    v-if="item.team2.logo"
-                                    class="size-12 flex-none rounded-full bg-gray-50 dark:bg-gray-800 dark:outline dark:-outline-offset-1 dark:outline-white/10"
-                                    :src="item.team2.logo"
-                                    alt=""
-                                />
-                                <div class="min-w-0">
-                                    <p class="text-sm/6 font-semibold text-gray-900 dark:text-white">{{ item.team2.name }}</p>
-                                    <p class="mt-1 truncate text-xs/5 text-gray-500 dark:text-gray-400">{{ item.team2.user.name }}</p>
-                                </div>
+                                <template v-if="item.team2">
+                                    <img
+                                        v-if="item.team2.logo"
+                                        class="size-12 flex-none rounded-full bg-gray-50 dark:bg-gray-800 dark:outline dark:-outline-offset-1 dark:outline-white/10"
+                                        :src="item.team2.logo"
+                                        alt=""
+                                    />
+                                    <div class="min-w-0">
+                                        <p class="text-sm/6 font-semibold text-gray-900 dark:text-white">{{ item.team2.name }}</p>
+                                        <p class="mt-1 truncate text-xs/5 text-gray-500 dark:text-gray-400">{{ item.team2.user.name }}</p>
+                                    </div>
+                                </template>
+                                <div v-else class="min-w-0 text-sm text-muted-foreground">Bye</div>
                             </Link>
                         </li>
                     </ul>

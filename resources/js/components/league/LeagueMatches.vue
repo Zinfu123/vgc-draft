@@ -23,7 +23,7 @@ interface TeamNext {
         user: {
             name: string;
         };
-    };
+    } | null;
 }
 
 interface PlayedSets {
@@ -47,7 +47,7 @@ interface PlayedSets {
             user: {
                 name: string;
             };
-        };
+        } | null;
     }>;
 }
 
@@ -72,7 +72,7 @@ interface UpcomingSets {
             user: {
                 name: string;
             };
-        };
+        } | null;
     }>;
 }
 

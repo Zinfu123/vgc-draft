@@ -12,7 +12,8 @@ class ReadTeamAction
     public function __invoke($data)
     {
         if ($data['command'] == 'league') {
-            $teams = Team::where('league_id', $data['league_id'])
+            $teams = Team::query()->where('league_id', $data['league_id'])
+                ->notDropped()
                 ->select('id', 'league_id', 'name', 'logo', 'user_id', 'admin_flag', 'pick_position', 'set_wins', 'set_losses', 'victory_points', 'trades')
                 ->with('user')
                 ->get();
@@ -28,7 +29,7 @@ class ReadTeamAction
                 return $team;
             });
             $teams = $teams->map(function ($team) {
-                $team->coach = User::find($team->user_id)->name;
+                $team->coach = User::find($team->user_id)?->name ?? '—';
 
                 return $team;
             });
@@ -54,7 +55,8 @@ class ReadTeamAction
 
             return $team;
         } elseif ($data['command'] == 'standings') {
-            $standings = Team::where('league_id', $data['league_id'])
+            $standings = Team::query()->where('league_id', $data['league_id'])
+                ->notDropped()
                 ->select('id', 'league_id', 'name', 'logo', 'user_id', 'set_wins', 'set_losses', 'victory_points', 'pool_id')
                 ->with('user')
                 ->orderBy('victory_points', 'desc')

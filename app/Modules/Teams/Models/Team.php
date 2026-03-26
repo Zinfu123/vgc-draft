@@ -3,6 +3,7 @@
 namespace App\Modules\Teams\Models;
 
 use App\Modules\Matches\Models\Pool;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class Team extends Model
@@ -38,9 +39,29 @@ class Team extends Model
         'seed',
         'pool_id',
         'medal_placement',
+        'dropped_at',
         'created_at',
         'updated_at',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'dropped_at' => 'datetime',
+        ];
+    }
+
+    /**
+     * @param  Builder<$this>  $query
+     * @return Builder<$this>
+     */
+    public function scopeNotDropped(Builder $query): Builder
+    {
+        return $query->whereNull('dropped_at');
+    }
 
     public function league()
     {

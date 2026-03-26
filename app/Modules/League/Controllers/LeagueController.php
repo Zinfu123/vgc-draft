@@ -8,6 +8,7 @@ use App\Enums\PokemonGame;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Draft\UpdateDraftConfigRequest;
 use App\Http\Requests\Draft\UpdateDraftPickOrderRequest;
+use App\Http\Requests\League\DropTeamFromLeagueRequest;
 use App\Http\Requests\League\UpdateTeamAdminRequest;
 use App\Http\Requests\Match\ReopenMatchSetRequest;
 use App\Modules\Draft\Models\Draft;
@@ -16,6 +17,7 @@ use App\Modules\League\Actions\CreateEditLeagueAction;
 use App\Modules\League\Actions\LeagueDetailLayoutDataAction;
 use App\Modules\League\Actions\ReadLeagueAction;
 use App\Modules\League\Models\League;
+use App\Modules\League\Services\DropTeamFromLeagueService;
 use App\Modules\Matches\Actions\CreateEditSetsAction;
 use App\Modules\Matches\Actions\ShowSetsAction;
 use App\Modules\Playoffs\Controllers\PlayoffController;
@@ -293,6 +295,7 @@ class LeagueController extends Controller
             'league' => $data['league'],
             'teams' => $data['teams'],
             'isLeagueOwner' => $isLeagueOwner,
+            'isLeagueAdmin' => Auth::user()->can('admin', $league),
         ]);
     }
 
@@ -307,6 +310,19 @@ class LeagueController extends Controller
         $team->save();
 
         return back()->with('success', 'Admin access updated.');
+    }
+
+    public function dropTeamFromLeague(DropTeamFromLeagueRequest $request, League $league, DropTeamFromLeagueService $dropTeamFromLeagueService): RedirectResponse
+    {
+        $team = Team::query()
+            ->where('league_id', $league->id)
+            ->where('id', $request->integer('team_id'))
+            ->whereNull('dropped_at')
+            ->firstOrFail();
+
+        $dropTeamFromLeagueService($team);
+
+        return back()->with('success', 'Team removed from the league. Their Pokémon returned to the pool; matches were converted to byes where applicable.');
     }
 
     public function reopenMatchSet(ReopenMatchSetRequest $request, League $league, CreateEditSetsAction $createEditSetsAction): \Illuminate\Http\RedirectResponse

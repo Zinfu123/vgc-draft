@@ -1,0 +1,2 @@
+id,league_id,draft_date,draft_points,minimum_drafts,ban_enabled,created_at,updated_at,bans_per_user,minimum_cost_to_ban
+1,1,2025-12-06,110,0,false,2026-03-17 16:07:07,2026-03-17 16:07:07,1,0

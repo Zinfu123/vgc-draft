@@ -155,7 +155,7 @@ class PlayoffController extends Controller
         return back()->with('success', 'Playoffs closed. League champion and medals are set.');
     }
 
-    public function reset(League $league): RedirectResponse
+    public function reset(League $league, PlayoffBracketService $playoffBracketService): RedirectResponse
     {
         $this->authorize('admin', $league);
 
@@ -164,15 +164,9 @@ class PlayoffController extends Controller
             return back()->withErrors(['playoff' => 'No playoff found for this league.']);
         }
 
-        if ($playoff->status === PlayoffStatus::Completed) {
-            return back()->withErrors(['playoff' => 'Completed playoffs cannot be reset from this screen.']);
-        }
+        $playoffBracketService->resetBracketAndReopenLeague($playoff);
 
-        PlayoffMatch::query()->where('playoff_id', $playoff->id)->delete();
-        $playoff->status = PlayoffStatus::Draft;
-        $playoff->save();
-
-        return back()->with('success', 'Playoff bracket cleared. You can adjust seeds and generate again.');
+        return back()->with('success', 'Playoff bracket cleared, league medals and champion reset. You can adjust seeds and generate again.');
     }
 
     /**

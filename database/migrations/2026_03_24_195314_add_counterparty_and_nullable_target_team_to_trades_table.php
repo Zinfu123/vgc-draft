@@ -6,23 +6,35 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
         Schema::table('trades', function (Blueprint $table) {
-            //
+            $table->dropForeign(['target_team_id']);
+        });
+
+        Schema::table('trades', function (Blueprint $table) {
+            $table->foreignId('target_team_id')->nullable()->change();
+            $table->string('counterparty', 32)->default('team')->after('target_team_id');
+        });
+
+        Schema::table('trades', function (Blueprint $table) {
+            $table->foreign('target_team_id')->references('id')->on('teams')->nullOnDelete();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::table('trades', function (Blueprint $table) {
-            //
+            $table->dropForeign(['target_team_id']);
+        });
+
+        Schema::table('trades', function (Blueprint $table) {
+            $table->dropColumn('counterparty');
+            $table->foreignId('target_team_id')->nullable(false)->change();
+        });
+
+        Schema::table('trades', function (Blueprint $table) {
+            $table->foreign('target_team_id')->references('id')->on('teams')->cascadeOnDelete();
         });
     }
 };

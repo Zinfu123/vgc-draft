@@ -28,7 +28,7 @@ interface Team2 {
 interface props {
     sets: Sets;
     team1: Team1;
-    team2: Team2;
+    team2: Team2 | null;
 }
 
 const props = defineProps<props>();
@@ -54,10 +54,10 @@ const props = defineProps<props>();
         </div>
         <div class="flex items-center justify-center">
             <div class="flex items-center justify-center">
-                <p class="text-sm leading-6 font-semibold text-gray-900 dark:text-white">VS</p>
+                <p class="text-sm leading-6 font-semibold text-gray-900 dark:text-white">{{ team2 ? 'VS' : 'Bye' }}</p>
             </div>
         </div>
-        <div class="flex min-w-0 gap-x-4">
+        <div v-if="team2" class="flex min-w-0 gap-x-4">
             <img
                 class="size-12 flex-none rounded-full bg-gray-50 dark:bg-gray-800 dark:outline dark:-outline-offset-1 dark:outline-white/10"
                 :src="team2.logo"
@@ -73,6 +73,9 @@ const props = defineProps<props>();
                     {{ team2.user.name }}
                 </p>
             </div>
+        </div>
+        <div v-else class="flex min-w-0 flex-1 items-center justify-center gap-x-2 text-sm text-muted-foreground">
+            <span class="rounded-md border border-dashed border-border px-3 py-2">Opponent removed — bye</span>
         </div>
     </Link>
 </template>

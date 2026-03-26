@@ -60,6 +60,7 @@ Route::prefix('leagues')->group(function () {
     Route::get('/{league}/playoffs', [LeagueController::class, 'showPlayoffs'])->middleware(['auth', 'verified'])->name('leagues.playoffs');
     Route::get('/{league}/trades', [TradeController::class, 'index'])->middleware(['auth', 'verified'])->name('leagues.trades');
     Route::post('/{league}/trades', [TradeController::class, 'create'])->middleware(['auth', 'verified'])->name('leagues.trades.create');
+    Route::post('/{league}/trades/free-agency', [TradeController::class, 'freeAgency'])->middleware(['auth', 'verified'])->name('leagues.trades.free-agency');
     Route::put('/{league}/trades/{trade}', [TradeController::class, 'respond'])->middleware(['auth', 'verified'])->name('leagues.trades.respond');
     Route::post('/{league}/trades/set-team-trades', [TradeController::class, 'setTeamTrades'])->middleware(['auth', 'verified'])->name('leagues.trades.set-team-trades');
     Route::get('/{league}/draft', [LeagueController::class, 'showDraft'])->middleware(['auth', 'verified'])->name('leagues.draft');
@@ -78,6 +79,7 @@ Route::prefix('leagues')->group(function () {
     Route::patch('/{league}/admin/draft-pick-order', [LeagueController::class, 'updateDraftPickOrder'])->middleware(['auth', 'verified'])->name('leagues.admin.draft-pick-order.update');
     Route::get('/{league}/admin/league-admins', [LeagueController::class, 'showAdminLeagueAdmins'])->middleware(['auth', 'verified'])->name('leagues.admin.league-admins');
     Route::patch('/{league}/admin/team-admin', [LeagueController::class, 'updateTeamAdmin'])->middleware(['auth', 'verified'])->name('leagues.admin.team-admin.update');
+    Route::post('/{league}/admin/drop-team', [LeagueController::class, 'dropTeamFromLeague'])->middleware(['auth', 'verified'])->name('leagues.admin.drop-team');
     Route::get('/{league}/admin/playoffs', [PlayoffController::class, 'show'])->middleware(['auth', 'verified'])->name('leagues.admin.playoffs');
     Route::patch('/{league}/admin/playoffs', [PlayoffController::class, 'update'])->middleware(['auth', 'verified'])->name('leagues.admin.playoffs.update');
     Route::post('/{league}/admin/playoffs/generate', [PlayoffController::class, 'generate'])->middleware(['auth', 'verified'])->name('leagues.admin.playoffs.generate');

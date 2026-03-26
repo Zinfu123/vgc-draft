@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Playoffs\PlayoffStatus;
 use App\Models\User;
 use App\Modules\Draft\Models\DraftConfig;
 use App\Modules\League\Models\League;
@@ -265,6 +266,58 @@ it('closes playoffs and sets league winner and medal placements', function () {
     expect(Team::query()->where('league_id', $league->id)->where('medal_placement', 1)->count())->toBe(1)
         ->and(Team::query()->where('league_id', $league->id)->where('medal_placement', 2)->count())->toBe(1)
         ->and(Team::query()->where('league_id', $league->id)->where('medal_placement', 3)->count())->toBe(1);
+});
+
+it('resets completed playoffs and clears league winner medals and matches', function () {
+    [$league, $teams] = createLeagueWithFourTeams();
+    $admin = $teams[0]->user;
+
+    $this->actingAs($admin)->get(route('leagues.admin.playoffs', $league));
+    $this->actingAs($admin)->post(route('leagues.admin.playoffs.generate', $league));
+
+    $playoff = Playoff::query()->where('league_id', $league->id)->first();
+
+    foreach (['r0-0', 'r0-1'] as $slot) {
+        $m = PlayoffMatch::query()->where('playoff_id', $playoff->id)->where('slot', $slot)->first();
+        $this->actingAs($admin)->post(route('leagues.admin.playoffs.record', $league), [
+            'playoff_match_id' => $m->id,
+            'team1_score' => 2,
+            'team2_score' => 0,
+        ]);
+    }
+
+    $bronze = PlayoffMatch::query()->where('playoff_id', $playoff->id)->where('slot', 'bronze')->first();
+    $this->actingAs($admin)->post(route('leagues.admin.playoffs.record', $league), [
+        'playoff_match_id' => $bronze->id,
+        'team1_score' => 2,
+        'team2_score' => 0,
+    ]);
+
+    $finals = PlayoffMatch::query()->where('playoff_id', $playoff->id)->where('slot', 'r1-0')->first();
+    $this->actingAs($admin)->post(route('leagues.admin.playoffs.record', $league), [
+        'playoff_match_id' => $finals->id,
+        'team1_score' => 2,
+        'team2_score' => 0,
+    ]);
+
+    $this->actingAs($admin)->post(route('leagues.admin.playoffs.close', $league));
+
+    $league->refresh();
+    expect($league->winner)->not->toBeNull()
+        ->and((int) $league->status)->toBe(0);
+
+    $reset = $this->actingAs($admin)->post(route('leagues.admin.playoffs.reset', $league));
+    $reset->assertRedirect();
+    $reset->assertSessionHasNoErrors();
+
+    $league->refresh();
+    $playoff->refresh();
+
+    expect($league->winner)->toBeNull()
+        ->and((int) $league->status)->toBe(1)
+        ->and($playoff->status)->toBe(PlayoffStatus::Draft)
+        ->and(PlayoffMatch::query()->where('playoff_id', $playoff->id)->count())->toBe(0)
+        ->and(Team::query()->where('league_id', $league->id)->where('medal_placement', '>', 0)->count())->toBe(0);
 });
 
 it('rejects generating double elimination brackets', function () {

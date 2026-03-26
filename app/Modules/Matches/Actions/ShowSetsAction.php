@@ -35,8 +35,12 @@ class ShowSetsAction
                 $set->team2->logo = $action->logoToUrl($set->team2->logo);
             }
 
-            $set->team1->pokemon = LeaguePokemon::where('drafted_by', $set->team1->id)->with('pokemon')->get();
-            $set->team2->pokemon = LeaguePokemon::where('drafted_by', $set->team2->id)->with('pokemon')->get();
+            if ($set->team1) {
+                $set->team1->pokemon = LeaguePokemon::where('drafted_by', $set->team1->id)->with('pokemon')->get();
+            }
+            if ($set->team2) {
+                $set->team2->pokemon = LeaguePokemon::where('drafted_by', $set->team2->id)->with('pokemon')->get();
+            }
 
             return $set;
         } elseif ($data['command'] == 'round') {
@@ -128,7 +132,7 @@ class ShowSetsAction
                 ->orderBy('round', 'asc')
                 ->get();
             $sets = $sets->map(function ($set) {
-                if ($set->team1->logo !== null) {
+                if ($set->team1 && $set->team1->logo !== null) {
                     $action = new LogoToUrlAction;
                     $set->team1->logo = $action->logoToUrl($set->team1->logo);
                 }

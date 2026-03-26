@@ -39,6 +39,8 @@ class ReadLeaguePokemonAction
                 ->join('pokedex', 'league_pokemon.pokedex_id', '=', 'pokedex.id')
                 ->select('league_pokemon.id', 'pokedex.sprite_url', 'pokedex.name', 'pokedex.type1', 'pokedex.type2', 'league_pokemon.cost')
                 ->whereNull('drafted_by')
+                ->where('league_pokemon.banned', false)
+                ->where('league_pokemon.is_drafted', false)
                 ->orderBy('league_pokemon.cost', 'desc')
                 ->orderBy('pokedex.name', 'asc')
                 ->get();

@@ -17,9 +17,11 @@ class LeaguePolicy
             return true;
         }
 
-        return Team::where('user_id', $user->id)
+        return Team::query()
+            ->where('user_id', $user->id)
             ->where('league_id', $league->id)
             ->where('admin_flag', 1)
+            ->whereNull('dropped_at')
             ->exists();
     }
 

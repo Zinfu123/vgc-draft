@@ -37,6 +37,7 @@ class PlayoffBracketService
     {
         return Team::query()
             ->where('league_id', $league->id)
+            ->notDropped()
             ->orderByDesc('victory_points')
             ->orderByDesc('set_wins')
             ->orderBy('set_losses')
@@ -321,6 +322,25 @@ class PlayoffBracketService
 
             $playoff->status = PlayoffStatus::Completed;
             $playoff->save();
+        });
+    }
+
+    public function resetBracketAndReopenLeague(Playoff $playoff): void
+    {
+        DB::transaction(function () use ($playoff): void {
+            PlayoffMatch::query()->where('playoff_id', $playoff->id)->delete();
+
+            $playoff->status = PlayoffStatus::Draft;
+            $playoff->save();
+
+            Team::query()->where('league_id', $playoff->league_id)->update(['medal_placement' => 0]);
+
+            $league = League::query()->find($playoff->league_id);
+            if ($league !== null) {
+                $league->winner = null;
+                $league->status = 1;
+                $league->save();
+            }
         });
     }
 

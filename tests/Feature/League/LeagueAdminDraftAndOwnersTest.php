@@ -200,5 +200,6 @@ it('shows league admins page to admins and hides toggles from non-owners', funct
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('league/admin/LeagueAdmins')
-            ->where('isLeagueOwner', false));
+            ->where('isLeagueOwner', false)
+            ->where('isLeagueAdmin', true));
 });

@@ -6,6 +6,7 @@ use App\Events\SetUpdatedEvent;
 use App\Modules\League\Models\League;
 use App\Modules\Matches\Models\Pool;
 use App\Modules\Matches\Models\Set;
+use App\Modules\Matches\Services\PoolSetStandingsAdjuster;
 use App\Modules\Pokepaste\Services\EnforceTeamMatchPokepasteChecker;
 use App\Modules\Teams\Models\Team;
 use App\Notifications\MatchReplaysNotification;
@@ -14,6 +15,10 @@ use Illuminate\Support\Facades\Auth;
 
 class CreateEditSetsAction
 {
+    public function __construct(
+        private PoolSetStandingsAdjuster $poolSetStandingsAdjuster,
+    ) {}
+
     public function __invoke($data)
     {
         if ($data['command'] == 'create') {
@@ -21,7 +26,7 @@ class CreateEditSetsAction
             $roundCount = $league?->matchConfig?->round_count;
             $pools = Pool::where('league_id', $data['league_id'])->where('status', 1)->get();
             foreach ($pools as $pool) {
-                $teams = Team::where('pool_id', $pool->id)->orderBy('seed', 'asc')->get();
+                $teams = Team::query()->where('pool_id', $pool->id)->whereNull('dropped_at')->orderBy('seed', 'asc')->get();
                 $oddCheck = $teams->count() % 2 !== 0;
                 if ($oddCheck === true) {
                     $teams->push(null);
@@ -50,6 +55,9 @@ class CreateEditSetsAction
             }
             if ($set->status == 0) {
                 return;
+            }
+            if ($set->team2_id === null) {
+                return false;
             } else {
                 $leagueForPaste = League::with('matchConfig')->find($set->league_id);
                 if ($leagueForPaste?->matchConfig?->require_team_match_pokepaste_before_results === true) {
@@ -107,41 +115,26 @@ class CreateEditSetsAction
                 return false;
             }
 
-            $team1Score = (int) $set->team1_score;
-            $team2Score = (int) $set->team2_score;
-
-            $team1 = Team::where('id', $set->team1_id)->first();
-            $team2 = Team::where('id', $set->team2_id)->first();
-            if (! $team1 || ! $team2) {
-                return false;
+            if ($set->is_bye) {
+                if ($set->team1_id === null) {
+                    return false;
+                }
+                $this->poolSetStandingsAdjuster->revertByeStandings($set);
+            } else {
+                $team1 = Team::where('id', $set->team1_id)->first();
+                $team2 = Team::where('id', $set->team2_id)->first();
+                if (! $team1 || ! $team2) {
+                    return false;
+                }
+                $this->poolSetStandingsAdjuster->revertCompletedMatchStandings($set);
             }
-
-            $team1points = $this->calculatePoints($team1Score, $team2Score);
-            $team2points = $this->calculatePoints($team2Score, $team1Score);
-            $team1->victory_points -= $team1points;
-            $team2->victory_points -= $team2points;
-
-            $winner = $set->winner_id;
-            if ($winner === $set->team1_id) {
-                $team1->set_wins -= 1;
-                $team2->set_losses -= 1;
-            } elseif ($winner === $set->team2_id) {
-                $team1->set_losses -= 1;
-                $team2->set_wins -= 1;
-            }
-
-            $team1->game_wins -= $team1Score;
-            $team1->game_losses -= $team2Score;
-            $team2->game_wins -= $team2Score;
-            $team2->game_losses -= $team1Score;
 
             $set->status = 1;
             $set->winner_id = null;
             $set->team1_score = null;
             $set->team2_score = null;
+            $set->is_bye = false;
             $set->save();
-            $team1->save();
-            $team2->save();
             SetUpdatedEvent::dispatch(['set_id' => $set->id, 'status' => $set->status]);
 
             return true;

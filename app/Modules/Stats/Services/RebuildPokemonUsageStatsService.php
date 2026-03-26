@@ -148,6 +148,9 @@ class RebuildPokemonUsageStatsService
             ->get(['id', 'team1_id', 'team2_id', 'team1_score', 'team2_score']);
 
         foreach ($sets as $set) {
+            if ($set->team1_id === null) {
+                continue;
+            }
             $this->addGameStatsForTeamSide(
                 $setClass,
                 (int) $set->id,
@@ -157,6 +160,9 @@ class RebuildPokemonUsageStatsService
                 $gameWins,
                 $gameLosses
             );
+            if ($set->team2_id === null) {
+                continue;
+            }
             $this->addGameStatsForTeamSide(
                 $setClass,
                 (int) $set->id,

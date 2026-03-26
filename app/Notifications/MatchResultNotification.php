@@ -28,7 +28,7 @@ class MatchResultNotification extends Notification
         $winnerId = $this->set->winner_id;
 
         $team1Name = $team1?->name ?? 'Team 1';
-        $team2Name = $team2?->name ?? 'Team 2';
+        $team2Name = $team2 === null ? 'Bye' : ($team2->name ?? 'Team 2');
         $winnerName = $winnerId === $this->set->team1_id ? $team1Name : $team2Name;
 
         return [

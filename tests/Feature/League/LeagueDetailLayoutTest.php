@@ -96,6 +96,7 @@ it('renders the trades tab', function () {
         ->has('teams')
         ->has('adminFlag')
         ->has('matchConfig')
+        ->has('freeAgencyPool')
         ->where('section', 'trades')
     );
 });
@@ -209,10 +210,25 @@ it('requires authentication on the admin pages', function (string $path) {
 })->with(['admin', 'admin/match-config', 'admin/discord', 'admin/trades', 'admin/reopen-match', 'admin/winner']);
 
 it('forbids non-admin users from accessing admin pages', function (string $path) {
-    $owner = User::factory()->create();
-    $league = createLeagueAndTeamForUser($owner, adminFlag: 0);
+    $leagueOwner = User::factory()->create();
+    $league = createLeagueAndTeamForUser($leagueOwner, adminFlag: 0);
 
-    $this->actingAs($owner)->get("/leagues/{$league->id}/{$path}")->assertForbidden();
+    $coach = User::factory()->create();
+    Team::create([
+        'name' => 'Guest Team',
+        'league_id' => $league->id,
+        'user_id' => $coach->id,
+        'admin_flag' => 0,
+        'pick_position' => 2,
+        'draft_points' => 100,
+        'victory_points' => 0,
+        'set_wins' => 0,
+        'set_losses' => 0,
+        'game_wins' => 0,
+        'game_losses' => 0,
+    ]);
+
+    $this->actingAs($coach)->get("/leagues/{$league->id}/{$path}")->assertForbidden();
 })->with(['admin', 'admin/match-config', 'admin/discord', 'admin/trades', 'admin/reopen-match', 'admin/winner']);
 
 it('forbids users not in the league from accessing admin pages', function (string $path) {

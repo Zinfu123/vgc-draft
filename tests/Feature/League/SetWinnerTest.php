@@ -69,9 +69,24 @@ it('fails validation when winner_user_id does not exist', function () {
 });
 
 it('forbids non-admin league members from setting a winner', function () {
-    [$owner, $league, $teamUser] = createLeagueWithOwnerAndTeam();
+    [, $league, $teamUser] = createLeagueWithOwnerAndTeam();
 
-    $response = $this->actingAs($owner)->post("/leagues/{$league->id}/set-winner", [
+    $plainCoach = User::factory()->create();
+    Team::create([
+        'name' => 'Team B',
+        'league_id' => $league->id,
+        'user_id' => $plainCoach->id,
+        'admin_flag' => 0,
+        'pick_position' => 2,
+        'draft_points' => 100,
+        'victory_points' => 0,
+        'set_wins' => 0,
+        'set_losses' => 0,
+        'game_wins' => 0,
+        'game_losses' => 0,
+    ]);
+
+    $response = $this->actingAs($plainCoach)->post("/leagues/{$league->id}/set-winner", [
         'winner_user_id' => $teamUser->id,
     ]);
 

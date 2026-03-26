@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\Trade\TradeCounterparty;
 use App\Models\User;
 use App\Modules\Draft\Models\DraftConfig;
 use App\Modules\League\Models\League;
@@ -397,4 +398,69 @@ it('discord id is not settable via the profile form', function () {
 
     $response->assertSessionHasNoErrors();
     expect($user->fresh()->discord_id)->toBeNull();
+});
+
+// ── Free agency trades ───────────────────────────────────────────────────────
+
+it('user can complete a free agency trade and creates an accepted audit trade', function () {
+    [$owner, $league, $teamA, $teamB, $userA, $userB, $pikachuA, $charizardA, $gengarA, $blastoiseB] = createLeagueForTradeTests();
+
+    $pd = Pokedex::create(['nationaldex_id' => 133, 'name' => 'Eevee', 'type1' => 'Normal']);
+    $poolMon = LeaguePokemon::create([
+        'league_id' => $league->id,
+        'pokedex_id' => $pd->id,
+        'name' => 'Eevee',
+        'cost' => 5,
+        'drafted_by' => null,
+        'is_drafted' => false,
+        'banned' => false,
+    ]);
+
+    $beforeTrades = $teamA->trades;
+
+    $response = $this->actingAs($userA)->post(route('leagues.trades.free-agency', ['league' => $league->id]), [
+        'offered_pokemon_ids' => [$pikachuA->id],
+        'requested_pokemon_ids' => [$poolMon->id],
+    ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHasNoErrors();
+
+    expect($pikachuA->fresh()->drafted_by)->toBeNull()
+        ->and($poolMon->fresh()->drafted_by)->toBe($teamA->id)
+        ->and($teamA->fresh()->trades)->toBe($beforeTrades - 2);
+
+    $trade = Trade::query()
+        ->where('league_id', $league->id)
+        ->where('requesting_team_id', $teamA->id)
+        ->where('counterparty', TradeCounterparty::FreeAgency)
+        ->first();
+
+    expect($trade)->not->toBeNull()
+        ->and($trade->target_team_id)->toBeNull()
+        ->and($trade->status)->toBe('accepted')
+        ->and($trade->offeredPokemon)->toHaveCount(1)
+        ->and($trade->requestedPokemon)->toHaveCount(1);
+});
+
+it('rejects free agency trade when offered cost is lower than pool cost', function () {
+    [$owner, $league, $teamA, $teamB, $userA, $userB, $pikachuA, $charizardA, $gengarA, $blastoiseB] = createLeagueForTradeTests();
+
+    $pd = Pokedex::create(['nationaldex_id' => 249, 'name' => 'Lugia', 'type1' => 'Psychic']);
+    $expensivePool = LeaguePokemon::create([
+        'league_id' => $league->id,
+        'pokedex_id' => $pd->id,
+        'name' => 'Lugia',
+        'cost' => 50,
+        'drafted_by' => null,
+        'is_drafted' => false,
+        'banned' => false,
+    ]);
+
+    $response = $this->actingAs($userA)->post(route('leagues.trades.free-agency', ['league' => $league->id]), [
+        'offered_pokemon_ids' => [$pikachuA->id],
+        'requested_pokemon_ids' => [$expensivePool->id],
+    ]);
+
+    $response->assertSessionHasErrors('offered_pokemon_ids');
 });

@@ -2,6 +2,7 @@
 
 namespace App\Modules\Trade\Models;
 
+use App\Enums\Trade\TradeCounterparty;
 use App\Modules\League\Models\League;
 use App\Modules\Teams\Models\Team;
 use Illuminate\Database\Eloquent\Model;
@@ -16,8 +17,19 @@ class Trade extends Model
         'league_id',
         'requesting_team_id',
         'target_team_id',
+        'counterparty',
         'status',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'counterparty' => TradeCounterparty::class,
+        ];
+    }
 
     public function league(): BelongsTo
     {

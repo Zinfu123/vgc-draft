@@ -46,7 +46,7 @@ interface PlayedSets {
         pool_id: number;
         round: number;
         team1: { id: number; name: string; logo: string; user: { name: string } };
-        team2: { id: number; name: string; logo: string; user: { name: string } };
+        team2: { id: number; name: string; logo: string; user: { name: string } } | null;
     }>;
 }
 
@@ -57,7 +57,7 @@ interface UpcomingSets {
         pool_id: number;
         round: number;
         team1: { id: number; name: string; logo: string; user: { name: string } };
-        team2: { id: number; name: string; logo: string; user: { name: string } };
+        team2: { id: number; name: string; logo: string; user: { name: string } } | null;
     }>;
 }
 
@@ -67,7 +67,7 @@ interface TeamNext {
     pool_id: number;
     round: number;
     team1: { id: number; name: string; logo: string; user: { name: string } };
-    team2: { id: number; name: string; logo: string; user: { name: string } };
+    team2: { id: number; name: string; logo: string; user: { name: string } } | null;
 }
 
 defineProps<{

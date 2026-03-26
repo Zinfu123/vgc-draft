@@ -37,13 +37,23 @@ interface TradePokemon {
 interface Trade {
     id: number;
     status: 'pending' | 'accepted' | 'declined' | 'cancelled';
+    counterparty: 'team' | 'free_agency';
     requesting_team_id: number;
-    target_team_id: number;
-    requesting_team: { id: number; name: string; user_id: number };
-    target_team: { id: number; name: string; user_id: number };
+    target_team_id: number | null;
+    requesting_team: { id: number; name: string; user_id: number | null };
+    target_team: { id: number; name: string; user_id: number | null } | null;
     offered_pokemon: TradePokemon[];
     requested_pokemon: TradePokemon[];
     created_at: string;
+}
+
+interface PoolMon {
+    id: number;
+    name: string;
+    cost: number;
+    sprite_url: string | null;
+    type1?: string;
+    type2?: string;
 }
 
 interface League {
@@ -81,15 +91,22 @@ const props = defineProps<{
     userTeam: Team | null;
     leagueTeams: Team[];
     trades: Trade[];
+    freeAgencyPool: PoolMon[];
 }>();
 
 const currentUser = usePage().props.auth.user;
 
 const showTradeForm = ref(false);
+const showFaForm = ref(false);
 const selectedTargetTeamId = ref<number | null>(null);
 
 const tradeForm = useForm({
     target_team_id: null as number | null,
+    offered_pokemon_ids: [] as number[],
+    requested_pokemon_ids: [] as number[],
+});
+
+const faForm = useForm({
     offered_pokemon_ids: [] as number[],
     requested_pokemon_ids: [] as number[],
 });
@@ -99,11 +116,15 @@ const selectedTargetTeam = computed(() =>
 );
 
 const incomingTrades = computed(() =>
-    props.trades.filter((t) => t.target_team_id === props.userTeam?.id && t.status === 'pending'),
+    props.trades.filter(
+        (t) => t.counterparty === 'team' && t.target_team_id === props.userTeam?.id && t.status === 'pending',
+    ),
 );
 
 const outgoingTrades = computed(() =>
-    props.trades.filter((t) => t.requesting_team_id === props.userTeam?.id && t.status === 'pending'),
+    props.trades.filter(
+        (t) => t.counterparty === 'team' && t.requesting_team_id === props.userTeam?.id && t.status === 'pending',
+    ),
 );
 
 const completedTrades = computed(() =>
@@ -152,6 +173,57 @@ const submitTrade = () => {
     });
 };
 
+const offeredCostSum = computed(() => {
+    if (!props.userTeam) {
+        return 0;
+    }
+    const byId = new Map(props.userTeam.pokemon.map((p) => [p.id, p.cost]));
+    return faForm.offered_pokemon_ids.reduce((s, id) => s + (byId.get(id) ?? 0), 0);
+});
+
+const requestedPoolCostSum = computed(() => {
+    const byId = new Map(props.freeAgencyPool.map((p) => [p.id, p.cost]));
+    return faForm.requested_pokemon_ids.reduce((s, id) => s + (byId.get(id) ?? 0), 0);
+});
+
+const faTradeTokenCost = computed(() => faForm.offered_pokemon_ids.length + faForm.requested_pokemon_ids.length);
+
+const faCostOk = computed(() => offeredCostSum.value >= requestedPoolCostSum.value && faForm.requested_pokemon_ids.length > 0);
+
+const toggleFaOffered = (id: number) => {
+    const idx = faForm.offered_pokemon_ids.indexOf(id);
+    if (idx === -1) {
+        faForm.offered_pokemon_ids.push(id);
+    } else {
+        faForm.offered_pokemon_ids.splice(idx, 1);
+    }
+};
+
+const toggleFaRequested = (id: number) => {
+    const idx = faForm.requested_pokemon_ids.indexOf(id);
+    if (idx === -1) {
+        faForm.requested_pokemon_ids.push(id);
+    } else {
+        faForm.requested_pokemon_ids.splice(idx, 1);
+    }
+};
+
+const submitFaTrade = () => {
+    faForm.post(route('leagues.trades.free-agency', { league: props.league.id }), {
+        onSuccess: () => {
+            showFaForm.value = false;
+            faForm.reset();
+        },
+    });
+};
+
+function tradePartnerLabel(trade: Trade): string {
+    if (trade.counterparty === 'free_agency') {
+        return 'Free agency pool';
+    }
+    return trade.target_team?.name ?? '—';
+}
+
 const respondToTrade = (trade: Trade, response: 'accepted' | 'declined' | 'cancelled') => {
     router.put(route('leagues.trades.respond', { league: props.league.id, trade: trade.id }), {
         response,
@@ -174,17 +246,27 @@ const respondToTrade = (trade: Trade, response: 'accepted' | 'declined' | 'cance
             </div>
 
             <!-- Header -->
-            <div class="flex items-center justify-between">
+            <div class="flex flex-wrap items-center justify-between gap-2">
                 <div>
                     <h2 class="text-xl font-semibold">Trades</h2>
                     <p v-if="userTeam" class="mt-1 text-sm text-muted-foreground">
                         {{ userTeam.name }} — <span class="font-medium">{{ userTeam.trades }}</span> trade{{ userTeam.trades === 1 ? '' : 's' }} remaining
                     </p>
                 </div>
-                <Button v-if="userTeam && !showTradeForm" @click="showTradeForm = true">Request Trade</Button>
-                <Button v-else-if="userTeam && showTradeForm" variant="outline" @click="showTradeForm = false; tradeForm.reset(); selectedTargetTeamId = null">
-                    Cancel
-                </Button>
+                <div v-if="userTeam" class="flex flex-wrap gap-2">
+                    <template v-if="!showTradeForm && !showFaForm">
+                        <Button @click="showTradeForm = true">Trade with team</Button>
+                        <Button variant="secondary" @click="showFaForm = true">Trade with free agency</Button>
+                    </template>
+                    <Button
+                        v-else-if="showTradeForm"
+                        variant="outline"
+                        @click="showTradeForm = false; tradeForm.reset(); selectedTargetTeamId = null"
+                    >
+                        Cancel team trade
+                    </Button>
+                    <Button v-else-if="showFaForm" variant="outline" @click="showFaForm = false; faForm.reset()">Cancel free agency</Button>
+                </div>
             </div>
 
             <!-- Trade Request Form -->
@@ -265,6 +347,79 @@ const respondToTrade = (trade: Trade, response: 'accepted' | 'declined' | 'cance
                     </p>
                     <Button @click="submitTrade" :disabled="tradeForm.processing || tradeForm.offered_pokemon_ids.length === 0 || tradeForm.requested_pokemon_ids.length === 0">
                         Send Request
+                    </Button>
+                </div>
+            </div>
+
+            <!-- Free agency trade -->
+            <div v-if="showFaForm && userTeam" class="rounded-lg border border-border bg-card p-6">
+                <h3 class="mb-2 text-base font-semibold">Trade with free agency</h3>
+                <p class="mb-4 text-sm text-muted-foreground">
+                    Return Pokémon to the pool and take available Pokémon. Total cost offered must be ≥ total cost taken. This uses
+                    {{ faTradeTokenCost || '…' }} trade slot(s) (offered + taken count).
+                </p>
+                <div class="grid gap-6 md:grid-cols-2">
+                    <div>
+                        <p class="mb-2 text-sm font-medium">📤 Your Pokémon to offer</p>
+                        <p v-if="faForm.errors.offered_pokemon_ids" class="mb-2 text-sm text-destructive">{{ faForm.errors.offered_pokemon_ids }}</p>
+                        <div class="flex flex-wrap gap-2">
+                            <button
+                                v-for="poke in userTeam.pokemon"
+                                :key="poke.id"
+                                type="button"
+                                @click="toggleFaOffered(poke.id)"
+                                :class="[
+                                    'flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors',
+                                    faForm.offered_pokemon_ids.includes(poke.id)
+                                        ? 'border-primary bg-primary text-primary-foreground'
+                                        : 'border-border bg-background hover:bg-muted',
+                                ]"
+                            >
+                                <img v-if="poke.pokemon?.sprite_url" :src="poke.pokemon.sprite_url" :alt="poke.name" class="size-5 object-contain" />
+                                {{ poke.name }} ({{ poke.cost }})
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <p class="mb-2 text-sm font-medium">📥 Take from pool</p>
+                        <p v-if="faForm.errors.requested_pokemon_ids" class="mb-2 text-sm text-destructive">{{ faForm.errors.requested_pokemon_ids }}</p>
+                        <div class="max-h-64 flex flex-wrap gap-2 overflow-y-auto">
+                            <button
+                                v-for="poke in freeAgencyPool"
+                                :key="poke.id"
+                                type="button"
+                                @click="toggleFaRequested(poke.id)"
+                                :class="[
+                                    'flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs transition-colors',
+                                    faForm.requested_pokemon_ids.includes(poke.id)
+                                        ? 'border-primary bg-primary text-primary-foreground'
+                                        : 'border-border bg-background hover:bg-muted',
+                                ]"
+                            >
+                                <img v-if="poke.sprite_url" :src="poke.sprite_url" :alt="poke.name" class="size-5 object-contain" />
+                                {{ poke.name }} ({{ poke.cost }})
+                            </button>
+                        </div>
+                        <p v-if="freeAgencyPool.length === 0" class="text-sm text-muted-foreground">No Pokémon available in the pool.</p>
+                    </div>
+                </div>
+                <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
+                    <p class="text-xs text-muted-foreground">
+                        Offered cost: <span class="font-medium text-foreground">{{ offeredCostSum }}</span> · Pool cost:
+                        <span class="font-medium text-foreground">{{ requestedPoolCostSum }}</span>
+                        <span v-if="!faCostOk && faForm.requested_pokemon_ids.length > 0" class="text-destructive"> — offered cost must be ≥ pool cost</span>
+                    </p>
+                    <Button
+                        @click="submitFaTrade"
+                        :disabled="
+                            faForm.processing ||
+                            faForm.offered_pokemon_ids.length === 0 ||
+                            faForm.requested_pokemon_ids.length === 0 ||
+                            !faCostOk ||
+                            faTradeTokenCost > (userTeam?.trades ?? 0)
+                        "
+                    >
+                        Complete trade
                     </Button>
                 </div>
             </div>
@@ -365,7 +520,7 @@ const respondToTrade = (trade: Trade, response: 'accepted' | 'declined' | 'cance
                             <div class="flex-1 text-sm">
                                 <span class="font-medium">{{ trade.requesting_team.name }}</span>
                                 <span class="text-muted-foreground"> ↔ </span>
-                                <span class="font-medium">{{ trade.target_team.name }}</span>
+                                <span class="font-medium">{{ tradePartnerLabel(trade) }}</span>
                                 <div class="mt-1.5 flex flex-wrap gap-3 text-xs text-muted-foreground">
                                     <span>
                                         {{ trade.offered_pokemon.map((tp) => tp.league_pokemon?.name).join(', ') }}

@@ -2,6 +2,7 @@
 
 namespace App\Modules\Trade\Actions;
 
+use App\Enums\Trade\TradeCounterparty;
 use App\Models\User;
 use App\Modules\Draft\Models\DraftConfig;
 use App\Modules\League\Models\LeaguePokemon;
@@ -31,12 +32,16 @@ class CreateTradeAction
             ]);
         }
 
-        $requestingTeam = Team::where('user_id', $request->user()->id)
+        $requestingTeam = Team::query()
+            ->where('user_id', $request->user()->id)
             ->where('league_id', $request->league_id)
+            ->whereNull('dropped_at')
             ->firstOrFail();
 
-        $targetTeam = Team::where('id', $request->target_team_id)
+        $targetTeam = Team::query()
+            ->where('id', $request->target_team_id)
             ->where('league_id', $request->league_id)
+            ->whereNull('dropped_at')
             ->firstOrFail();
 
         $offeredIds = $request->offered_pokemon_ids;
@@ -53,6 +58,7 @@ class CreateTradeAction
             'league_id' => $request->league_id,
             'requesting_team_id' => $requestingTeam->id,
             'target_team_id' => $targetTeam->id,
+            'counterparty' => TradeCounterparty::Team,
             'status' => 'pending',
         ]);
 

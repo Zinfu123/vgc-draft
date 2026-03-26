@@ -4,7 +4,8 @@ import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import AdminLayout from '@/layouts/league/AdminLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { Button } from '@/components/ui/button';
+import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 
 interface FlashProps {
@@ -30,6 +31,7 @@ const props = defineProps<{
     league: League;
     teams: Team[];
     isLeagueOwner: boolean;
+    isLeagueAdmin: boolean;
 }>();
 
 const page = usePage();
@@ -41,6 +43,28 @@ const breadcrumbs: BreadcrumbItem[] = [
 ];
 
 const processingTeamId = ref<number | null>(null);
+
+const dropForm = useForm({ team_id: 0 });
+
+function confirmDropTeam(team: Team): void {
+    if (!props.isLeagueAdmin) {
+        return;
+    }
+    if (
+        !confirm(
+            `Remove "${team.name}" from this league? Their Pokémon return to the pool, sets become byes, and playoffs may reset. This cannot be undone.`,
+        )
+    ) {
+        return;
+    }
+    dropForm.team_id = team.id;
+    dropForm.post(route('leagues.admin.drop-team', { league: props.league.id }), {
+        preserveScroll: true,
+        onFinish: () => {
+            dropForm.reset();
+        },
+    });
+}
 
 const flashSuccess = computed(() => (page.props as FlashProps).flash?.success ?? null);
 
@@ -93,7 +117,7 @@ function setTeamAdmin(team: Team, checked: boolean): void {
                             <p class="font-medium">{{ team.name }}</p>
                             <p class="text-muted-foreground">{{ team.coach }}</p>
                         </div>
-                        <div class="flex items-center gap-2">
+                        <div class="flex flex-wrap items-center gap-2">
                             <input
                                 :id="`admin-${team.id}`"
                                 type="checkbox"
@@ -103,6 +127,17 @@ function setTeamAdmin(team: Team, checked: boolean): void {
                                 @change="setTeamAdmin(team, ($event.target as HTMLInputElement).checked)"
                             />
                             <Label :for="`admin-${team.id}`" class="cursor-pointer font-normal">Co-admin</Label>
+                            <Button
+                                v-if="isLeagueAdmin"
+                                type="button"
+                                variant="destructive"
+                                size="sm"
+                                class="text-xs"
+                                :disabled="dropForm.processing"
+                                @click="confirmDropTeam(team)"
+                            >
+                                Drop from league
+                            </Button>
                         </div>
                     </li>
                 </ul>

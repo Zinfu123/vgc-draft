@@ -28,7 +28,18 @@ class Set extends Model
         'replay3',
         'round',
         'status',
+        'is_bye',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'is_bye' => 'boolean',
+        ];
+    }
 
     public function team1()
     {

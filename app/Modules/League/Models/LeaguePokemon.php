@@ -2,6 +2,7 @@
 
 namespace App\Modules\League\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class LeaguePokemon extends Model
@@ -44,5 +45,16 @@ class LeaguePokemon extends Model
     public function draftPicks()
     {
         return $this->hasMany(\App\Modules\Draft\Models\DraftPick::class, 'league_pokemon_id');
+    }
+
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeFreeAgencyEligible(Builder $query): Builder
+    {
+        return $query->whereNull('drafted_by')
+            ->where('banned', false)
+            ->where('is_drafted', false);
     }
 }

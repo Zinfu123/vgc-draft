@@ -15,7 +15,14 @@ class EnforceTeamMatchPokepasteChecker
 
     public function poolSetBothSidesHaveData(Set $set): bool
     {
-        foreach ([(int) $set->team1_id, (int) $set->team2_id] as $teamId) {
+        $teamIds = [];
+        if ($set->team1_id !== null) {
+            $teamIds[] = (int) $set->team1_id;
+        }
+        if ($set->team2_id !== null) {
+            $teamIds[] = (int) $set->team2_id;
+        }
+        foreach ($teamIds as $teamId) {
             $paste = SetTeamPokepaste::query()
                 ->where('matchable_type', Set::class)
                 ->where('matchable_id', $set->id)

@@ -23,7 +23,7 @@ class LeagueDetailLayoutDataAction
     public function __invoke(League $league): array
     {
         $teams = ($this->readTeamAction)(['league_id' => $league->id, 'command' => 'league']);
-        $user_team = Team::where('user_id', Auth::user()->id)->where('league_id', $league->id)->select('id', 'admin_flag')->first();
+        $user_team = Team::query()->where('user_id', Auth::user()->id)->where('league_id', $league->id)->whereNull('dropped_at')->select('id', 'admin_flag')->first();
         $isOwner = (int) Auth::user()->id === (int) $league->league_owner;
         $adminflag = $isOwner || ($user_team && (int) $user_team->admin_flag === 1) ? 1 : 0;
         $match_config = MatchConfig::where('league_id', $league->id)->first();

@@ -2,6 +2,7 @@
 
 namespace App\Modules\Trade\Actions;
 
+use App\Enums\Trade\TradeCounterparty;
 use App\Modules\Draft\Models\DraftConfig;
 use App\Modules\League\Models\LeaguePokemon;
 use App\Modules\Trade\Models\Trade;
@@ -19,6 +20,12 @@ class RespondToTradeAction
         if ($trade->status !== 'pending') {
             throw ValidationException::withMessages([
                 'trade' => 'This trade is no longer pending.',
+            ]);
+        }
+
+        if ($trade->counterparty === TradeCounterparty::FreeAgency) {
+            throw ValidationException::withMessages([
+                'trade' => 'Free-agency trades are completed immediately and cannot be updated here.',
             ]);
         }
 
