@@ -10,10 +10,10 @@
         "herd": {
             "command": "php",
             "args": [
-                "C:/Users/justi/.config/herd/bin/herd-mcp.phar"
+                "/Applications/Herd.app/Contents/Resources/herd-mcp.phar"
             ],
             "env": {
-                "SITE_PATH": "C:\\Users\\justi\\Herd\\vgc-draft"
+                "SITE_PATH": "/Users/jfurloughdev/Herd/vgc-draft"
             }
         }
     }

@@ -23,3 +23,4 @@ yarn-error.log
 /.vscode
 /.zed
 /database/schema/sqlite-schema.sql
+/database/data/*.csv
