@@ -1,2 +1,0 @@
-id,league_id,number_of_pools,frequency_type,frequency_value,status,created_at,updated_at,enforce_round_count,round_count,require_team_match_pokepaste_before_results
-1,1,2,2,0,1,2025-12-07 03:00:39,2025-12-07 03:00:39,false,,false
