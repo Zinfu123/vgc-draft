@@ -38,8 +38,8 @@ class Pokedex extends Model
         return $this->hasMany(\App\Modules\League\Models\LeaguePokemon::class, 'pokedex_id');
     }
 
-    public function gameData(): HasMany
+    public function generationData(): HasMany
     {
-        return $this->hasMany(PokemonGameData::class, 'pokedex_id');
+        return $this->hasMany(PokemonGenerationData::class, 'pokedex_id');
     }
 }

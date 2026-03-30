@@ -1,6 +1,6 @@
 <?php
 
-use App\Modules\Pokedex\Models\PokemonGameData;
+use App\Modules\Pokedex\Models\PokemonGenerationData;
 use App\Modules\Pokedex\Models\VersionGroup;
 use Illuminate\Support\Facades\DB;
 
@@ -17,7 +17,7 @@ it('does nothing when only-missing and the only pokedex row already has game dat
         'created_at' => now(),
         'updated_at' => now(),
     ]);
-    PokemonGameData::factory()->create([
+    PokemonGenerationData::factory()->create([
         'pokedex_id' => $pokedexId,
         'version_group_id' => $versionGroup->id,
     ]);

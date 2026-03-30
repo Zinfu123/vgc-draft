@@ -2,17 +2,17 @@
 
 namespace App\Modules\Pokedex\Models;
 
-use Database\Factories\PokemonGameDataFactory;
+use Database\Factories\PokemonGenerationDataFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class PokemonGameData extends Model
+class PokemonGenerationData extends Model
 {
-    /** @use HasFactory<PokemonGameDataFactory> */
+    /** @use HasFactory<PokemonGenerationDataFactory> */
     use HasFactory;
 
-    protected $table = 'pokemon_game_data';
+    protected $table = 'pokemon_generation_data';
 
     protected $fillable = [
         'pokedex_id',
@@ -26,9 +26,9 @@ class PokemonGameData extends Model
         'spe',
         'type1',
         'type2',
-        'ability_primary',
-        'ability_secondary',
-        'ability_hidden',
+        'ability_primary_pokeapi_id',
+        'ability_secondary_pokeapi_id',
+        'ability_hidden_pokeapi_id',
         'learnset',
         'mechanics',
     ];
@@ -54,8 +54,8 @@ class PokemonGameData extends Model
         return $this->belongsTo(VersionGroup::class, 'version_group_id');
     }
 
-    protected static function newFactory(): PokemonGameDataFactory
+    protected static function newFactory(): PokemonGenerationDataFactory
     {
-        return PokemonGameDataFactory::new();
+        return PokemonGenerationDataFactory::new();
     }
 }

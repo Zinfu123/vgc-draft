@@ -2,15 +2,15 @@
 
 namespace Database\Factories;
 
-use App\Modules\Pokedex\Models\PokemonGameData;
+use App\Modules\Pokedex\Models\PokemonGenerationData;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<PokemonGameData>
+ * @extends Factory<PokemonGenerationData>
  */
-class PokemonGameDataFactory extends Factory
+class PokemonGenerationDataFactory extends Factory
 {
-    protected $model = PokemonGameData::class;
+    protected $model = PokemonGenerationData::class;
 
     /**
      * @return array<string, mixed>
@@ -29,9 +29,9 @@ class PokemonGameDataFactory extends Factory
             'spe' => 50,
             'type1' => 'Normal',
             'type2' => null,
-            'ability_primary' => 'Keen Eye',
-            'ability_secondary' => null,
-            'ability_hidden' => null,
+            'ability_primary_pokeapi_id' => 51,
+            'ability_secondary_pokeapi_id' => null,
+            'ability_hidden_pokeapi_id' => null,
             'learnset' => [
                 ['move_id' => 33, 'move_name' => 'tackle', 'method' => 'level-up', 'level' => 1],
             ],

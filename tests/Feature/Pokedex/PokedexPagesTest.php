@@ -1,9 +1,11 @@
 <?php
 
 use App\Models\User;
-use App\Modules\Pokedex\Models\PokemonGameData;
+use App\Modules\Pokedex\Models\AbilityGenerationData;
+use App\Modules\Pokedex\Models\PokemonGenerationData;
 use App\Modules\Pokedex\Models\VersionGroup;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -36,9 +38,17 @@ it('renders pokemon detail with scarlet-violet game data', function () {
         'updated_at' => now(),
     ]);
 
-    PokemonGameData::factory()->create([
+    PokemonGenerationData::factory()->create([
         'pokedex_id' => $pokedexId,
         'version_group_id' => $versionGroup->id,
+    ]);
+    AbilityGenerationData::query()->create([
+        'pokedex_id' => $pokedexId,
+        'version_group_id' => $versionGroup->id,
+        'pokeapi_ability_id' => 65,
+        'ability_name' => 'overgrow',
+        'slot' => 1,
+        'is_hidden' => false,
     ]);
 
     $response = $this->actingAs($user)->get(route('pokedex.show', $pokedexId));
@@ -49,6 +59,7 @@ it('renders pokemon detail with scarlet-violet game data', function () {
         ->where('selectedVersionSlug', 'scarlet-violet')
         ->has('gameData')
         ->where('gameData.hp', 50)
+        ->has('gameData.abilities')
     );
 });
 
@@ -77,16 +88,32 @@ it('switches game data when game query matches another version group', function 
         'updated_at' => now(),
     ]);
 
-    PokemonGameData::factory()->create([
+    PokemonGenerationData::factory()->create([
         'pokedex_id' => $pokedexId,
         'version_group_id' => $sv->id,
         'hp' => 39,
     ]);
+    AbilityGenerationData::query()->create([
+        'pokedex_id' => $pokedexId,
+        'version_group_id' => $sv->id,
+        'pokeapi_ability_id' => 66,
+        'ability_name' => 'blaze',
+        'slot' => 1,
+        'is_hidden' => false,
+    ]);
 
-    PokemonGameData::factory()->create([
+    PokemonGenerationData::factory()->create([
         'pokedex_id' => $pokedexId,
         'version_group_id' => $swsh->id,
         'hp' => 40,
+    ]);
+    AbilityGenerationData::query()->create([
+        'pokedex_id' => $pokedexId,
+        'version_group_id' => $swsh->id,
+        'pokeapi_ability_id' => 66,
+        'ability_name' => 'blaze',
+        'slot' => 1,
+        'is_hidden' => false,
     ]);
 
     $this->actingAs($user)
@@ -95,4 +122,61 @@ it('switches game data when game query matches another version group', function 
             ->where('selectedVersionSlug', 'sword-shield')
             ->where('gameData.hp', 40)
         );
+});
+
+it('renders pokedex ability detail from PokéAPI', function () {
+    $user = User::factory()->create();
+    Http::fake(function (\Illuminate\Http\Client\Request $request) {
+        $path = (string) (parse_url($request->url(), PHP_URL_PATH) ?? '');
+        if (str_contains($path, '/ability/65')) {
+            return Http::response([
+                'id' => 65,
+                'name' => 'overgrow',
+                'effect_entries' => [
+                    ['effect' => 'Test effect.', 'short_effect' => 'Short.', 'language' => ['name' => 'en']],
+                ],
+                'generation' => ['name' => 'generation-iii'],
+                'flavor_text_entries' => [],
+            ], 200);
+        }
+
+        return Http::response(['error' => 'unexpected'], 404);
+    });
+
+    $this->actingAs($user)
+        ->get(route('pokedex.abilities.show', 65))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('pokedex/PokedexAbilityShow')
+            ->where('name_display', 'Overgrow'));
+});
+
+it('renders pokedex item detail from PokéAPI', function () {
+    $user = User::factory()->create();
+    Http::fake(function (\Illuminate\Http\Client\Request $request) {
+        $path = (string) (parse_url($request->url(), PHP_URL_PATH) ?? '');
+        if (str_contains($path, '/item/211')) {
+            return Http::response([
+                'id' => 211,
+                'name' => 'leftovers',
+                'cost' => 200,
+                'category' => ['name' => 'medicine'],
+                'effect_entries' => [
+                    ['effect' => 'Restores HP.', 'short_effect' => 'Restores HP each turn.', 'language' => ['name' => 'en']],
+                ],
+                'names' => [['name' => 'Leftovers', 'language' => ['name' => 'en']]],
+                'sprites' => ['default' => 'https://example.com/leftovers.png'],
+                'flavor_text_entries' => [],
+            ], 200);
+        }
+
+        return Http::response(['error' => 'unexpected'], 404);
+    });
+
+    $this->actingAs($user)
+        ->get(route('pokedex.items.show', 211))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('pokedex/PokedexItemShow')
+            ->where('name_display', 'Leftovers'));
 });

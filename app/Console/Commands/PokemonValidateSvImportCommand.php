@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Modules\Pokedex\Models\Pokedex;
-use App\Modules\Pokedex\Models\PokemonGameData;
+use App\Modules\Pokedex\Models\PokemonGenerationData;
 use App\Modules\Pokedex\Models\VersionGroup;
 use App\Modules\Pokedex\Services\PokeApiSvDexSpeciesService;
 use Illuminate\Console\Command;
@@ -13,7 +13,7 @@ class PokemonValidateSvImportCommand extends Command
     protected $signature = 'pokemon:validate-sv-import
                             {--slug=scarlet-violet : Version group slug stored in your database (PokeAPI slug)}';
 
-    protected $description = 'Compare PokeAPI Scarlet/Violet Pokédex species counts with your pokemon_game_data import';
+    protected $description = 'Compare PokeAPI Scarlet/Violet Pokédex species counts with your pokemon_generation_data import';
 
     public function handle(PokeApiSvDexSpeciesService $dexService): int
     {
@@ -36,12 +36,12 @@ class PokemonValidateSvImportCommand extends Command
             return self::FAILURE;
         }
 
-        $gameDataCount = PokemonGameData::query()
+        $gameDataCount = PokemonGenerationData::query()
             ->where('version_group_id', $versionGroup->id)
             ->count();
 
         $localSpeciesIds = Pokedex::query()
-            ->whereHas('gameData', function ($q) use ($versionGroup) {
+            ->whereHas('generationData', function ($q) use ($versionGroup) {
                 $q->where('version_group_id', $versionGroup->id);
             })
             ->pluck('nationaldex_id')
@@ -70,7 +70,7 @@ class PokemonValidateSvImportCommand extends Command
                 ],
                 [
                     'Your DB',
-                    "Rows in pokemon_game_data for [{$slug}]",
+                    "Rows in pokemon_generation_data for [{$slug}]",
                     (string) $gameDataCount,
                 ],
                 [
@@ -82,7 +82,7 @@ class PokemonValidateSvImportCommand extends Command
         );
 
         $this->newLine();
-        $this->comment('Regional dex union is the best single PokeAPI number for “species that appear on an in-game SV-area dex”. Your pokedex table may have multiple rows per species (forms); pokemon_game_data rows follow those rows.');
+        $this->comment('Regional dex union is the best single PokeAPI number for “species that appear on an in-game SV-area dex”. Your pokedex table may have multiple rows per species (forms); pokemon_generation_data rows follow those rows.');
         $this->newLine();
 
         if ($missingInDb !== []) {

@@ -1,7 +1,7 @@
 <?php
 
 use App\Modules\Pokedex\Models\Pokedex;
-use App\Modules\Pokedex\Models\PokemonGameData;
+use App\Modules\Pokedex\Models\PokemonGenerationData;
 use App\Modules\Pokedex\Models\VersionGroup;
 use App\Modules\Pokedex\Services\PokeApiPokemonGameDataImporter;
 use Illuminate\Support\Facades\DB;
@@ -25,7 +25,7 @@ function minimalPokemonPayloadForImporter(): array
             ['slot' => 1, 'type' => ['name' => 'bug']],
         ],
         'abilities' => [
-            ['ability' => ['name' => 'swarm'], 'is_hidden' => false, 'slot' => 1],
+            ['ability' => ['name' => 'swarm', 'url' => 'https://pokeapi.co/api/v2/ability/68/'], 'is_hidden' => false, 'slot' => 1],
         ],
     ];
 }
@@ -105,6 +105,22 @@ it('merges egg moves from evolves_from ancestor into the imported learnset', fun
     Http::fake(function (\Illuminate\Http\Client\Request $request) use ($species900, $species123, $pokemon900, $pokemon123) {
         $path = (string) (parse_url($request->url(), PHP_URL_PATH) ?? '');
 
+        if (preg_match('#/move/(\d+)/#', $path, $m)) {
+            $id = (int) $m[1];
+            $names = [33 => 'tackle', 400 => 'night-slash'];
+
+            return Http::response([
+                'id' => $id,
+                'name' => $names[$id] ?? 'move-'.$id,
+                'type' => ['name' => 'normal'],
+                'damage_class' => ['name' => 'physical'],
+                'power' => 40,
+                'accuracy' => 100,
+                'meta' => ['ailment' => ['name' => 'none']],
+                'effect_entries' => [['short_effect' => 'Damages the opponent.', 'language' => ['name' => 'en']]],
+            ], 200);
+        }
+
         if (str_contains($path, '/pokemon-species/900')) {
             return Http::response($species900, 200);
         }
@@ -125,7 +141,7 @@ it('merges egg moves from evolves_from ancestor into the imported learnset', fun
 
     expect($ok)->toBeTrue();
 
-    $row = PokemonGameData::query()
+    $row = PokemonGenerationData::query()
         ->where('pokedex_id', $pokedex->id)
         ->where('version_group_id', $versionGroup->id)
         ->first();

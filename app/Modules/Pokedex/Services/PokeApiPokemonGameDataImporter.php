@@ -2,8 +2,10 @@
 
 namespace App\Modules\Pokedex\Services;
 
+use App\Modules\Pokedex\Models\AbilityGenerationData;
+use App\Modules\Pokedex\Models\PokeApiMoveCache;
 use App\Modules\Pokedex\Models\Pokedex;
-use App\Modules\Pokedex\Models\PokemonGameData;
+use App\Modules\Pokedex\Models\PokemonGenerationData;
 use App\Modules\Pokedex\Models\VersionGroup;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -56,12 +58,9 @@ class PokeApiPokemonGameDataImporter
         $learnset = $this->buildLearnset($pokemon, $slug);
         $learnset = $this->mergeAncestorEggMovesIntoLearnset($learnset, $species, $slug);
         if ($learnset === []) {
-            PokemonGameData::query()
-                ->where('pokedex_id', $pokedex->id)
-                ->where('version_group_id', $versionGroup->id)
-                ->delete();
+            $this->deleteSnapshot($pokedex->id, $versionGroup->id);
 
-            Log::info('Skipped pokemon_game_data: no moves for version group', [
+            Log::info('Skipped pokemon_generation_data: no moves for version group', [
                 'pokedex_id' => $pokedex->id,
                 'version_group' => $slug,
                 'pokeapi_pokemon_id' => $pokemonId,
@@ -72,9 +71,9 @@ class PokeApiPokemonGameDataImporter
 
         $stats = $this->mapStats($pokemon);
         [$type1, $type2] = $this->mapTypes($pokemon);
-        [$primary, $secondary, $hidden] = $this->mapAbilities($pokemon);
+        [$primaryId, $secondaryId, $hiddenId] = $this->mapAbilityIds($pokemon);
 
-        PokemonGameData::query()->updateOrCreate(
+        $generationData = PokemonGenerationData::query()->updateOrCreate(
             [
                 'pokedex_id' => $pokedex->id,
                 'version_group_id' => $versionGroup->id,
@@ -89,15 +88,150 @@ class PokeApiPokemonGameDataImporter
                 'spe' => $stats['spe'],
                 'type1' => $type1,
                 'type2' => $type2,
-                'ability_primary' => $primary,
-                'ability_secondary' => $secondary,
-                'ability_hidden' => $hidden,
+                'ability_primary_pokeapi_id' => $primaryId,
+                'ability_secondary_pokeapi_id' => $secondaryId,
+                'ability_hidden_pokeapi_id' => $hiddenId,
                 'learnset' => $learnset,
                 'mechanics' => $this->defaultMechanicsForVersionGroup($versionGroup),
             ]
         );
 
+        $this->syncAbilities($pokedex->id, $versionGroup->id, $pokemon);
+        $this->hydrateMoveCache($baseUrl, $learnset);
+
         return true;
+    }
+
+    private function deleteSnapshot(int $pokedexId, int $versionGroupId): void
+    {
+        AbilityGenerationData::query()
+            ->where('pokedex_id', $pokedexId)
+            ->where('version_group_id', $versionGroupId)
+            ->delete();
+
+        PokemonGenerationData::query()
+            ->where('pokedex_id', $pokedexId)
+            ->where('version_group_id', $versionGroupId)
+            ->delete();
+    }
+
+    /**
+     * @param  array<string, mixed>  $pokemon
+     */
+    private function syncAbilities(int $pokedexId, int $versionGroupId, array $pokemon): void
+    {
+        AbilityGenerationData::query()
+            ->where('pokedex_id', $pokedexId)
+            ->where('version_group_id', $versionGroupId)
+            ->delete();
+
+        foreach ($pokemon['abilities'] ?? [] as $row) {
+            if (! is_array($row) || empty($row['ability']['url'])) {
+                continue;
+            }
+
+            $id = $this->extractTrailingId((string) $row['ability']['url']);
+            $name = isset($row['ability']['name']) ? (string) $row['ability']['name'] : '';
+            if ($id === null || $name === '') {
+                continue;
+            }
+
+            AbilityGenerationData::query()->create([
+                'pokedex_id' => $pokedexId,
+                'version_group_id' => $versionGroupId,
+                'pokeapi_ability_id' => $id,
+                'ability_name' => $name,
+                'slot' => (int) ($row['slot'] ?? 0),
+                'is_hidden' => ! empty($row['is_hidden']),
+            ]);
+        }
+    }
+
+    /**
+     * @param  list<array{move_id: int, move_name: string, method: string, level: int}>  $learnset
+     */
+    private function hydrateMoveCache(string $baseUrl, array $learnset): void
+    {
+        $ids = [];
+        foreach ($learnset as $row) {
+            if (isset($row['move_id']) && is_numeric($row['move_id'])) {
+                $ids[(int) $row['move_id']] = true;
+            }
+        }
+
+        $moveIds = array_keys($ids);
+        if ($moveIds === []) {
+            return;
+        }
+
+        $existing = PokeApiMoveCache::query()
+            ->whereIn('id', $moveIds)
+            ->pluck('id')
+            ->all();
+
+        $missing = array_values(array_diff($moveIds, $existing));
+        if ($missing === []) {
+            return;
+        }
+
+        foreach (array_chunk($missing, 25) as $chunk) {
+            $responses = Http::pool(function (\Illuminate\Http\Client\Pool $pool) use ($baseUrl, $chunk): void {
+                foreach ($chunk as $moveId) {
+                    $pool->as((string) $moveId)
+                        ->timeout(45)
+                        ->retry(3, 500)
+                        ->acceptJson()
+                        ->get(rtrim($baseUrl, '/').'/move/'.$moveId.'/');
+                }
+            });
+
+            foreach ($chunk as $moveId) {
+                /** @var \Illuminate\Http\Client\Response $response */
+                $response = $responses[(string) $moveId] ?? null;
+                if ($response === null || ! $response->successful()) {
+                    continue;
+                }
+
+                $data = $response->json();
+                if (! is_array($data) || empty($data['name'])) {
+                    continue;
+                }
+
+                $shortEffect = null;
+                foreach ($data['effect_entries'] ?? [] as $entry) {
+                    if (! is_array($entry) || empty($entry['short_effect'])) {
+                        continue;
+                    }
+                    $lang = $entry['language']['name'] ?? '';
+                    if ($lang === 'en') {
+                        $shortEffect = (string) $entry['short_effect'];
+
+                        break;
+                    }
+                }
+
+                $ailment = null;
+                if (isset($data['meta']['ailment']['name']) && is_string($data['meta']['ailment']['name'])) {
+                    $ailment = $data['meta']['ailment']['name'];
+                }
+
+                PokeApiMoveCache::query()->updateOrCreate(
+                    ['id' => (int) $data['id']],
+                    [
+                        'name' => (string) $data['name'],
+                        'type_slug' => isset($data['type']['name']) ? (string) $data['type']['name'] : 'unknown',
+                        'damage_class' => isset($data['damage_class']['name']) ? (string) $data['damage_class']['name'] : 'status',
+                        'power' => isset($data['power']) && $data['power'] !== null ? (int) $data['power'] : null,
+                        'accuracy' => isset($data['accuracy']) && $data['accuracy'] !== null ? (int) $data['accuracy'] : null,
+                        'ailment_name' => $ailment,
+                        'short_effect_en' => $shortEffect,
+                        'updated_at' => now(),
+                    ]
+                );
+            }
+
+            usleep(100_000);
+        }
     }
 
     /**
@@ -349,35 +483,35 @@ class PokeApiPokemonGameDataImporter
 
     /**
      * @param  array<string, mixed>  $pokemon
-     * @return array{0: string|null, 1: string|null, 2: string|null}
+     * @return array{0: int|null, 1: int|null, 2: int|null}
      */
-    private function mapAbilities(array $pokemon): array
+    private function mapAbilityIds(array $pokemon): array
     {
         $primary = null;
         $secondary = null;
         $hidden = null;
 
         foreach ($pokemon['abilities'] ?? [] as $row) {
-            if (! is_array($row)) {
+            if (! is_array($row) || empty($row['ability']['url'])) {
                 continue;
             }
 
-            $name = isset($row['ability']['name']) ? $this->formatAbilityName((string) $row['ability']['name']) : null;
-            if ($name === null || $name === '') {
+            $id = $this->extractTrailingId((string) $row['ability']['url']);
+            if ($id === null) {
                 continue;
             }
 
             if (! empty($row['is_hidden'])) {
-                $hidden = $name;
+                $hidden = $id;
 
                 continue;
             }
 
             $slot = (int) ($row['slot'] ?? 0);
             if ($slot === 1) {
-                $primary = $name;
+                $primary = $id;
             } elseif ($slot === 2) {
-                $secondary = $name;
+                $secondary = $id;
             }
         }
 
@@ -385,11 +519,6 @@ class PokeApiPokemonGameDataImporter
     }
 
     private function formatTypeName(string $slug): string
-    {
-        return Str::title(str_replace('-', ' ', $slug));
-    }
-
-    private function formatAbilityName(string $slug): string
     {
         return Str::title(str_replace('-', ' ', $slug));
     }

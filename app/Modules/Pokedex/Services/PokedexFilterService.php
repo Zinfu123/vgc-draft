@@ -52,7 +52,7 @@ class PokedexFilterService
                 });
             })
             ->when($generation !== null, function (Builder $query) use ($generation): void {
-                $query->whereHas('gameData.versionGroup', function (Builder $q) use ($generation): void {
+                $query->whereHas('generationData.versionGroup', function (Builder $q) use ($generation): void {
                     $q->where('generation', (int) $generation);
                 });
             })

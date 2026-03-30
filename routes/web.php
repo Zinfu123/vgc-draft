@@ -12,7 +12,9 @@ use App\Modules\Matches\Controllers\PoolController;
 use App\Modules\Matches\Controllers\SetController;
 use App\Modules\MatchPrep\Controllers\MatchPrepController;
 use App\Modules\Playoffs\Controllers\PlayoffController;
+use App\Modules\Pokedex\Controllers\PokedexAbilityController;
 use App\Modules\Pokedex\Controllers\PokedexController;
+use App\Modules\Pokedex\Controllers\PokedexItemController;
 use App\Modules\Pokepaste\Controllers\PokepasteController;
 use App\Modules\Stats\Controllers\PokemonUsageStatsController;
 use App\Modules\Teams\Controllers\TeamController;
@@ -43,6 +45,14 @@ Route::get('/match-prep/share/{share_uuid}', [MatchPrepController::class, 'showS
 
 // Pokemon Routes
 Route::get('pokedex', [PokedexController::class, 'index'])->middleware(['auth', 'verified'])->name('pokedex.index');
+Route::get('pokedex/abilities/{id}', [PokedexAbilityController::class, 'show'])
+    ->whereNumber('id')
+    ->middleware(['auth', 'verified'])
+    ->name('pokedex.abilities.show');
+Route::get('pokedex/items/{id}', [PokedexItemController::class, 'show'])
+    ->whereNumber('id')
+    ->middleware(['auth', 'verified'])
+    ->name('pokedex.items.show');
 Route::get('pokedex/{pokedex}', [PokedexController::class, 'show'])->middleware(['auth', 'verified'])->name('pokedex.show');
 
 Route::get('pool-templates', [PoolTemplateCatalogController::class, 'index'])->middleware(['auth', 'verified'])->name('pool-templates.index');

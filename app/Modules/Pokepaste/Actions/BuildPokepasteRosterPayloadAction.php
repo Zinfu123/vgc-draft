@@ -2,7 +2,8 @@
 
 namespace App\Modules\Pokepaste\Actions;
 
-use App\Modules\Pokedex\Models\PokemonGameData;
+use App\Modules\Pokedex\Models\AbilityGenerationData;
+use App\Modules\Pokedex\Models\PokemonGenerationData;
 use App\Modules\Pokedex\Models\VersionGroup;
 use App\Modules\Pokepaste\Services\ShowdownFormatHelper;
 use Illuminate\Support\Collection;
@@ -19,18 +20,28 @@ class BuildPokepasteRosterPayloadAction
 
         foreach ($leaguePokemon as $lp) {
             $gameData = null;
+            $abilitiesRaw = [];
             if ($versionGroup !== null) {
-                $gameData = PokemonGameData::query()
+                $gameData = PokemonGenerationData::query()
                     ->where('pokedex_id', $lp->pokedex_id)
                     ->where('version_group_id', $versionGroup->id)
                     ->first();
+
+                if ($gameData !== null) {
+                    $abilitiesRaw = AbilityGenerationData::query()
+                        ->where('pokedex_id', $lp->pokedex_id)
+                        ->where('version_group_id', $versionGroup->id)
+                        ->orderBy('slot')
+                        ->get();
+                }
             }
 
             $abilities = [];
             if ($gameData !== null) {
-                foreach ([$gameData->ability_primary, $gameData->ability_secondary, $gameData->ability_hidden] as $a) {
-                    if ($a !== null && $a !== '' && ! in_array($a, $abilities, true)) {
-                        $abilities[] = $a;
+                foreach ($abilitiesRaw as $row) {
+                    $label = ShowdownFormatHelper::moveSlugToDisplay($row->ability_name);
+                    if ($label !== '' && ! in_array($label, $abilities, true)) {
+                        $abilities[] = $label;
                     }
                 }
             }

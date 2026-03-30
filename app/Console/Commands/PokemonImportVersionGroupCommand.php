@@ -14,10 +14,10 @@ class PokemonImportVersionGroupCommand extends Command
                             {slug? : PokeAPI version group slug (e.g. scarlet-violet)}
                             {--id= : Import only this pokedex row id}
                             {--async : Dispatch a queued job per species instead of running synchronously}
-                            {--only-missing : Skip species that already have pokemon_game_data for this version group (resume)}
+                            {--only-missing : Skip species that already have pokemon_generation_data for this version group (resume)}
                             {--chunk= : Max species to process this run (use with --only-missing for batched resume)}';
 
-    protected $description = 'Import or refresh pokemon_game_data from PokeAPI for a version group';
+    protected $description = 'Import or refresh pokemon_generation_data from PokeAPI for a version group';
 
     public function handle(PokeApiPokemonGameDataImporter $importer): int
     {
@@ -35,7 +35,7 @@ class PokemonImportVersionGroupCommand extends Command
         }
 
         if ($this->option('only-missing')) {
-            $query->whereDoesntHave('gameData', function ($q) use ($versionGroup) {
+            $query->whereDoesntHave('generationData', function ($q) use ($versionGroup) {
                 $q->where('version_group_id', $versionGroup->id);
             });
         }
@@ -86,7 +86,7 @@ class PokemonImportVersionGroupCommand extends Command
 
         if ($this->option('only-missing') && ($chunk !== null && $chunk !== '') && $count === (int) $chunk) {
             $remaining = Pokedex::query()
-                ->whereDoesntHave('gameData', function ($q) use ($versionGroup) {
+                ->whereDoesntHave('generationData', function ($q) use ($versionGroup) {
                     $q->where('version_group_id', $versionGroup->id);
                 })
                 ->when($this->option('id') !== null, fn ($q) => $q->where('id', (int) $this->option('id')))

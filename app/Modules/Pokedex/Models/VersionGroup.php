@@ -27,9 +27,9 @@ class VersionGroup extends Model
         ];
     }
 
-    public function pokemonGameData(): HasMany
+    public function pokemonGenerationData(): HasMany
     {
-        return $this->hasMany(PokemonGameData::class, 'version_group_id');
+        return $this->hasMany(PokemonGenerationData::class, 'version_group_id');
     }
 
     public function heldItems(): HasMany

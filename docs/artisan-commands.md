@@ -4,7 +4,7 @@ Custom commands live in `app/Console/Commands/` and auto-register in Laravel 12 
 
 | Command | Purpose |
 | --- | --- |
-| `pokemon:import-version-group` | Import or refresh `pokemon_game_data` from PokeAPI for a version group |
+| `pokemon:import-version-group` | Import or refresh `pokemon_generation_data` from PokeAPI for a version group |
 | `pokemon:import-version-group-held-items` | Import holdable items into `version_group_held_items` from PokeAPI |
 | `pokemon:validate-sv-import` | Sanity-check Scarlet/Violet import coverage against PokeAPI regional dexes |
 | `league:import-draft-csv` | Bulk import draft/match CSV exports with preserved IDs |
@@ -18,7 +18,7 @@ For built-in Laravel commands, run `php artisan list`. A small demo command `ins
 
 ## `pokemon:import-version-group`
 
-**Description:** Import or refresh `pokemon_game_data` from PokeAPI for a version group.
+**Description:** Import or refresh `pokemon_generation_data` from PokeAPI for a version group (including per-species ability rows and PokéAPI move cache). Item legality and metadata for a generation live in `version_group_held_items` via `pokemon:import-version-group-held-items`.
 
 **Signature:**
 
@@ -27,7 +27,7 @@ pokemon:import-version-group
     {slug? : PokeAPI version group slug (e.g. scarlet-violet)}
     {--id= : Import only this pokedex row id}
     {--async : Dispatch a queued job per species instead of running synchronously}
-    {--only-missing : Skip species that already have pokemon_game_data for this version group (resume)}
+    {--only-missing : Skip species that already have pokemon_generation_data for this version group (resume)}
     {--chunk= : Max species to process this run (use with --only-missing for batched resume)}
 ```
 
@@ -78,7 +78,7 @@ php artisan pokemon:import-version-group-held-items scarlet-violet
 
 ## `pokemon:validate-sv-import`
 
-**Description:** Compare PokeAPI Scarlet/Violet regional Pokédex species sets with your database’s `pokemon_game_data` for a version group (default slug `scarlet-violet`). Read-only; does not modify data.
+**Description:** Compare PokeAPI Scarlet/Violet regional Pokédex species sets with your database’s `pokemon_generation_data` for a version group (default slug `scarlet-violet`). Read-only; does not modify data.
 
 **Signature:**
 

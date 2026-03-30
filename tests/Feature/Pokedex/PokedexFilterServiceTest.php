@@ -1,13 +1,13 @@
 <?php
 
 use App\Modules\Pokedex\Models\Pokedex;
-use App\Modules\Pokedex\Models\PokemonGameData;
+use App\Modules\Pokedex\Models\PokemonGenerationData;
 use App\Modules\Pokedex\Models\VersionGroup;
 use App\Modules\Pokedex\Services\PokedexFilterService;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-it('filters by generation using pokemon_game_data and version_groups', function () {
+it('filters by generation using pokemon_generation_data and version_groups', function () {
     $versionGroup = VersionGroup::query()->firstOrFail();
 
     $withData = Pokedex::query()->create([
@@ -26,7 +26,7 @@ it('filters by generation using pokemon_game_data and version_groups', function 
         'sprite_url' => null,
     ]);
 
-    PokemonGameData::factory()->create([
+    PokemonGenerationData::factory()->create([
         'pokedex_id' => $withData->id,
         'version_group_id' => $versionGroup->id,
     ]);

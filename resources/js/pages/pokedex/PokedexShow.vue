@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import LearnsetMoveRow from '@/components/pokedex/LearnsetMoveRow.vue';
 import PokemonCard from '@/components/pokemon/PokemonCard.vue';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
@@ -14,11 +15,23 @@ interface VersionGroupRow {
     sort_order: number;
 }
 
-interface LearnsetEntry {
+interface AbilityRow {
+    pokeapi_ability_id: number;
+    ability_name: string;
+    slot: number;
+    is_hidden: boolean;
+}
+
+interface LearnsetMove {
     move_id: number;
     move_name: string;
     method: string;
     level: number;
+    type_slug?: string | null;
+    damage_class?: string | null;
+    power?: number | null;
+    accuracy?: number | null;
+    ailment_name?: string | null;
 }
 
 interface GameDataPayload {
@@ -30,10 +43,11 @@ interface GameDataPayload {
     spe: number;
     type1: string;
     type2: string | null;
-    ability_primary: string | null;
-    ability_secondary: string | null;
-    ability_hidden: string | null;
-    learnset: LearnsetEntry[];
+    ability_primary_pokeapi_id: number | null;
+    ability_secondary_pokeapi_id: number | null;
+    ability_hidden_pokeapi_id: number | null;
+    abilities: AbilityRow[];
+    learnset: LearnsetMove[];
     mechanics: Record<string, boolean>;
 }
 
@@ -63,7 +77,7 @@ const breadcrumbs = computed<BreadcrumbItem[]>(() => [
 
 const learnsetByMethod = computed(() => {
     const data = props.gameData?.learnset ?? [];
-    const groups: Record<string, LearnsetEntry[]> = {};
+    const groups: Record<string, LearnsetMove[]> = {};
     for (const row of data) {
         const key = row.method || 'other';
         if (!groups[key]) {
@@ -74,19 +88,15 @@ const learnsetByMethod = computed(() => {
     return groups;
 });
 
-function formatMoveName(name: string): string {
-    return name
+function formatItemName(slug: string): string {
+    return slug
         .split('-')
         .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
         .join(' ');
 }
 
 function switchVersion(slug: string) {
-    router.get(
-        route('pokedex.show', props.pokemon.id),
-        { game: slug },
-        { preserveScroll: true, only: ['gameData', 'selectedVersionSlug'] },
-    );
+    router.get(route('pokedex.show', props.pokemon.id), { game: slug }, { preserveScroll: true, only: ['gameData', 'selectedVersionSlug'] });
 }
 </script>
 
@@ -140,18 +150,30 @@ function switchVersion(slug: string) {
                         <section class="space-y-2">
                             <h2 class="text-lg font-semibold">Base stats</h2>
                             <dl class="grid grid-cols-2 gap-x-4 gap-y-1 text-sm sm:grid-cols-3">
-                                <div><dt class="text-muted-foreground">HP</dt>
-                                    <dd class="font-medium">{{ gameData.hp }}</dd></div>
-                                <div><dt class="text-muted-foreground">Attack</dt>
-                                    <dd class="font-medium">{{ gameData.atk }}</dd></div>
-                                <div><dt class="text-muted-foreground">Defense</dt>
-                                    <dd class="font-medium">{{ gameData.def }}</dd></div>
-                                <div><dt class="text-muted-foreground">Sp. Atk</dt>
-                                    <dd class="font-medium">{{ gameData.spa }}</dd></div>
-                                <div><dt class="text-muted-foreground">Sp. Def</dt>
-                                    <dd class="font-medium">{{ gameData.spd }}</dd></div>
-                                <div><dt class="text-muted-foreground">Speed</dt>
-                                    <dd class="font-medium">{{ gameData.spe }}</dd></div>
+                                <div>
+                                    <dt class="text-muted-foreground">HP</dt>
+                                    <dd class="font-medium">{{ gameData.hp }}</dd>
+                                </div>
+                                <div>
+                                    <dt class="text-muted-foreground">Attack</dt>
+                                    <dd class="font-medium">{{ gameData.atk }}</dd>
+                                </div>
+                                <div>
+                                    <dt class="text-muted-foreground">Defense</dt>
+                                    <dd class="font-medium">{{ gameData.def }}</dd>
+                                </div>
+                                <div>
+                                    <dt class="text-muted-foreground">Sp. Atk</dt>
+                                    <dd class="font-medium">{{ gameData.spa }}</dd>
+                                </div>
+                                <div>
+                                    <dt class="text-muted-foreground">Sp. Def</dt>
+                                    <dd class="font-medium">{{ gameData.spd }}</dd>
+                                </div>
+                                <div>
+                                    <dt class="text-muted-foreground">Speed</dt>
+                                    <dd class="font-medium">{{ gameData.spe }}</dd>
+                                </div>
                             </dl>
                         </section>
 
@@ -166,12 +188,17 @@ function switchVersion(slug: string) {
                         <section class="space-y-2">
                             <h2 class="text-lg font-semibold">Abilities</h2>
                             <ul class="list-inside list-disc text-sm">
-                                <li v-if="gameData.ability_primary">{{ gameData.ability_primary }}</li>
-                                <li v-if="gameData.ability_secondary">{{ gameData.ability_secondary }}</li>
-                                <li v-if="gameData.ability_hidden">
-                                    <span class="text-muted-foreground">Hidden:</span> {{ gameData.ability_hidden }}
+                                <li v-for="a in gameData.abilities" :key="a.pokeapi_ability_id + '-' + a.slot">
+                                    <Link
+                                        :href="route('pokedex.abilities.show', a.pokeapi_ability_id)"
+                                        class="font-medium text-primary underline-offset-4 hover:underline"
+                                    >
+                                        {{ formatItemName(a.ability_name) }}
+                                    </Link>
+                                    <span v-if="a.is_hidden" class="text-muted-foreground"> (hidden)</span>
                                 </li>
                             </ul>
+                            <p v-if="gameData.abilities.length === 0" class="text-sm text-muted-foreground">No ability rows imported.</p>
                         </section>
 
                         <section class="space-y-2">
@@ -194,12 +221,8 @@ function switchVersion(slug: string) {
                                 <h3 class="text-sm font-medium capitalize text-muted-foreground">
                                     {{ method.replaceAll('-', ' ') }}
                                 </h3>
-                                <ul class="max-h-48 overflow-y-auto rounded border border-border p-2 text-sm">
-                                    <li v-for="m in entries" :key="m.move_id + '-' + m.method + '-' + m.level" class="py-0.5">
-                                        <span class="font-medium">{{ formatMoveName(m.move_name) }}</span>
-                                        <span v-if="m.method === 'level-up' && m.level > 0" class="text-muted-foreground">
-                                            — Lv. {{ m.level }}</span>
-                                    </li>
+                                <ul class="max-h-64 overflow-y-auto rounded border border-border px-2 py-1">
+                                    <LearnsetMoveRow v-for="m in entries" :key="m.move_id + '-' + m.method + '-' + m.level" :move="m" />
                                 </ul>
                             </div>
                         </section>

@@ -8,8 +8,9 @@ use App\Modules\League\Models\LeaguePokemon;
 use App\Modules\Matches\Models\MatchConfig;
 use App\Modules\Matches\Models\Pool;
 use App\Modules\Matches\Models\Set;
+use App\Modules\Pokedex\Models\AbilityGenerationData;
 use App\Modules\Pokedex\Models\Pokedex;
-use App\Modules\Pokedex\Models\PokemonGameData;
+use App\Modules\Pokedex\Models\PokemonGenerationData;
 use App\Modules\Pokedex\Models\VersionGroup;
 use App\Modules\Pokedex\Models\VersionGroupHeldItem;
 use App\Modules\Pokepaste\Models\SetTeamPokepaste;
@@ -140,13 +141,22 @@ function createLeagueTeamWithSixDraftedPokemonAndMatch(): array
             'type1' => 'Normal',
         ]);
 
-        PokemonGameData::factory()->create([
+        PokemonGenerationData::factory()->create([
             'pokedex_id' => $pd->id,
             'version_group_id' => $versionGroup->id,
-            'ability_primary' => 'Keen Eye',
-            'ability_secondary' => null,
-            'ability_hidden' => null,
+            'ability_primary_pokeapi_id' => 51,
+            'ability_secondary_pokeapi_id' => null,
+            'ability_hidden_pokeapi_id' => null,
             'learnset' => $learnset,
+        ]);
+
+        AbilityGenerationData::query()->create([
+            'pokedex_id' => $pd->id,
+            'version_group_id' => $versionGroup->id,
+            'pokeapi_ability_id' => 51,
+            'ability_name' => 'keen-eye',
+            'slot' => 1,
+            'is_hidden' => false,
         ]);
 
         $leaguePokemon[] = LeaguePokemon::create([
@@ -387,10 +397,28 @@ it('lets the owner open edit mode with a query flag', function () {
 it('accepts showdown ability labels that differ only in title casing from imported game data', function () {
     $data = createLeagueTeamWithSixDraftedPokemonAndMatch();
     $firstLp = $data['leaguePokemon'][0];
-    PokemonGameData::query()
+    AbilityGenerationData::query()
         ->where('pokedex_id', $firstLp->pokedex_id)
         ->where('version_group_id', $data['versionGroup']->id)
-        ->update(['ability_primary' => 'Sword Of Ruin']);
+        ->delete();
+
+    AbilityGenerationData::query()->create([
+        'pokedex_id' => $firstLp->pokedex_id,
+        'version_group_id' => $data['versionGroup']->id,
+        'pokeapi_ability_id' => 297,
+        'ability_name' => 'sword-of-ruin',
+        'slot' => 1,
+        'is_hidden' => false,
+    ]);
+
+    PokemonGenerationData::query()
+        ->where('pokedex_id', $firstLp->pokedex_id)
+        ->where('version_group_id', $data['versionGroup']->id)
+        ->update([
+            'ability_primary_pokeapi_id' => 297,
+            'ability_secondary_pokeapi_id' => null,
+            'ability_hidden_pokeapi_id' => null,
+        ]);
 
     $slots = buildValidSlots($data['leaguePokemon'], $data['heldItems']);
     $slots[0]['ability'] = 'Sword of Ruin';

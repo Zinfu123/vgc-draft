@@ -3,8 +3,10 @@
 namespace App\Modules\Pokedex\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Pokedex\Models\AbilityGenerationData;
+use App\Modules\Pokedex\Models\PokeApiMoveCache;
 use App\Modules\Pokedex\Models\Pokedex;
-use App\Modules\Pokedex\Models\PokemonGameData;
+use App\Modules\Pokedex\Models\PokemonGenerationData;
 use App\Modules\Pokedex\Models\VersionGroup;
 use App\Modules\Pokedex\Services\PokedexFilterService;
 use Illuminate\Http\Request;
@@ -64,11 +66,56 @@ class PokedexController extends Controller
             ?? $versionGroups->first();
 
         $gameData = null;
+        $abilitiesPayload = [];
+        $learnsetDisplay = [];
+
         if ($selectedGroup !== null) {
-            $gameData = PokemonGameData::query()
+            $gameData = PokemonGenerationData::query()
                 ->where('pokedex_id', $pokedex->id)
                 ->where('version_group_id', $selectedGroup->id)
                 ->first();
+
+            if ($gameData !== null) {
+                $abilitiesPayload = AbilityGenerationData::query()
+                    ->where('pokedex_id', $pokedex->id)
+                    ->where('version_group_id', $selectedGroup->id)
+                    ->orderBy('slot')
+                    ->get()
+                    ->map(fn (AbilityGenerationData $a): array => [
+                        'pokeapi_ability_id' => $a->pokeapi_ability_id,
+                        'ability_name' => $a->ability_name,
+                        'slot' => $a->slot,
+                        'is_hidden' => $a->is_hidden,
+                    ])
+                    ->all();
+
+                $learnset = is_array($gameData->learnset) ? $gameData->learnset : [];
+                $moveIds = [];
+                foreach ($learnset as $row) {
+                    if (is_array($row) && isset($row['move_id']) && is_numeric($row['move_id'])) {
+                        $moveIds[(int) $row['move_id']] = true;
+                    }
+                }
+                $caches = PokeApiMoveCache::query()
+                    ->whereIn('id', array_keys($moveIds))
+                    ->get()
+                    ->keyBy('id');
+
+                foreach ($learnset as $row) {
+                    if (! is_array($row)) {
+                        continue;
+                    }
+                    $mid = isset($row['move_id']) ? (int) $row['move_id'] : 0;
+                    $cache = $caches->get($mid);
+                    $learnsetDisplay[] = array_merge($row, [
+                        'type_slug' => $cache?->type_slug,
+                        'damage_class' => $cache?->damage_class,
+                        'power' => $cache?->power,
+                        'accuracy' => $cache?->accuracy,
+                        'ailment_name' => $cache?->ailment_name,
+                    ]);
+                }
+            }
         }
 
         return Inertia::render('pokedex/PokedexShow', [
@@ -91,10 +138,11 @@ class PokedexController extends Controller
                 'spe' => $gameData->spe,
                 'type1' => $gameData->type1,
                 'type2' => $gameData->type2,
-                'ability_primary' => $gameData->ability_primary,
-                'ability_secondary' => $gameData->ability_secondary,
-                'ability_hidden' => $gameData->ability_hidden,
-                'learnset' => $gameData->learnset,
+                'ability_primary_pokeapi_id' => $gameData->ability_primary_pokeapi_id,
+                'ability_secondary_pokeapi_id' => $gameData->ability_secondary_pokeapi_id,
+                'ability_hidden_pokeapi_id' => $gameData->ability_hidden_pokeapi_id,
+                'abilities' => $abilitiesPayload,
+                'learnset' => $learnsetDisplay,
                 'mechanics' => $gameData->mechanics,
             ] : null,
         ]);

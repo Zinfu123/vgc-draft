@@ -10,7 +10,7 @@ use RuntimeException;
 class DatabaseCsvDumpImportService
 {
     /**
-     * Import order: parents before foreign-key children. Filenames match {@see database/data}.
+     * Import order: parents before foreign-key children. CSV basename may lag renames (e.g. pokemon_game_data.csv → pokemon_generation_data).
      *
      * @var list<array{0: string, 1: string}>
      */
@@ -18,7 +18,7 @@ class DatabaseCsvDumpImportService
         ['users', 'users.csv'],
         ['version_groups', 'version_groups.csv'],
         ['pokedex', 'pokedex.csv'],
-        ['pokemon_game_data', 'pokemon_game_data.csv'],
+        ['pokemon_generation_data', 'pokemon_game_data.csv'],
         ['version_group_held_items', 'version_group_held_items.csv'],
         ['leagues', 'leagues.csv'],
         ['match_configs', 'match_configs.csv'],
