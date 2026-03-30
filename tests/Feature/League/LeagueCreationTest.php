@@ -11,6 +11,7 @@ it('creates a default pool when a league is created', function () {
 
     $this->actingAs($user)->post('/leagues', [
         'command' => 'create',
+        'league_id' => 0,
         'name' => 'Test League',
         'draft_date' => '2026-04-01',
         'set_start_date' => '2026-04-15',

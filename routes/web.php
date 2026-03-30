@@ -31,6 +31,10 @@ Route::get('/', function () {
     return Inertia::render('Welcome');
 })->name('home');
 
+Route::get('docs', function () {
+    return Inertia::render('Docs');
+})->name('docs');
+
 Route::get('dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::get('/match-prep/share/{share_uuid}', [MatchPrepController::class, 'showShare'])

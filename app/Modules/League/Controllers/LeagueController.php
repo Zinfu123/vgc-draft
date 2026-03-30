@@ -340,7 +340,8 @@ class LeagueController extends Controller
     public function create(Request $request)
     {
         $action = new CreateEditLeagueAction;
-        $league = $request->filled('league_id') ? $action->edit($request) : $action->create($request);
+        $isEditingExistingLeague = $request->integer('league_id') > 0;
+        $league = $isEditingExistingLeague ? $action->edit($request) : $action->create($request);
 
         return redirect()->route('leagues.matches', ['league' => $league->id]);
     }

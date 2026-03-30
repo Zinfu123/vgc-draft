@@ -108,7 +108,7 @@ class CreateEditLeagueAction
         ]);
 
         $this->assertPokemonGameMatchesGeneration($request);
-        $league = League::where('id', $request->league_id)->first();
+        $league = League::query()->where('id', $request->integer('league_id'))->firstOrFail();
         if ($request->hasFile('logo')) {
             $oldlogo = $league->logo;
             if ($oldlogo !== null) {

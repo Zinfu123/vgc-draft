@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import PokemonCard from '@/components/pokemon/PokemonCard.vue';
+import { Link } from '@inertiajs/vue3';
 
 interface Pokemon {
     id: number;
+    pokedex_id: number;
     cost: number;
     name: string;
     sprite_url: string;
@@ -12,6 +14,7 @@ interface Pokemon {
 
 interface PokemonDrafted {
     id: number;
+    pokedex_id: number;
     cost: number;
     name: string;
     sprite_url: string;
@@ -34,11 +37,25 @@ const props = defineProps<{
     <div class="flex flex-col items-center justify-center">
         <h1 class="text-2xl font-bold">Available Pokemon</h1>
         <div class="grid grid-cols-6 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
-            <PokemonCard v-for="pokemon in props.pokemon" :key="pokemon.id" :pokemon="pokemon" />
+            <Link
+                v-for="pokemon in props.pokemon"
+                :key="pokemon.id"
+                :href="route('pokedex.show', pokemon.pokedex_id)"
+                class="transition-opacity hover:opacity-90"
+            >
+                <PokemonCard :pokemon="pokemon" />
+            </Link>
         </div>
         <h1 class="text-2xl font-bold">Drafted Pokemon</h1>
         <div class="grid grid-cols-6 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
-            <PokemonCard v-for="pokemon in props.pokemon_drafted" :key="pokemon.id" :pokemon="pokemon" />
+            <Link
+                v-for="pokemon in props.pokemon_drafted"
+                :key="pokemon.id"
+                :href="route('pokedex.show', pokemon.pokedex_id)"
+                class="transition-opacity hover:opacity-90"
+            >
+                <PokemonCard :pokemon="pokemon" />
+            </Link>
         </div>
     </div>
 </template>

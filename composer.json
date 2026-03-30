@@ -18,6 +18,8 @@
         "league/flysystem-aws-s3-v3": "^3.29",
         "league/flysystem-path-prefixing": "^3.28",
         "socialiteproviders/discord": "^4.2",
+        "symfony/http-client": "^8.0",
+        "symfony/postmark-mailer": "^8.0",
         "tightenco/ziggy": "^2.4"
     },
     "require-dev": {

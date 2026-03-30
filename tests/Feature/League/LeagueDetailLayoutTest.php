@@ -2,6 +2,8 @@
 
 use App\Models\User;
 use App\Modules\League\Models\League;
+use App\Modules\League\Models\LeaguePokemon;
+use App\Modules\Pokedex\Models\Pokedex;
 use App\Modules\Teams\Models\Team;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
@@ -118,12 +120,40 @@ it('renders the draft tab', function () {
     );
 });
 
+it('renders the pokemon tab with pokedex ids for links', function () {
+    $user = User::factory()->create();
+    $league = createLeagueAndTeamForUser($user);
+    $dex = Pokedex::query()->create([
+        'nationaldex_id' => 561,
+        'name' => 'Sigilyph',
+        'type1' => 'Psychic',
+        'type2' => 'Flying',
+        'sprite_url' => null,
+    ]);
+    LeaguePokemon::query()->create([
+        'league_id' => $league->id,
+        'pokedex_id' => $dex->id,
+        'name' => $dex->name,
+        'cost' => 12,
+    ]);
+
+    $response = $this->actingAs($user)->get("/leagues/{$league->id}/pokemon");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('league/LeaguePokemonPage')
+        ->has('pokemon', 1)
+        ->where('pokemon.0.pokedex_id', $dex->id)
+        ->where('section', 'pokemon')
+    );
+});
+
 it('requires authentication on all detail tabs', function (string $tab) {
     $owner = User::factory()->create();
     $league = createLeagueAndTeamForUser($owner);
 
     $this->get("/leagues/{$league->id}/{$tab}")->assertRedirect('/login');
-})->with(['teams', 'matches', 'standings', 'trades', 'draft']);
+})->with(['teams', 'matches', 'standings', 'trades', 'draft', 'pokemon']);
 
 it('redirects the admin page to match-config', function () {
     $user = User::factory()->create();
