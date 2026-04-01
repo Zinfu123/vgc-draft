@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Modules\Draft\Models\Draft;
 use App\Modules\League\Models\League;
 use App\Modules\League\Models\LeaguePokemon;
 use App\Modules\Pokedex\Models\Pokedex;
@@ -51,6 +52,54 @@ it('renders the teams tab', function () {
     );
 });
 
+it('sorts league teams by name on the teams tab', function () {
+    $user = User::factory()->create();
+    $league = createLeagueAndTeamForUser($user);
+
+    $otherUser = User::factory()->create();
+    Team::create([
+        'name' => 'Alpha Squad',
+        'league_id' => $league->id,
+        'user_id' => $otherUser->id,
+        'admin_flag' => 0,
+        'pick_position' => 2,
+        'draft_points' => 100,
+        'victory_points' => 0,
+        'set_wins' => 0,
+        'set_losses' => 0,
+        'game_wins' => 0,
+        'game_losses' => 0,
+    ]);
+
+    $response = $this->actingAs($user)->get("/leagues/{$league->id}/teams");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('league/LeagueDetailTeams')
+        ->where('teams.0.name', 'Alpha Squad')
+        ->where('teams.1.name', 'My Team')
+    );
+});
+
+it('renders the teams tab when the league has no teams', function () {
+    $user = User::factory()->create();
+    $league = League::create([
+        'name' => 'Empty League',
+        'status' => 1,
+        'league_owner' => $user->id,
+        'maximum_teams' => 10,
+    ]);
+
+    $response = $this->actingAs($user)->get("/leagues/{$league->id}/teams");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('league/LeagueDetailTeams')
+        ->where('teams', [])
+        ->where('section', 'teams')
+    );
+});
+
 it('renders the matches tab', function () {
     $user = User::factory()->create();
     $league = createLeagueAndTeamForUser($user);
@@ -65,6 +114,45 @@ it('renders the matches tab', function () {
         ->has('adminFlag')
         ->has('matchConfig')
         ->where('section', 'matches')
+        ->where('matches_filter_team_id', null)
+    );
+});
+
+it('passes matches_filter_team_id when the team query belongs to the league', function () {
+    $user = User::factory()->create();
+    $league = createLeagueAndTeamForUser($user);
+    $team = Team::query()->where('league_id', $league->id)->firstOrFail();
+
+    $response = $this->actingAs($user)->get("/leagues/{$league->id}/matches?team={$team->id}");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('matches_filter_team_id', $team->id)
+    );
+});
+
+it('ignores the team query when the team is not in the league', function () {
+    $user = User::factory()->create();
+    $league = createLeagueAndTeamForUser($user);
+    $otherUser = User::factory()->create();
+    $otherLeague = League::create([
+        'name' => 'Other League',
+        'status' => 1,
+        'league_owner' => $otherUser->id,
+        'maximum_teams' => 10,
+    ]);
+    $otherTeam = Team::create([
+        'name' => 'Other Team',
+        'league_id' => $otherLeague->id,
+        'user_id' => $otherUser->id,
+        'pick_position' => 1,
+    ]);
+
+    $response = $this->actingAs($user)->get("/leagues/{$league->id}/matches?team={$otherTeam->id}");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->where('matches_filter_team_id', null)
     );
 });
 
@@ -117,6 +205,30 @@ it('renders the draft tab', function () {
         ->has('adminFlag')
         ->has('matchConfig')
         ->where('section', 'draft')
+        ->where('draft_recap_teams', null)
+        ->where('draft_recap_bans', null)
+    );
+});
+
+it('passes draft recap teams when the draft is completed', function () {
+    $user = User::factory()->create();
+    $league = createLeagueAndTeamForUser($user);
+    Draft::create([
+        'league_id' => $league->id,
+        'status' => 0,
+        'round_number' => 1,
+        'pick_number' => 1,
+    ]);
+
+    $response = $this->actingAs($user)->get("/leagues/{$league->id}/draft");
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('league/LeagueDetailDraft')
+        ->where('draft.status', 0)
+        ->has('draft_recap_teams')
+        ->has('draft_recap_bans')
+        ->where('draft_recap_teams.0.name', 'My Team')
     );
 });
 

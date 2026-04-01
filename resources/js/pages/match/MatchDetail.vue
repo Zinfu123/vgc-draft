@@ -336,6 +336,16 @@ const winnerCoach = computed((): string | null => {
     return null;
 });
 
+const winnerShowdownUsername = computed((): string | null => {
+    if (props.set.winner_id === props.set.team1.id) {
+        return showdownDisplay(props.set.team1.user.showdown_username) || null;
+    }
+    if (props.set.winner_id === props.set.team2.id) {
+        return showdownDisplay(props.set.team2.user.showdown_username) || null;
+    }
+    return null;
+});
+
 const winnerLogo = computed((): string | null => {
     if (props.set.winner_id === props.set.team1.id) {
         return props.set.team1.logo || null;
@@ -343,6 +353,30 @@ const winnerLogo = computed((): string | null => {
         return props.set.team2.logo || null;
     }
     return props.set.winner_logo || null;
+});
+
+const authUserId = computed((): number | null => {
+    const u = page.props.auth?.user as { id?: number } | undefined;
+    return u?.id ?? null;
+});
+
+function showdownDisplay(username: string | null | undefined): string {
+    const t = username?.trim();
+    return t !== undefined && t !== '' ? t : '';
+}
+
+const currentUserMissingShowdown = computed((): boolean => {
+    const id = authUserId.value;
+    if (id === null) {
+        return false;
+    }
+    if (props.set.team1.user.id === id && !showdownDisplay(props.set.team1.user.showdown_username)) {
+        return true;
+    }
+    if (props.set.team2.user.id === id && !showdownDisplay(props.set.team2.user.showdown_username)) {
+        return true;
+    }
+    return false;
 });
 
 const handleSubmit = () => {
@@ -389,6 +423,38 @@ const handleReopenMatch = () => {
             >
                 {{ flashSuccess }}
             </p>
+            <div
+                class="border-border bg-muted/30 text-foreground mx-auto mt-6 w-full max-w-xl rounded-lg border px-4 py-3 text-left shadow-sm sm:text-center"
+            >
+                <h2 class="text-base font-semibold">Pokémon Showdown</h2>
+                <p class="text-muted-foreground mt-1 text-xs">
+                    Names from each coach’s profile — useful for challenges and replay import.
+                </p>
+                <dl class="mt-3 space-y-2 text-sm sm:mx-auto sm:max-w-md sm:text-left">
+                    <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                        <dt class="min-w-0 font-medium">{{ props.set.team1.name }}</dt>
+                        <dd class="text-muted-foreground shrink-0 font-mono text-xs sm:text-sm">
+                            <template v-if="showdownDisplay(props.set.team1.user.showdown_username)">
+                                {{ showdownDisplay(props.set.team1.user.showdown_username) }}
+                            </template>
+                            <span v-else class="italic">Not set</span>
+                        </dd>
+                    </div>
+                    <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                        <dt class="min-w-0 font-medium">{{ props.set.team2.name }}</dt>
+                        <dd class="text-muted-foreground shrink-0 font-mono text-xs sm:text-sm">
+                            <template v-if="showdownDisplay(props.set.team2.user.showdown_username)">
+                                {{ showdownDisplay(props.set.team2.user.showdown_username) }}
+                            </template>
+                            <span v-else class="italic">Not set</span>
+                        </dd>
+                    </div>
+                </dl>
+                <p v-if="currentUserMissingShowdown" class="text-muted-foreground mt-3 text-xs">
+                    <Link :href="route('profile.edit')" class="text-primary font-medium hover:underline">Add your Showdown name in Profile</Link>
+                    to help opponents find you and speed up replay matching.
+                </p>
+            </div>
         </div>
         <div class="mt-8 flex w-full flex-col items-stretch gap-10 px-4 lg:flex-row lg:items-start lg:gap-4 lg:px-6">
             <div class="flex min-w-0 flex-1 flex-col">
@@ -399,8 +465,12 @@ const handleReopenMatch = () => {
                         {{ props.set.team1.name }}
                     </p>
                     <p class="text-center text-muted-foreground transition-colors hover:text-primary">Coach: {{ props.set.team1.user.name }}</p>
-                    <p v-if="props.set.team1.user?.showdown_username" class="text-center text-xs text-muted-foreground">
-                        Showdown: {{ props.set.team1.user.showdown_username }}
+                    <p class="text-center text-xs text-muted-foreground">
+                        <span class="text-foreground/80 font-medium">Showdown</span>:
+                        <span v-if="showdownDisplay(props.set.team1.user.showdown_username)" class="font-mono">{{
+                            showdownDisplay(props.set.team1.user.showdown_username)
+                        }}</span>
+                        <span v-else class="italic">Not set</span>
                     </p>
                 </Link>
                 <p class="text-center text-2xl font-bold">Pokemon</p>
@@ -665,8 +735,12 @@ const handleReopenMatch = () => {
                         {{ props.set.team2.name }}
                     </p>
                     <p class="text-center text-muted-foreground transition-colors hover:text-primary">Coach: {{ props.set.team2.user.name }}</p>
-                    <p v-if="props.set.team2.user?.showdown_username" class="text-center text-xs text-muted-foreground">
-                        Showdown: {{ props.set.team2.user.showdown_username }}
+                    <p class="text-center text-xs text-muted-foreground">
+                        <span class="text-foreground/80 font-medium">Showdown</span>:
+                        <span v-if="showdownDisplay(props.set.team2.user.showdown_username)" class="font-mono">{{
+                            showdownDisplay(props.set.team2.user.showdown_username)
+                        }}</span>
+                        <span v-else class="italic">Not set</span>
                     </p>
                 </Link>
                 <p class="text-center text-2xl font-bold">Pokemon</p>

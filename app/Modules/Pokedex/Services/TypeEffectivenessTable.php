@@ -3,8 +3,7 @@
 namespace App\Modules\Pokedex\Services;
 
 /**
- * Gen VI+ type chart (includes Fairy). Used for Scarlet & Violet planning.
- * Chart selection is tied to {@see VersionGroup} mechanics via {@see self::forChart}.
+ * Gen VI+ type chart (includes Fairy). Used for team coverage and related planning tools.
  *
  * @phpstan-type TypeName string
  */
@@ -15,8 +14,7 @@ class TypeEffectivenessTable
     ) {}
 
     /**
-     * Resolve a type chart id from VersionGroup mechanics (`type_chart` in mechanics_config).
-     * Unknown ids fall back to the Gen VI+ fairy chart.
+     * Factory for a chart variant. Unknown ids fall back to the Gen VI+ fairy chart.
      */
     public static function forChart(string $chartId): self
     {

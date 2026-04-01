@@ -1,99 +1,158 @@
 <script setup lang="ts">
-import { Button } from '@/components/ui/button';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import Tabs from '@/components/ui/tabs/Tabs.vue';
+import TabsContent from '@/components/ui/tabs/TabsContent.vue';
+import TabsList from '@/components/ui/tabs/TabsList.vue';
+import TabsTrigger from '@/components/ui/tabs/TabsTrigger.vue';
 import { Link } from '@inertiajs/vue3';
-import { ChevronDown, ChevronRight } from 'lucide-vue-next';
-import { reactive } from 'vue';
-const isOpen = reactive<{ [key: string]: boolean }>({});
+import { computed, ref, watch } from 'vue';
 
-interface Set {
-    [key: number]: Array<{
+interface SetRow {
+    id: number;
+    league_id: number;
+    pool_id: number;
+    round: number;
+    team1: {
         id: number;
-        league_id: number;
-        pool_id: number;
-        round: number;
-        team1: {
-            id: number;
+        name: string;
+        logo: string;
+        user: {
             name: string;
-            logo: string;
-            user: {
-                name: string;
-            };
         };
-        team2: {
-            id: number;
+    };
+    team2: {
+        id: number;
+        name: string;
+        logo: string;
+        user: {
             name: string;
-            logo: string;
-            user: {
-                name: string;
-            };
-        } | null;
-    }>;
-}
-interface props {
-    set: Set;
+        };
+    } | null;
 }
 
-const props = defineProps<props>();
+type SetMap = Record<number, SetRow[]>;
+
+interface Props {
+    set: SetMap;
+}
+
+const props = defineProps<Props>();
+
+const roundKeys = computed(() =>
+    Object.keys(props.set)
+        .map((k) => Number(k))
+        .filter((n) => !Number.isNaN(n))
+        .sort((a, b) => a - b)
+        .map(String),
+);
+
+const selectedRound = ref<string>('');
+
+watch(
+    roundKeys,
+    (keys) => {
+        if (keys.length === 0) {
+            selectedRound.value = '';
+
+            return;
+        }
+
+        if (!keys.includes(selectedRound.value)) {
+            selectedRound.value = keys[keys.length - 1]!;
+        }
+    },
+    { immediate: true },
+);
+
+function matchCount(roundKey: string): number {
+    return props.set[Number(roundKey)]?.length ?? 0;
+}
 </script>
 
 <template>
-    <nav class="w-full" aria-label="Matches">
-        <div v-for="key in Object.keys(props.set)" :key="key" class="relative">
-            <Collapsible :open="isOpen[key] || false" @open-change="isOpen[key] = $event">
-                <div
-                    class="sticky top-0 z-10 border-y border-t-gray-100 border-b-gray-200 bg-gray-50 px-3 py-1.5 text-sm/6 font-semibold text-gray-900 dark:border-t-white/5 dark:border-b-white/10 dark:bg-gray-900 dark:text-white dark:before:pointer-events-none dark:before:absolute dark:before:inset-0 dark:before:bg-white/5"
+    <div v-if="roundKeys.length > 0" class="flex w-full flex-col gap-3" role="region" aria-label="Match schedule by round">
+        <Tabs v-model="selectedRound" class="w-full gap-0">
+            <div class="sticky top-0 z-10 -mx-0.5 pb-1 pt-0.5">
+                <TabsList
+                    class="h-auto min-h-10 w-full max-w-full flex-nowrap justify-start gap-1 overflow-x-auto overscroll-x-contain rounded-xl border border-border/70 bg-muted/40 p-1.5 shadow-sm [scrollbar-width:thin] dark:bg-muted/25 dark:shadow-inner [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-muted-foreground/25"
                 >
-                    <h3 class="relative">Round Number: {{ key }}</h3>
-                    <CollapsibleTrigger as-child>
-                        <Button variant="ghost" size="icon" class="absolute top-0 right-0" @click="isOpen[key] = !(isOpen[key] || false)">
-                            <ChevronRight class="size-4" v-if="!(isOpen[key] || false)" />
-                            <ChevronDown class="size-4" v-if="isOpen[key] || false" />
-                        </Button>
-                    </CollapsibleTrigger>
-                </div>
-                <CollapsibleContent>
-                    <ul
-                        role="list"
-                        class="divide-y divide-gray-100 bg-white shadow-xs outline-1 outline-gray-900/5 sm:rounded-xl dark:divide-white/5 dark:bg-gray-800/50 dark:shadow-none dark:outline-white/10 dark:sm:-outline-offset-1"
+                    <TabsTrigger
+                        v-for="key in roundKeys"
+                        :key="key"
+                        :value="key"
+                        class="group shrink-0 snap-start gap-2 px-3.5 py-2 text-sm font-semibold shadow-none data-[state=active]:border-border/80 data-[state=active]:shadow-sm sm:px-4"
                     >
-                        <li v-for="item in props.set[Number(key)]" :key="item.id" class="px-3 py-5 hover:bg-gray-50 sm:px-6 dark:hover:bg-white/2.5">
-                            <Link :href="`/match/set/${item.id}`" class="flex w-full gap-x-4">
+                        <span class="tabular-nums">Round {{ key }}</span>
+                        <span
+                            class="rounded-full bg-muted-foreground/15 px-2 py-0.5 text-xs font-medium tabular-nums text-muted-foreground group-data-[state=active]:bg-primary/15 group-data-[state=active]:text-foreground"
+                        >
+                            {{ matchCount(key) }}
+                        </span>
+                    </TabsTrigger>
+                </TabsList>
+            </div>
+
+            <TabsContent
+                v-for="key in roundKeys"
+                :key="`content-${key}`"
+                :value="key"
+                class="mt-3 focus-visible:outline-none"
+            >
+                <ul
+                    role="list"
+                    class="divide-y divide-border overflow-hidden rounded-xl border border-border/80 bg-card shadow-sm"
+                >
+                    <li
+                        v-for="item in props.set[Number(key)]"
+                        :key="item.id"
+                        class="transition-colors hover:bg-accent/40"
+                    >
+                        <Link
+                            :href="`/match/set/${item.id}`"
+                            class="flex w-full items-center gap-x-4 px-4 py-4 sm:px-5 sm:py-5"
+                        >
+                            <img
+                                v-if="item.team1.logo"
+                                class="size-12 shrink-0 rounded-full bg-muted object-cover ring-1 ring-border/60"
+                                :src="item.team1.logo"
+                                alt=""
+                            />
+                            <div class="min-w-0 flex-1">
+                                <p class="text-sm font-semibold text-foreground">
+                                    {{ item.team1.name }}
+                                </p>
+                                <p class="mt-0.5 truncate text-xs text-muted-foreground">
+                                    {{ item.team1.user.name }}
+                                </p>
+                            </div>
+                            <div class="flex shrink-0 flex-col items-center justify-center px-1">
+                                <span
+                                    class="text-xs font-bold uppercase tracking-wider text-muted-foreground"
+                                    aria-hidden="true"
+                                >
+                                    {{ item.team2 ? 'vs' : 'bye' }}
+                                </span>
+                            </div>
+                            <template v-if="item.team2">
                                 <img
-                                    v-if="item.team1.logo"
-                                    class="size-12 flex-none rounded-full bg-gray-50 dark:bg-gray-800 dark:outline dark:-outline-offset-1 dark:outline-white/10"
-                                    :src="item.team1.logo"
+                                    v-if="item.team2.logo"
+                                    class="size-12 shrink-0 rounded-full bg-muted object-cover ring-1 ring-border/60"
+                                    :src="item.team2.logo"
                                     alt=""
                                 />
-                                <div class="min-w-0">
-                                    <p class="text-sm/6 font-semibold text-gray-900 hover:text-blue-500 dark:text-white">
-                                        {{ item.team1.name }}
+                                <div class="min-w-0 flex-1 text-right sm:text-left">
+                                    <p class="text-sm font-semibold text-foreground">
+                                        {{ item.team2.name }}
                                     </p>
-                                    <p class="mt-1 truncate text-xs/5 text-gray-500 hover:text-blue-500 dark:text-gray-400">
-                                        {{ item.team1.user.name }}
+                                    <p class="mt-0.5 truncate text-xs text-muted-foreground">
+                                        {{ item.team2.user.name }}
                                     </p>
                                 </div>
-                                <div class="flex flex-col items-center justify-center">
-                                    <p class="text-sm/6 font-semibold text-gray-900 dark:text-white">{{ item.team2 ? 'VS' : 'Bye' }}</p>
-                                </div>
-                                <template v-if="item.team2">
-                                    <img
-                                        v-if="item.team2.logo"
-                                        class="size-12 flex-none rounded-full bg-gray-50 dark:bg-gray-800 dark:outline dark:-outline-offset-1 dark:outline-white/10"
-                                        :src="item.team2.logo"
-                                        alt=""
-                                    />
-                                    <div class="min-w-0">
-                                        <p class="text-sm/6 font-semibold text-gray-900 dark:text-white">{{ item.team2.name }}</p>
-                                        <p class="mt-1 truncate text-xs/5 text-gray-500 dark:text-gray-400">{{ item.team2.user.name }}</p>
-                                    </div>
-                                </template>
-                                <div v-else class="min-w-0 text-sm text-muted-foreground">Bye</div>
-                            </Link>
-                        </li>
-                    </ul>
-                </CollapsibleContent>
-            </Collapsible>
-        </div>
-    </nav>
+                            </template>
+                            <div v-else class="min-w-0 flex-1 text-sm text-muted-foreground">Bye week</div>
+                        </Link>
+                    </li>
+                </ul>
+            </TabsContent>
+        </Tabs>
+    </div>
 </template>

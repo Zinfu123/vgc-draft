@@ -16,6 +16,7 @@ class ReadTeamAction
                 ->notDropped()
                 ->select('id', 'league_id', 'name', 'logo', 'user_id', 'admin_flag', 'pick_position', 'set_wins', 'set_losses', 'victory_points', 'trades')
                 ->with('user')
+                ->orderBy('name')
                 ->get();
 
             $teams = $teams->map(function ($team) {

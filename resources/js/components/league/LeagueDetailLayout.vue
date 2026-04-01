@@ -78,11 +78,13 @@ const sections: { value: LeagueDetailSection; label: string; route: string }[] =
     { value: 'pokemon', label: 'Pokemon', route: 'leagues.pokemon' },
 ];
 
-const draftHref = computed(() =>
-    props.draft !== null
-        ? route('draft.detail', { league_id: props.league.id })
-        : route('leagues.draft', { league: props.league.id }),
-);
+const draftHref = computed(() => {
+    if (props.draft === null || props.draft.status === 0) {
+        return route('leagues.draft', { league: props.league.id });
+    }
+
+    return route('draft.detail', { league_id: props.league.id });
+});
 </script>
 
 <template>

@@ -196,6 +196,8 @@ const isSubmitting = ref(false);
 const isBanPhase = computed(() => props.draft?.status === 2);
 const isDraftPhase = computed(() => props.draft?.status === 1);
 
+const isDraftActive = computed(() => props.draft?.status === 1 || props.draft?.status === 2);
+
 const isMyTurnToBan = computed(() => isBanPhase.value && props.currentBanner?.team?.id === props.userTeam?.id);
 const isMyTurnToPick = computed(() => isDraftPhase.value && props.currentPicker?.team?.id === props.userTeam?.id);
 const isMyTurn = computed(() => isMyTurnToBan.value || isMyTurnToPick.value);
@@ -339,7 +341,7 @@ const submitAction = () => {
                 <div v-if="!isMobile" class="flex flex-wrap items-center gap-2">
                     <DraftPicksPanel :teams="props.teams" :bans="props.allBans" />
                     <DraftTeamsPanel :teams="props.teams" :bans="props.allBans" />
-                    <ButtonGroup v-if="props.canManageDraftAsAdmin === true">
+                    <ButtonGroup v-if="props.canManageDraftAsAdmin === true && isDraftActive">
                         <Button variant="outline" size="sm" @click="revertLastPick">Revert Last Pick</Button>
                         <Button variant="destructive" size="sm" @click="abortDraft">Abort Draft</Button>
                     </ButtonGroup>
@@ -637,7 +639,7 @@ const submitAction = () => {
                 <TabsContent value="teams" class="mt-4 flex flex-col gap-3">
                     <DraftPicksPanel :teams="props.teams" :bans="props.allBans" />
                     <DraftTeamsPanel :teams="props.teams" :bans="props.allBans" />
-                    <ButtonGroup v-if="props.canManageDraftAsAdmin === true" class="flex flex-col gap-2 sm:flex-row">
+                    <ButtonGroup v-if="props.canManageDraftAsAdmin === true && isDraftActive" class="flex flex-col gap-2 sm:flex-row">
                         <Button variant="outline" size="sm" class="min-h-11 touch-manipulation" @click="revertLastPick">Revert Last Pick</Button>
                         <Button variant="destructive" size="sm" class="min-h-11 touch-manipulation" @click="abortDraft">Abort Draft</Button>
                     </ButtonGroup>

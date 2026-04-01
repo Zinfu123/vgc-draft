@@ -11,6 +11,7 @@ use App\Http\Requests\Draft\UpdateDraftPickOrderRequest;
 use App\Http\Requests\League\DropTeamFromLeagueRequest;
 use App\Http\Requests\League\UpdateTeamAdminRequest;
 use App\Http\Requests\Match\ReopenMatchSetRequest;
+use App\Modules\Draft\Actions\ReadCurrentDraftAction;
 use App\Modules\Draft\Models\Draft;
 use App\Modules\Draft\Models\DraftConfig;
 use App\Modules\League\Actions\CreateEditLeagueAction;
@@ -57,16 +58,27 @@ class LeagueController extends Controller
         ]);
     }
 
-    public function showMatches(League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction, ShowSetsAction $showSetsAction)
+    public function showMatches(Request $request, League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction, ShowSetsAction $showSetsAction)
     {
         $user_team = Team::where('user_id', Auth::user()->id)->where('league_id', $league->id)->select('id')->first();
+
+        $matchesFilterTeamId = null;
+        if ($request->filled('team')) {
+            $candidate = (int) $request->query('team');
+            if (Team::query()->where('league_id', $league->id)->whereKey($candidate)->exists()) {
+                $matchesFilterTeamId = $candidate;
+            }
+        }
+
+        $teamIdForNextSet = $matchesFilterTeamId ?? $user_team?->id;
 
         return Inertia::render('league/LeagueDetailMatches', [
             ...$leagueDetailLayoutDataAction($league),
             'section' => 'matches',
             'played_sets' => $showSetsAction(['league_id' => $league->id, 'command' => 'played']),
             'upcoming_sets' => $showSetsAction(['league_id' => $league->id, 'command' => 'upcoming']),
-            'team_next' => $showSetsAction(['league_id' => $league->id, 'command' => 'team_next', 'team_id' => $user_team?->id]),
+            'team_next' => $showSetsAction(['league_id' => $league->id, 'command' => 'team_next', 'team_id' => $teamIdForNextSet]),
+            'matches_filter_team_id' => $matchesFilterTeamId,
         ]);
     }
 
@@ -87,11 +99,25 @@ class LeagueController extends Controller
         ]);
     }
 
-    public function showDraft(League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction)
+    public function showDraft(League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction, ReadCurrentDraftAction $readCurrentDraftAction): \Inertia\Response
     {
+        $data = $leagueDetailLayoutDataAction($league);
+        $draft = $data['draft'];
+        $draftRecapTeams = null;
+        $draftRecapBans = null;
+
+        if ($draft !== null && (int) $draft->status === 0) {
+            $draftRecapTeams = $readCurrentDraftAction(['league_id' => $league->id, 'command' => 'teams'])
+                ->sortBy('name')
+                ->values();
+            $draftRecapBans = $readCurrentDraftAction(['league_id' => $league->id, 'command' => 'allbans']);
+        }
+
         return Inertia::render('league/LeagueDetailDraft', [
-            ...$leagueDetailLayoutDataAction($league),
+            ...$data,
             'section' => 'draft',
+            'draft_recap_teams' => $draftRecapTeams,
+            'draft_recap_bans' => $draftRecapBans,
         ]);
     }
 

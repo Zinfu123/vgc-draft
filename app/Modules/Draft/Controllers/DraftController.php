@@ -25,6 +25,10 @@ class DraftController extends Controller
     public function index(ReadCurrentDraftAction $readCurrentDraftAction, ReadLeaguePokemonAction $readLeaguePokemonAction, $league_id)
     {
         $draft = Draft::where('league_id', $league_id)->first();
+        if ($draft !== null && (int) $draft->status === 0) {
+            return redirect()->route('leagues.draft', ['league' => $league_id]);
+        }
+
         $league = League::with('draftConfig')->find($league_id);
         $pokemon = $readLeaguePokemonAction(['league_id' => $league_id, 'command' => 'all_with_status']);
         $costHeaders = $pokemon->unique('cost')->pluck('cost')->sortDesc()->values();
