@@ -428,7 +428,7 @@ const handleReopenMatch = () => {
             >
                 <h2 class="text-base font-semibold">Pokémon Showdown</h2>
                 <p class="text-muted-foreground mt-1 text-xs">
-                    Names from each coach’s profile — useful for challenges and replay import.
+                    Names from each coach's profile — useful for challenges and replay import.
                 </p>
                 <dl class="mt-3 space-y-2 text-sm sm:mx-auto sm:max-w-md sm:text-left">
                     <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
@@ -710,6 +710,10 @@ const handleReopenMatch = () => {
                                 <div class="text-center">
                                     <p class="text-2xl font-bold text-foreground">{{ props.set.winner_name }}</p>
                                     <p v-if="winnerCoach" class="text-lg text-muted-foreground">Coach: {{ winnerCoach }}</p>
+                                    <p v-if="winnerShowdownUsername" class="text-muted-foreground text-sm">
+                                        Showdown:
+                                        <span class="text-foreground font-mono font-medium">{{ winnerShowdownUsername }}</span>
+                                    </p>
                                 </div>
                                 <div v-if="props.isLeagueAdmin && isSetCompleted" class="flex w-full max-w-md flex-col items-center gap-2">
                                     <p v-if="reopenForm.errors.set_id" class="text-center text-sm text-destructive">{{ reopenForm.errors.set_id }}</p>

@@ -283,6 +283,21 @@ it('allows guests to view a public paste', function () {
         );
 });
 
+it('includes coach showdown usernames on match detail', function () {
+    $data = createLeagueTeamWithSixDraftedPokemonAndMatch();
+    $data['coach']->update(['showdown_username' => 'CoachShowdown1']);
+    $data['opponent']->update(['showdown_username' => 'CoachShowdown2']);
+
+    $this->actingAs($data['coach'])
+        ->get(route('sets.show', ['set_id' => $data['set']->id]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('match/MatchDetail')
+            ->where('set.team1.user.showdown_username', 'CoachShowdown1')
+            ->where('set.team2.user.showdown_username', 'CoachShowdown2')
+        );
+});
+
 it('includes match pokepaste public id only for participants on match detail', function () {
     $data = createLeagueTeamWithSixDraftedPokemonAndMatch();
 
