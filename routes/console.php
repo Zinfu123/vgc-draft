@@ -13,3 +13,8 @@ Schedule::job(new RebuildPokemonUsageStatsJob)
     ->name('rebuild-pokemon-usage-stats')
     ->dailyAt('05:00')
     ->withoutOverlapping(180);
+
+Schedule::command('stats:sync-showdown-vgc-usage')
+    ->name('sync-showdown-vgc-usage')
+    ->dailyAt('06:15')
+    ->withoutOverlapping(600);

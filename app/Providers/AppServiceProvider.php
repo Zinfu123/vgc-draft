@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Modules\League\Models\League;
 use App\Policies\LeaguePolicy;
+use App\Support\CleanupInvalidViteHotFile;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -28,6 +29,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        CleanupInvalidViteHotFile::deleteIfInvalid(
+            $this->app->isLocal(),
+            public_path('hot'),
+        );
+
         Model::automaticallyEagerLoadRelationships();
 
         Gate::policy(League::class, LeaguePolicy::class);

@@ -14,6 +14,9 @@ class VersionGroup extends Model
         'generation',
         'sort_order',
         'name',
+        'mechanics_config',
+        'showdown_format_key',
+        'showdown_ladder_rating',
     ];
 
     /**
@@ -24,6 +27,8 @@ class VersionGroup extends Model
         return [
             'generation' => 'integer',
             'sort_order' => 'integer',
+            'mechanics_config' => 'array',
+            'showdown_ladder_rating' => 'integer',
         ];
     }
 
@@ -35,5 +40,10 @@ class VersionGroup extends Model
     public function heldItems(): HasMany
     {
         return $this->hasMany(VersionGroupHeldItem::class, 'version_group_id');
+    }
+
+    public function pokemonMoveVersionData(): HasMany
+    {
+        return $this->hasMany(PokemonMoveVersionData::class, 'version_group_id');
     }
 }

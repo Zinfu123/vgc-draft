@@ -40,3 +40,9 @@ it('uses tera type as monotype defense when set', function () {
 it('returns one when attack type is unknown', function () {
     expect($this->table->multiplier('Unknown', 'Fire', 'Water', null))->toBe(1.0);
 });
+
+it('forChart uses the gen6 fairy matrix for gen9 id', function () {
+    $gen9 = TypeEffectivenessTable::forChart('gen9');
+    expect($gen9->chartId())->toBe('gen6_fairy')
+        ->and($gen9->singleMultiplier('Fire', 'Grass'))->toBe(2.0);
+});

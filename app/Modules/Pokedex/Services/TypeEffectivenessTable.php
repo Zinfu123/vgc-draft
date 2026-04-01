@@ -3,12 +3,47 @@
 namespace App\Modules\Pokedex\Services;
 
 /**
- * Gen VI+ type chart (includes Fairy). Used for Scarlet/Violet planning.
+ * Gen VI+ type chart (includes Fairy). Used for Scarlet & Violet planning.
+ * Chart selection is tied to {@see VersionGroup} mechanics via {@see self::forChart}.
  *
  * @phpstan-type TypeName string
  */
 class TypeEffectivenessTable
 {
+    public function __construct(
+        private readonly string $chartId = 'gen6_fairy',
+    ) {}
+
+    /**
+     * Resolve a type chart id from VersionGroup mechanics (`type_chart` in mechanics_config).
+     * Unknown ids fall back to the Gen VI+ fairy chart.
+     */
+    public static function forChart(string $chartId): self
+    {
+        $normalized = match ($chartId) {
+            'gen6_fairy', 'gen7', 'gen8', 'gen9' => 'gen6_fairy',
+            default => 'gen6_fairy',
+        };
+
+        return new self($normalized);
+    }
+
+    public function chartId(): string
+    {
+        return $this->chartId;
+    }
+
+    /**
+     * @return list<list<float|int>>
+     */
+    private function matrix(): array
+    {
+        return match ($this->chartId) {
+            'gen6_fairy' => self::MATRIX,
+            default => self::MATRIX,
+        };
+    }
+
     /**
      * Canonical attacking/defending type names (Title Case).
      */
@@ -101,7 +136,7 @@ class TypeEffectivenessTable
             return 1.0;
         }
 
-        return (float) self::MATRIX[$ai][$di];
+        return (float) $this->matrix()[$ai][$di];
     }
 
     /**

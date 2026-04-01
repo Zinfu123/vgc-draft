@@ -11,7 +11,8 @@ it('schedules the pokemon usage stats rebuild job daily', function () {
     $schedule = app(Schedule::class);
     $descriptions = collect($schedule->events())->pluck('description');
 
-    expect($descriptions)->toContain('rebuild-pokemon-usage-stats');
+    expect($descriptions)->toContain('rebuild-pokemon-usage-stats')
+        ->and($descriptions)->toContain('sync-showdown-vgc-usage');
 });
 
 it('runs the rebuild service when the job is processed', function () {

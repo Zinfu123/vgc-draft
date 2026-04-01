@@ -1,6 +1,7 @@
 <?php
 
 /* Define Controllers */
+use App\Modules\DamageCalculator\Controllers\DamageCalculatorController;
 use App\Modules\Dashboard\Controllers\DashboardController;
 use App\Modules\Draft\Controllers\DraftController;
 use App\Modules\League\Controllers\LeagueController;
@@ -173,6 +174,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/teams/{team}/roster', [TeamCoveragePlannerController::class, 'roster'])
             ->whereNumber('team')
             ->name('roster');
+    });
+
+    Route::prefix('damage-calculator')->name('damage-calculator.')->group(function () {
+        Route::get('/', [DamageCalculatorController::class, 'show'])->name('index');
+        Route::get('/pokedex-search', [DamageCalculatorController::class, 'search'])->name('pokedex-search');
+        Route::get('/pokedex/{pokedex}/learnset', [DamageCalculatorController::class, 'learnset'])
+            ->whereNumber('pokedex')
+            ->name('learnset');
+        Route::post('/calculate', [DamageCalculatorController::class, 'calculate'])->name('calculate');
+        Route::get('/vgc-usage', [DamageCalculatorController::class, 'vgcUsage'])->name('vgc-usage');
     });
 });
 

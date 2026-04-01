@@ -127,4 +127,53 @@ enum PokemonNature: int
 
         return null;
     }
+
+    /**
+     * Competitive stat multiplier from nature for atk, def, spa, spd, or spe. HP is unaffected.
+     */
+    public function statMultiplier(string $stat): float
+    {
+        $stat = strtolower($stat);
+        [$up, $down] = $this->changedStats();
+
+        if ($up !== null && $stat === $up) {
+            return 1.1;
+        }
+
+        if ($down !== null && $stat === $down) {
+            return 0.9;
+        }
+
+        return 1.0;
+    }
+
+    /**
+     * @return array{0: ?string, 1: ?string} [increased stat key or null, decreased stat key or null]
+     */
+    public function changedStats(): array
+    {
+        return match ($this) {
+            self::Hardy, self::Docile, self::Serious, self::Bashful, self::Quirky => [null, null],
+            self::Lonely => ['atk', 'def'],
+            self::Brave => ['atk', 'spe'],
+            self::Adamant => ['atk', 'spa'],
+            self::Naughty => ['atk', 'spd'],
+            self::Bold => ['def', 'atk'],
+            self::Relaxed => ['def', 'spe'],
+            self::Impish => ['def', 'spa'],
+            self::Lax => ['def', 'spd'],
+            self::Timid => ['spe', 'atk'],
+            self::Hasty => ['spe', 'def'],
+            self::Jolly => ['spe', 'spa'],
+            self::Naive => ['spe', 'spd'],
+            self::Modest => ['spa', 'atk'],
+            self::Mild => ['spa', 'def'],
+            self::Quiet => ['spa', 'spe'],
+            self::Rash => ['spa', 'spd'],
+            self::Calm => ['spd', 'atk'],
+            self::Gentle => ['spd', 'def'],
+            self::Sassy => ['spd', 'spe'],
+            self::Careful => ['spd', 'spa'],
+        };
+    }
 }
