@@ -45,6 +45,30 @@ class ShowdownPasteParser
     }
 
     /**
+     * Parse the third field of a replay {@code |poke|pX|...} line (e.g. {@code Species, L50, M} or {@code Nick (Species), L50, F}).
+     */
+    public function speciesRawFromReplayPokeDetails(string $details): ?string
+    {
+        $trimmed = trim($details);
+        if ($trimmed === '') {
+            return null;
+        }
+
+        if (str_starts_with($trimmed, '★')) {
+            $trimmed = trim(substr($trimmed, strlen('★')));
+        }
+
+        if (! preg_match('/^(.+),\s*L\d+(?:,\s*[MFN])?$/iu', $trimmed, $m)) {
+            return null;
+        }
+
+        $namePart = trim($m[1]);
+        $speciesLine = $this->parseSpeciesLine($namePart);
+
+        return $speciesLine['species'] ?? null;
+    }
+
+    /**
      * @return array{errors: list<string>, data?: array{species_raw: string, item: ?string, ability: ?string, nature: ?string, tera_type: ?string, moves: list<string>, evs: ?array<string, int>}}
      */
     private function parseBlock(string $block): array

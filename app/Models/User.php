@@ -23,6 +23,7 @@ class User extends Authenticatable
         'password',
         'discord_id',
         'discord_username',
+        'showdown_username',
     ];
 
     /**

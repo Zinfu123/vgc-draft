@@ -17,6 +17,8 @@ class MatchConfig extends Model
         'enforce_round_count',
         'round_count',
         'require_team_match_pokepaste_before_results',
+        'require_replays_before_results',
+        'auto_complete_set_from_replays',
     ];
 
     /**
@@ -27,6 +29,8 @@ class MatchConfig extends Model
         return [
             'enforce_round_count' => 'boolean',
             'require_team_match_pokepaste_before_results' => 'boolean',
+            'require_replays_before_results' => 'boolean',
+            'auto_complete_set_from_replays' => 'boolean',
         ];
     }
 }

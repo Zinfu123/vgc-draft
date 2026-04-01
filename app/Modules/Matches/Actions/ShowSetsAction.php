@@ -22,7 +22,7 @@ class ShowSetsAction
 
             return $sets;
         } elseif ($data['command'] == 'detail') {
-            $set = Set::where('id', $data['set_id'])->with('team1', 'team2')->first();
+            $set = Set::where('id', $data['set_id'])->with(['team1.user', 'team2.user'])->first();
             if (! $set) {
                 return null;
             }

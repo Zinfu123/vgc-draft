@@ -1,5 +1,5 @@
 import type { NavMainGroup } from '@/types';
-import { BarChart3, BookOpen, ClipboardList, LayoutDashboard, LayoutList, Trophy } from 'lucide-vue-next';
+import { BarChart3, BookOpen, ClipboardList, LayoutDashboard, LayoutList, Shield, Trophy } from 'lucide-vue-next';
 
 export const appNavGroups: NavMainGroup[] = [
     {
@@ -14,6 +14,7 @@ export const appNavGroups: NavMainGroup[] = [
         label: 'Reference',
         items: [
             { title: 'Pokedex', href: '/pokedex', icon: BookOpen },
+            { title: 'Team coverage', href: '/team-coverage', icon: Shield },
             { title: 'Pool templates', href: '/pool-templates', icon: LayoutList },
             { title: 'Usage stats', href: '/usage-stats', icon: BarChart3 },
         ],

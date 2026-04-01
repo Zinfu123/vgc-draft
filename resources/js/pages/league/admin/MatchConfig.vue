@@ -21,6 +21,8 @@ interface MatchConfig {
     frequency_value: number;
     status: number;
     require_team_match_pokepaste_before_results?: boolean;
+    require_replays_before_results?: boolean;
+    auto_complete_set_from_replays?: boolean;
 }
 
 const props = defineProps<{
@@ -40,6 +42,8 @@ const matchConfigForm = useForm({
     frequency_type: props.matchConfig?.frequency_type ?? 1,
     frequency_value: props.matchConfig?.frequency_value ?? null,
     require_team_match_pokepaste_before_results: props.matchConfig?.require_team_match_pokepaste_before_results ?? false,
+    require_replays_before_results: props.matchConfig?.require_replays_before_results ?? false,
+    auto_complete_set_from_replays: props.matchConfig?.auto_complete_set_from_replays ?? false,
     command: props.matchConfig?.id ? 'update' : 'create',
 });
 
@@ -109,6 +113,28 @@ const createSets = () => {
                         />
                         <label for="require_pokepaste" class="text-sm leading-snug">
                             Require both teams to submit their match team paste (Pokepaste) before pool set or playoff results can be saved.
+                        </label>
+                    </div>
+                    <div class="flex items-start gap-2 pt-1">
+                        <input
+                            id="require_replays"
+                            v-model="matchConfigForm.require_replays_before_results"
+                            type="checkbox"
+                            class="mt-1 size-4 rounded border-input"
+                        />
+                        <label for="require_replays" class="text-sm leading-snug">
+                            Require at least one saved Showdown replay on a pool set before match results can be submitted.
+                        </label>
+                    </div>
+                    <div class="flex items-start gap-2 pt-1">
+                        <input
+                            id="auto_replay_result"
+                            v-model="matchConfigForm.auto_complete_set_from_replays"
+                            type="checkbox"
+                            class="mt-1 size-4 rounded border-input"
+                        />
+                        <label for="auto_replay_result" class="text-sm leading-snug">
+                            When replays are saved, automatically complete the set from replay logs if both coaches have a Showdown username on file and the series reaches 2–0 or 2–1 (parsed from |win| lines).
                         </label>
                     </div>
                     <div class="flex justify-end pt-2">

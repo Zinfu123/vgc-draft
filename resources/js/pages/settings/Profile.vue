@@ -31,6 +31,7 @@ const user = page.props.auth.user as User;
 const form = useForm({
     name: user.name,
     email: user.email,
+    showdown_username: user.showdown_username ?? '',
 });
 
 const submit = () => {
@@ -71,6 +72,22 @@ const disconnectDiscord = () => {
                             placeholder="Email address"
                         />
                         <InputError class="mt-2" :message="form.errors.email" />
+                    </div>
+
+                    <div class="grid gap-2">
+                        <Label for="showdown_username">Pokémon Showdown username</Label>
+                        <Input
+                            id="showdown_username"
+                            type="text"
+                            class="mt-1 block w-full"
+                            v-model="form.showdown_username"
+                            autocomplete="off"
+                            placeholder="Same name as in Showdown battles (optional)"
+                        />
+                        <InputError class="mt-2" :message="form.errors.showdown_username" />
+                        <p class="text-sm text-muted-foreground">
+                            Used to match replay logs to your team when importing rosters or when the league auto-grades from replays.
+                        </p>
                     </div>
 
                     <div v-if="mustVerifyEmail && !user.email_verified_at">

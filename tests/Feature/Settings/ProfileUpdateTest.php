@@ -35,6 +35,37 @@ test('profile information can be updated', function () {
     expect($user->email_verified_at)->toBeNull();
 });
 
+test('showdown username can be saved on the profile', function () {
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->patch('/settings/profile', [
+            'name' => $user->name,
+            'email' => $user->email,
+            'showdown_username' => 'MyShowdown_Name-1',
+        ]);
+
+    $response->assertSessionHasNoErrors()->assertRedirect('/settings/profile');
+
+    expect($user->refresh()->showdown_username)->toBe('MyShowdown_Name-1');
+});
+
+test('invalid showdown username is rejected', function () {
+    $user = User::factory()->create();
+
+    $response = $this
+        ->actingAs($user)
+        ->from('/settings/profile')
+        ->patch('/settings/profile', [
+            'name' => $user->name,
+            'email' => $user->email,
+            'showdown_username' => 'bad<name>',
+        ]);
+
+    $response->assertSessionHasErrors('showdown_username');
+});
+
 test('email verification status is unchanged when the email address is unchanged', function () {
     $user = User::factory()->create();
 

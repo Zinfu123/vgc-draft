@@ -3,9 +3,11 @@ import PokemonCard from '@/components/pokemon/PokemonCard.vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { isReverbBroadcastClientConfigured } from '@/lib/broadcasting';
 import { type BreadcrumbItem } from '@/types';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { useEchoPublic } from '@laravel/echo-vue';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
+
+const page = usePage();
 
 interface Set {
     id: number;
@@ -19,6 +21,7 @@ interface Set {
         user: {
             id: number;
             name: string;
+            showdown_username?: string | null;
         };
         pokemon: [
             {
@@ -42,6 +45,7 @@ interface Set {
         user: {
             id: number;
             name: string;
+            showdown_username?: string | null;
         };
         pokemon: [
             {
@@ -91,6 +95,7 @@ interface props {
     matchPokepasteSides: MatchPokepasteSides;
     isLeagueAdmin: boolean;
     requireTeamMatchPokepasteBeforeResults?: boolean;
+    requireReplaysBeforeResults?: boolean;
 }
 
 const props = defineProps<props>();
@@ -115,6 +120,143 @@ const reopenForm = useForm({
     command: 'reopen' as const,
     set_id: props.set.id,
 });
+
+const importReplayModalOpen = ref(false);
+
+const importFromReplayForm = useForm({
+    set_id: props.set.id,
+    replay_slot: 1,
+    p1_team_id: props.set.team1.id,
+});
+
+const flashSuccess = computed((): string | null => {
+    const f = page.props.flash as { success?: string } | undefined;
+    return f?.success ?? null;
+});
+
+const savedReplayOptions = computed((): { slot: number; label: string; url: string }[] => {
+    const out: { slot: number; label: string; url: string }[] = [];
+    const r1 = props.set.replay1?.trim();
+    const r2 = props.set.replay2?.trim();
+    const r3 = props.set.replay3?.trim();
+    if (r1) {
+        out.push({ slot: 1, label: 'Game 1', url: r1 });
+    }
+    if (r2) {
+        out.push({ slot: 2, label: 'Game 2', url: r2 });
+    }
+    if (r3) {
+        out.push({ slot: 3, label: 'Game 3', url: r3 });
+    }
+
+    return out;
+});
+
+const hasSavedReplayUrl = computed((): boolean => savedReplayOptions.value.length > 0);
+
+const hasServerSavedReplay = computed((): boolean => {
+    return !!(
+        props.set.replay1?.trim() ||
+        props.set.replay2?.trim() ||
+        props.set.replay3?.trim()
+    );
+});
+
+const replayPreviewLoading = ref(false);
+const replayPreviewError = ref<string | null>(null);
+const replayPreviewData = ref<{
+    p1_name: string;
+    p2_name: string;
+    suggested_p1_team_id: number | null;
+    needs_manual_p1_map: boolean;
+} | null>(null);
+
+function readXsrfToken(): string {
+    const match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);
+    return match ? decodeURIComponent(match[1]) : '';
+}
+
+async function fetchReplayPlayerPreview(): Promise<void> {
+    replayPreviewLoading.value = true;
+    replayPreviewError.value = null;
+    replayPreviewData.value = null;
+    try {
+        const res = await fetch(route('sets.preview-replay-players'), {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-XSRF-TOKEN': readXsrfToken(),
+            },
+            body: JSON.stringify({
+                set_id: props.set.id,
+                replay_slot: importFromReplayForm.replay_slot,
+            }),
+        });
+        const json = (await res.json().catch(() => ({}))) as {
+            ok?: boolean;
+            message?: string;
+            errors?: string[];
+            p1_name?: string;
+            p2_name?: string;
+            suggested_p1_team_id?: number | null;
+            needs_manual_p1_map?: boolean;
+        };
+        if (!res.ok || !json.ok) {
+            const msg =
+                json.message ||
+                (Array.isArray(json.errors) ? json.errors.join(' ') : null) ||
+                'Could not read Showdown players from this replay.';
+            replayPreviewError.value = msg;
+            importFromReplayForm.p1_team_id = props.set.team1.id;
+
+            return;
+        }
+        replayPreviewData.value = {
+            p1_name: json.p1_name ?? '',
+            p2_name: json.p2_name ?? '',
+            suggested_p1_team_id: json.suggested_p1_team_id ?? null,
+            needs_manual_p1_map: !!json.needs_manual_p1_map,
+        };
+        if (json.suggested_p1_team_id != null && json.needs_manual_p1_map === false) {
+            importFromReplayForm.p1_team_id = json.suggested_p1_team_id;
+        } else {
+            importFromReplayForm.p1_team_id = props.set.team1.id;
+        }
+    } catch {
+        replayPreviewError.value = 'Could not load replay preview.';
+        importFromReplayForm.p1_team_id = props.set.team1.id;
+    } finally {
+        replayPreviewLoading.value = false;
+    }
+}
+
+watch(importReplayModalOpen, (open) => {
+    if (!open) {
+        replayPreviewError.value = null;
+        replayPreviewData.value = null;
+
+        return;
+    }
+    const first = savedReplayOptions.value[0];
+    if (first) {
+        importFromReplayForm.replay_slot = first.slot;
+    }
+    importFromReplayForm.p1_team_id = props.set.team1.id;
+    importFromReplayForm.clearErrors();
+    void fetchReplayPlayerPreview();
+});
+
+watch(
+    () => importFromReplayForm.replay_slot,
+    () => {
+        if (importReplayModalOpen.value) {
+            void fetchReplayPlayerPreview();
+        }
+    },
+);
 
 type SetModel = {
     id: number;
@@ -172,6 +314,8 @@ const disableForm = computed((): boolean => {
         return true;
     } else if (props.requireTeamMatchPokepasteBeforeResults && !bothSidesPasteReady.value) {
         return true;
+    } else if (props.requireReplaysBeforeResults && !hasServerSavedReplay.value) {
+        return true;
     } else {
         return false;
     }
@@ -210,6 +354,19 @@ const handleReplaySubmit = () => {
     replayForm.put(route('sets.update-replays'));
 };
 
+const closeImportReplayModal = () => {
+    importReplayModalOpen.value = false;
+};
+
+const submitImportFromReplay = () => {
+    importFromReplayForm.post(route('sets.import-replay-teams'), {
+        preserveScroll: true,
+        onSuccess: () => {
+            importReplayModalOpen.value = false;
+        },
+    });
+};
+
 const handleReopenMatch = () => {
     if (
         !confirm(
@@ -226,6 +383,12 @@ const handleReopenMatch = () => {
         <Head :title="`${props.set.team1.name} vs ${props.set.team2.name}`" />
         <div class="mx-auto mt-6 mb-6 flex max-w-4xl flex-col items-center px-4 sm:mt-8 sm:mb-8">
             <h1 class="text-center text-2xl font-bold sm:text-3xl">{{ props.set.team1.name }} vs {{ props.set.team2.name }}</h1>
+            <p
+                v-if="flashSuccess"
+                class="text-green-700 dark:text-green-400 mt-4 max-w-lg text-center text-sm font-medium"
+            >
+                {{ flashSuccess }}
+            </p>
         </div>
         <div class="mt-8 flex w-full flex-col items-stretch gap-10 px-4 lg:flex-row lg:items-start lg:gap-4 lg:px-6">
             <div class="flex min-w-0 flex-1 flex-col">
@@ -236,6 +399,9 @@ const handleReopenMatch = () => {
                         {{ props.set.team1.name }}
                     </p>
                     <p class="text-center text-muted-foreground transition-colors hover:text-primary">Coach: {{ props.set.team1.user.name }}</p>
+                    <p v-if="props.set.team1.user?.showdown_username" class="text-center text-xs text-muted-foreground">
+                        Showdown: {{ props.set.team1.user.showdown_username }}
+                    </p>
                 </Link>
                 <p class="text-center text-2xl font-bold">Pokemon</p>
                 <div class="flex flex-wrap justify-center gap-4">
@@ -313,6 +479,12 @@ const handleReopenMatch = () => {
                                     Both teams must submit their match team paste before set results can be entered.
                                     <span v-if="!matchPokepasteSides.team1?.has_data" class="block">Missing paste: {{ props.set.team1.name }}</span>
                                     <span v-if="!matchPokepasteSides.team2?.has_data" class="block">Missing paste: {{ props.set.team2.name }}</span>
+                                </p>
+                                <p
+                                    v-else-if="!isSetCompleted && isUserInSet && requireReplaysBeforeResults && !hasServerSavedReplay"
+                                    class="text-amber-700 sm:col-span-6 text-sm dark:text-amber-400"
+                                >
+                                    At least one Showdown replay must be saved (use Save Replays) before you can submit set results for this league.
                                 </p>
                                 <p
                                     v-else-if="!isSetCompleted && isUserInSet && !canSubmitSetResult"
@@ -443,7 +615,22 @@ const handleReopenMatch = () => {
                                     >
                                         Save Replays
                                     </button>
+                                    <button
+                                        v-if="isUserInSet && hasSavedReplayUrl"
+                                        type="button"
+                                        :disabled="importFromReplayForm.processing"
+                                        class="min-h-11 touch-manipulation rounded-md border border-border bg-background px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:min-h-9 sm:px-3 sm:py-2"
+                                        @click="importReplayModalOpen = true"
+                                    >
+                                        Import rosters from replay
+                                    </button>
                                 </div>
+                                <p
+                                    v-if="page.props.errors && (page.props.errors as Record<string, string>).replay_import"
+                                    class="text-destructive sm:col-span-6 text-sm"
+                                >
+                                    {{ (page.props.errors as Record<string, string>).replay_import }}
+                                </p>
                             </div>
                         </div>
                         <div v-if="props.set.winner_id" class="mt-8 border-t border-border pt-8">
@@ -478,6 +665,9 @@ const handleReopenMatch = () => {
                         {{ props.set.team2.name }}
                     </p>
                     <p class="text-center text-muted-foreground transition-colors hover:text-primary">Coach: {{ props.set.team2.user.name }}</p>
+                    <p v-if="props.set.team2.user?.showdown_username" class="text-center text-xs text-muted-foreground">
+                        Showdown: {{ props.set.team2.user.showdown_username }}
+                    </p>
                 </Link>
                 <p class="text-center text-2xl font-bold">Pokemon</p>
                 <div class="flex flex-wrap justify-center gap-4">
@@ -486,6 +676,110 @@ const handleReopenMatch = () => {
                         :key="pokemon.id"
                         :pokemon="{ ...pokemon.pokemon, cost: pokemon.cost, type2: pokemon.pokemon.type2 || '-' }"
                     />
+                </div>
+            </div>
+        </div>
+        <div
+            v-if="importReplayModalOpen"
+            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="import-replay-title"
+            @click.self="closeImportReplayModal"
+        >
+            <div
+                class="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg border border-border bg-background p-6 shadow-lg"
+                @click.stop
+            >
+                <h2 id="import-replay-title" class="text-lg font-semibold text-foreground">Import rosters from Showdown replay</h2>
+                <p class="text-muted-foreground mt-2 text-sm">
+                    Uses the saved replay log to set both teams’ match paste species. Choose which replay and which league team is
+                    Showdown player 1 (p1); then complete abilities, moves, and items in each team paste.
+                </p>
+                <div class="mt-4 space-y-4">
+                    <fieldset>
+                        <legend class="text-sm font-medium text-foreground">Which replay?</legend>
+                        <div class="mt-2 space-y-2">
+                            <label
+                                v-for="opt in savedReplayOptions"
+                                :key="opt.slot"
+                                class="hover:bg-muted/50 flex cursor-pointer items-start gap-2 rounded-md border border-transparent p-2"
+                            >
+                                <input
+                                    v-model.number="importFromReplayForm.replay_slot"
+                                    type="radio"
+                                    name="replay_slot_import"
+                                    class="mt-1"
+                                    :value="opt.slot"
+                                />
+                                <span class="text-sm">
+                                    <span class="text-foreground font-medium">{{ opt.label }}</span>
+                                    <span class="text-muted-foreground block truncate text-xs">{{ opt.url }}</span>
+                                </span>
+                            </label>
+                        </div>
+                        <p v-if="importFromReplayForm.errors.replay_slot" class="text-destructive mt-1 text-sm">
+                            {{ importFromReplayForm.errors.replay_slot }}
+                        </p>
+                    </fieldset>
+                    <p v-if="replayPreviewLoading" class="text-muted-foreground text-sm">Reading replay…</p>
+                    <p v-else-if="replayPreviewError" class="text-destructive text-sm">{{ replayPreviewError }}</p>
+                    <template v-else-if="replayPreviewData">
+                        <p class="text-muted-foreground text-sm">
+                            Showdown:
+                            <span class="text-foreground font-medium">{{ replayPreviewData.p1_name }}</span>
+                            vs
+                            <span class="text-foreground font-medium">{{ replayPreviewData.p2_name }}</span>
+                        </p>
+                        <p
+                            v-if="!replayPreviewData.needs_manual_p1_map && replayPreviewData.suggested_p1_team_id"
+                            class="text-sm font-medium text-green-700 dark:text-green-400"
+                        >
+                            Player 1 (p1) matched your Settings → Profile Showdown names ({{
+                                replayPreviewData.suggested_p1_team_id === props.set.team1.id
+                                    ? props.set.team1.name
+                                    : props.set.team2.name
+                            }}).
+                        </p>
+                        <p v-else class="text-muted-foreground text-sm">
+                            Add your Pokémon Showdown username under Settings → Profile for automatic p1 matching, or choose manually
+                            below.
+                        </p>
+                    </template>
+                    <fieldset v-if="replayPreviewLoading || !replayPreviewData || replayPreviewData.needs_manual_p1_map">
+                        <legend class="text-sm font-medium text-foreground">Showdown player 1 (p1) is</legend>
+                        <div class="mt-2 space-y-2">
+                            <label class="flex cursor-pointer items-center gap-2">
+                                <input v-model.number="importFromReplayForm.p1_team_id" type="radio" name="p1_team_import" :value="props.set.team1.id" />
+                                <span class="text-foreground text-sm">{{ props.set.team1.name }}</span>
+                            </label>
+                            <label class="flex cursor-pointer items-center gap-2">
+                                <input v-model.number="importFromReplayForm.p1_team_id" type="radio" name="p1_team_import" :value="props.set.team2.id" />
+                                <span class="text-foreground text-sm">{{ props.set.team2.name }}</span>
+                            </label>
+                        </div>
+                        <p v-if="importFromReplayForm.errors.p1_team_id" class="text-destructive mt-1 text-sm">
+                            {{ importFromReplayForm.errors.p1_team_id }}
+                        </p>
+                    </fieldset>
+                    <p v-if="importFromReplayForm.errors.set_id" class="text-destructive text-sm">{{ importFromReplayForm.errors.set_id }}</p>
+                </div>
+                <div class="mt-6 flex flex-wrap justify-end gap-2">
+                    <button
+                        type="button"
+                        class="border-border bg-background text-foreground hover:bg-muted rounded-md border px-3 py-2 text-sm font-semibold"
+                        @click="closeImportReplayModal"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        :disabled="importFromReplayForm.processing || savedReplayOptions.length === 0"
+                        class="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-3 py-2 text-sm font-semibold disabled:opacity-50"
+                        @click="submitImportFromReplay"
+                    >
+                        Import both teams
+                    </button>
                 </div>
             </div>
         </div>

@@ -96,15 +96,25 @@ class UpdateSetRequest extends FormRequest
             }
 
             $league = League::query()->with('matchConfig')->find($set->league_id);
-            if ($league?->matchConfig?->require_team_match_pokepaste_before_results !== true) {
-                return;
+
+            if ($league?->matchConfig?->require_team_match_pokepaste_before_results === true) {
+                if (! app(EnforceTeamMatchPokepasteChecker::class)->poolSetBothSidesHaveData($set)) {
+                    $validator->errors()->add(
+                        'set_result',
+                        'Both teams must submit their match teamsheet (Pokepaste) before results can be saved.'
+                    );
+
+                    return;
+                }
             }
 
-            if (! app(EnforceTeamMatchPokepasteChecker::class)->poolSetBothSidesHaveData($set)) {
-                $validator->errors()->add(
-                    'set_result',
-                    'Both teams must submit their match teamsheet (Pokepaste) before results can be saved.'
-                );
+            if ($league?->matchConfig?->require_replays_before_results === true) {
+                if ($set->replay1 === null && $set->replay2 === null && $set->replay3 === null) {
+                    $validator->errors()->add(
+                        'set_result',
+                        'At least one Pokémon Showdown replay must be saved for this set before results can be submitted.'
+                    );
+                }
             }
         });
     }

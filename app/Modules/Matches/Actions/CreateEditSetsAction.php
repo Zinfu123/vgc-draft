@@ -8,6 +8,7 @@ use App\Modules\Matches\Models\Pool;
 use App\Modules\Matches\Models\Set;
 use App\Modules\Matches\Services\PoolSetStandingsAdjuster;
 use App\Modules\Pokepaste\Services\EnforceTeamMatchPokepasteChecker;
+use App\Modules\Pokepaste\Services\ReplaySetOutcomeAggregator;
 use App\Modules\Teams\Models\Team;
 use App\Notifications\MatchReplaysNotification;
 use App\Notifications\MatchResultNotification;
@@ -163,6 +164,24 @@ class CreateEditSetsAction
                 $league = League::find($set->league_id);
                 $set->load(['team1', 'team2']);
                 $league->notify(new MatchReplaysNotification($set));
+            }
+
+            $set->refresh();
+            $leagueForAuto = League::with('matchConfig')->find($set->league_id);
+            if ((int) $set->status === 1
+                && $set->team2_id !== null
+                && $leagueForAuto?->matchConfig?->auto_complete_set_from_replays === true) {
+                $scores = app(ReplaySetOutcomeAggregator::class)->aggregateScoresFromSetReplays($set);
+                if ($scores !== null) {
+                    $this->__invoke([
+                        'command' => 'update',
+                        'set_id' => $set->id,
+                        'team1_id' => $set->team1_id,
+                        'team2_id' => $set->team2_id,
+                        'team1_score' => $scores['team1_score'],
+                        'team2_score' => $scores['team2_score'],
+                    ]);
+                }
             }
 
             return true;

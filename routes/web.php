@@ -17,6 +17,7 @@ use App\Modules\Pokedex\Controllers\PokedexController;
 use App\Modules\Pokedex\Controllers\PokedexItemController;
 use App\Modules\Pokepaste\Controllers\PokepasteController;
 use App\Modules\Stats\Controllers\PokemonUsageStatsController;
+use App\Modules\TeamCoverage\Controllers\TeamCoveragePlannerController;
 use App\Modules\Teams\Controllers\TeamController;
 use App\Modules\Trade\Controllers\TradeController;
 /* End Define Controllers */
@@ -141,6 +142,8 @@ Route::prefix('match')->group(function () {
     Route::get('/set/{set_id}', [SetController::class, 'show'])->middleware(['auth', 'verified'])->name('sets.show');
     Route::put('/', [SetController::class, 'update'])->middleware(['auth', 'verified'])->name('sets.update');
     Route::put('/replays', [SetController::class, 'updateReplays'])->middleware(['auth', 'verified'])->name('sets.update-replays');
+    Route::post('/replays/import-teams', [SetController::class, 'importReplayTeams'])->middleware(['auth', 'verified'])->name('sets.import-replay-teams');
+    Route::post('/replays/preview-players', [SetController::class, 'previewReplayPlayers'])->middleware(['auth', 'verified'])->name('sets.preview-replay-players');
 });
 
 Route::get('/pokepaste/{pokepaste}', [PokepasteController::class, 'show'])->name('pokepaste.show');
@@ -160,6 +163,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/match-prep', [MatchPrepController::class, 'index'])->name('match-prep.index');
     Route::put('/match-prep/{set}', [MatchPrepController::class, 'update'])->name('match-prep.update');
     Route::post('/match-prep/{set}/share', [MatchPrepController::class, 'updateShare'])->name('match-prep.share');
+
+    Route::prefix('team-coverage')->name('team-coverage.')->group(function () {
+        Route::get('/', [TeamCoveragePlannerController::class, 'show'])->name('index');
+        Route::get('/pokedex-search', [TeamCoveragePlannerController::class, 'search'])->name('pokedex-search');
+        Route::get('/pokedex/{pokedex}/learnset', [TeamCoveragePlannerController::class, 'learnset'])
+            ->whereNumber('pokedex')
+            ->name('learnset');
+        Route::get('/teams/{team}/roster', [TeamCoveragePlannerController::class, 'roster'])
+            ->whereNumber('team')
+            ->name('roster');
+    });
 });
 
 Broadcast::routes();

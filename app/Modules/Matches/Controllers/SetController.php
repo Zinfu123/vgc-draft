@@ -3,13 +3,24 @@
 namespace App\Modules\Matches\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Match\ImportSetReplayTeamsRequest;
+use App\Http\Requests\Match\PreviewSetReplayPlayersRequest;
+use App\Http\Requests\Match\UpdateSetReplaysRequest;
 use App\Http\Requests\Match\UpdateSetRequest;
 use App\Modules\League\Models\League;
 use App\Modules\Matches\Actions\CreateEditSetsAction;
 use App\Modules\Matches\Actions\ShowSetsAction;
+use App\Modules\Matches\Models\Set;
+use App\Modules\Pokepaste\Actions\ImportSetTeamsFromShowdownReplayAction;
 use App\Modules\Pokepaste\Actions\ReadMatchPokepastePayloadAction;
 use App\Modules\Pokepaste\Actions\ReadMatchPokepasteSideSummariesAction;
+use App\Modules\Pokepaste\Services\ShowdownReplayLogFetcher;
+use App\Modules\Pokepaste\Services\ShowdownReplayLogUrl;
+use App\Modules\Pokepaste\Services\ShowdownReplayPlayerNamesParser;
+use App\Modules\Pokepaste\Services\SuggestP1TeamFromShowdownReplay;
 use App\Modules\Teams\Models\Team;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -70,6 +81,7 @@ class SetController extends Controller
             'matchPokepasteSides' => fn () => $readMatchPokepasteSideSummariesAction($set),
             'isLeagueAdmin' => fn () => $isLeagueAdmin,
             'requireTeamMatchPokepasteBeforeResults' => fn () => (bool) ($league?->matchConfig?->require_team_match_pokepaste_before_results ?? false),
+            'requireReplaysBeforeResults' => fn () => (bool) ($league?->matchConfig?->require_replays_before_results ?? false),
         ]);
     }
 
@@ -87,23 +99,75 @@ class SetController extends Controller
         return redirect()->route('sets.show', ['set_id' => $request->set_id]);
     }
 
-    public function updateReplays(Request $request, CreateEditSetsAction $createEditSetsAction)
+    public function updateReplays(UpdateSetReplaysRequest $request, CreateEditSetsAction $createEditSetsAction)
     {
-        $request->validate([
-            'set_id' => 'required|integer|exists:sets,id',
-            'replay1' => 'nullable|url|max:500',
-            'replay2' => 'nullable|url|max:500',
-            'replay3' => 'nullable|url|max:500',
-        ]);
+        $data = $request->validated();
 
         $createEditSetsAction([
             'command' => 'updateReplays',
-            'set_id' => $request->set_id,
-            'replay1' => $request->replay1,
-            'replay2' => $request->replay2,
-            'replay3' => $request->replay3,
+            'set_id' => $data['set_id'],
+            'replay1' => $data['replay1'] ?? null,
+            'replay2' => $data['replay2'] ?? null,
+            'replay3' => $data['replay3'] ?? null,
         ]);
 
-        return redirect()->route('sets.show', ['set_id' => $request->set_id]);
+        return redirect()->route('sets.show', ['set_id' => $data['set_id']]);
+    }
+
+    public function previewReplayPlayers(
+        PreviewSetReplayPlayersRequest $request,
+        ShowdownReplayLogFetcher $logFetcher,
+        ShowdownReplayPlayerNamesParser $playerNamesParser,
+        SuggestP1TeamFromShowdownReplay $suggestP1TeamFromShowdownReplay,
+    ): JsonResponse {
+        $set = Set::query()->with(['team1.user', 'team2.user'])->findOrFail($request->validated('set_id'));
+        $slot = (int) $request->validated('replay_slot');
+        $replayUrl = match ($slot) {
+            1 => $set->replay1,
+            2 => $set->replay2,
+            3 => $set->replay3,
+            default => null,
+        };
+
+        try {
+            $logUrl = ShowdownReplayLogUrl::resolveLogDownloadUrl((string) $replayUrl);
+            $logText = $logFetcher->fetch($logUrl);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'ok' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+
+        $parsed = $playerNamesParser->parse($logText);
+        if ($parsed['errors'] !== []) {
+            return response()->json([
+                'ok' => false,
+                'errors' => $parsed['errors'],
+            ], 422);
+        }
+
+        $suggested = $suggestP1TeamFromShowdownReplay->suggest($set, $parsed['p1'], $parsed['p2']);
+
+        return response()->json([
+            'ok' => true,
+            'p1_name' => $parsed['p1'],
+            'p2_name' => $parsed['p2'],
+            'suggested_p1_team_id' => $suggested,
+            'needs_manual_p1_map' => $suggested === null,
+        ]);
+    }
+
+    public function importReplayTeams(
+        ImportSetReplayTeamsRequest $request,
+        ImportSetTeamsFromShowdownReplayAction $importSetTeamsFromShowdownReplayAction,
+    ): RedirectResponse {
+        $set = Set::query()->findOrFail($request->validated('set_id'));
+
+        return $importSetTeamsFromShowdownReplayAction(
+            $set,
+            (int) $request->validated('replay_slot'),
+            (int) $request->validated('p1_team_id'),
+        );
     }
 }
