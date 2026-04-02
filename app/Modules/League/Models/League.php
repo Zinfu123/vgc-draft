@@ -80,6 +80,11 @@ class League extends Model
         return $this->hasMany(LeaguePokemon::class, 'league_id');
     }
 
+    public function winnerUser(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(\App\Models\User::class, 'winner');
+    }
+
     public function versionGroup(): ?VersionGroup
     {
         return VersionGroup::query()->where('slug', $this->pokemon_game->versionGroupSlug())->first();

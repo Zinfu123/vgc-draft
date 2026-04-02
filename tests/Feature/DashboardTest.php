@@ -195,6 +195,93 @@ test('dashboard open leagues expose draft_date as Y-m-d', function () {
     );
 });
 
+test('dashboard past leagues include podium and winner from eager-loaded data', function () {
+    $owner = User::factory()->create();
+    $first = User::factory()->create();
+    $second = User::factory()->create();
+    $third = User::factory()->create();
+
+    $league = League::create([
+        'name' => 'Finished League',
+        'status' => 0,
+        'open' => false,
+        'draft_points' => 100,
+        'league_owner' => $owner->id,
+        'winner' => $first->id,
+    ]);
+
+    Team::create([
+        'name' => 'Owner Team',
+        'league_id' => $league->id,
+        'user_id' => $owner->id,
+        'admin_flag' => 1,
+        'pick_position' => 1,
+        'draft_points' => 100,
+        'victory_points' => 0,
+        'set_wins' => 0,
+        'set_losses' => 0,
+        'game_wins' => 0,
+        'game_losses' => 0,
+    ]);
+
+    Team::create([
+        'name' => 'First Place',
+        'league_id' => $league->id,
+        'user_id' => $first->id,
+        'admin_flag' => 0,
+        'pick_position' => 2,
+        'draft_points' => 100,
+        'victory_points' => 0,
+        'set_wins' => 0,
+        'set_losses' => 0,
+        'game_wins' => 0,
+        'game_losses' => 0,
+        'medal_placement' => 1,
+    ]);
+
+    Team::create([
+        'name' => 'Second Place',
+        'league_id' => $league->id,
+        'user_id' => $second->id,
+        'admin_flag' => 0,
+        'pick_position' => 3,
+        'draft_points' => 100,
+        'victory_points' => 0,
+        'set_wins' => 0,
+        'set_losses' => 0,
+        'game_wins' => 0,
+        'game_losses' => 0,
+        'medal_placement' => 2,
+    ]);
+
+    Team::create([
+        'name' => 'Third Place',
+        'league_id' => $league->id,
+        'user_id' => $third->id,
+        'admin_flag' => 0,
+        'pick_position' => 4,
+        'draft_points' => 100,
+        'victory_points' => 0,
+        'set_wins' => 0,
+        'set_losses' => 0,
+        'game_wins' => 0,
+        'game_losses' => 0,
+        'medal_placement' => 3,
+    ]);
+
+    $response = $this->actingAs($owner)->get('/dashboard');
+
+    $response->assertOk();
+    $response->assertInertia(
+        fn ($page) => $page
+            ->has('usersPastLeagues', 1)
+            ->where('usersPastLeagues.0.winner', $first->name)
+            ->where('usersPastLeagues.0.podium.first', $first->name)
+            ->where('usersPastLeagues.0.podium.second', $second->name)
+            ->where('usersPastLeagues.0.podium.third', $third->name)
+    );
+});
+
 test('dashboard excludes leagues marked as not open', function () {
     $user = User::factory()->create();
 

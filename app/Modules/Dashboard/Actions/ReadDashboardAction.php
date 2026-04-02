@@ -2,7 +2,6 @@
 
 namespace App\Modules\Dashboard\Actions;
 
-use App\Models\User;
 use App\Modules\League\Models\League;
 use App\Modules\Playoffs\Models\PlayoffMatch;
 use App\Modules\Teams\Models\Team;
@@ -15,7 +14,11 @@ class ReadDashboardAction
         if ($data['command'] == 'usersActiveLeagues') {
             return Team::where('user_id', $data['user_id'])
                 ->whereHas('league', fn ($query) => $query->where('status', 1))
-                ->with('league.draftConfig')
+                ->with([
+                    'league.draftConfig',
+                    'league.winnerUser',
+                    'league.teams' => fn ($query) => $query->whereIn('medal_placement', [1, 2, 3])->with('user'),
+                ])
                 ->get()
                 ->map(fn (Team $team) => $this->leagueShape($team));
         }
@@ -23,7 +26,11 @@ class ReadDashboardAction
         if ($data['command'] == 'usersPastLeagues') {
             return Team::where('user_id', $data['user_id'])
                 ->whereHas('league', fn ($query) => $query->where('status', 0))
-                ->with('league.draftConfig')
+                ->with([
+                    'league.draftConfig',
+                    'league.winnerUser',
+                    'league.teams' => fn ($query) => $query->whereIn('medal_placement', [1, 2, 3])->with('user'),
+                ])
                 ->get()
                 ->map(fn (Team $team) => $this->leagueShape($team));
         }
@@ -120,13 +127,7 @@ class ReadDashboardAction
             ? str_replace('\\', '/', Storage::disk('s3-league-logos')->url($league->logo))
             : null;
 
-        $winner = $league->winner !== null
-            ? User::find($league->winner)?->name
-            : null;
-
-        $first = Team::query()->where('league_id', $league->id)->where('medal_placement', 1)->with('user')->first();
-        $second = Team::query()->where('league_id', $league->id)->where('medal_placement', 2)->with('user')->first();
-        $third = Team::query()->where('league_id', $league->id)->where('medal_placement', 3)->with('user')->first();
+        $podiumTeams = $league->teams->keyBy('medal_placement');
 
         return [
             'id' => $league->id,
@@ -135,11 +136,11 @@ class ReadDashboardAction
             'draft_date' => $league->draftConfig?->draft_date?->toDateString(),
             'set_start_date' => $league->set_start_date,
             'logo' => $logo,
-            'winner' => $winner,
+            'winner' => $league->winnerUser?->name,
             'podium' => [
-                'first' => $first?->user?->name,
-                'second' => $second?->user?->name,
-                'third' => $third?->user?->name,
+                'first' => $podiumTeams->get(1)?->user?->name,
+                'second' => $podiumTeams->get(2)?->user?->name,
+                'third' => $podiumTeams->get(3)?->user?->name,
             ],
         ];
     }
