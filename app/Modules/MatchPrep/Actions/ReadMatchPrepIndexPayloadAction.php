@@ -49,10 +49,43 @@ class ReadMatchPrepIndexPayloadAction
                 'team_id' => $team->id,
             ]);
 
+            // Eager-load both teams on the entire collection at once
+            $sets->loadMissing(['team1', 'team2']);
+
+            // Load my roster once — it's constant across all sets
+            $myRoster = LeaguePokemon::query()
+                ->where('drafted_by', $team->id)
+                ->where('league_id', $selectedLeagueId)
+                ->with('pokemon')
+                ->orderByDesc('cost')
+                ->get();
+            $myRosterBuilt = ($this->buildDraftPreview)($myRoster);
+
+            // Collect all opponent team IDs then load all their rosters in one query
+            $opponentTeamIds = $sets->map(fn (Set $set) => $set->team1_id === $team->id ? $set->team2_id : $set->team1_id)
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+
+            $allOpponentRosters = LeaguePokemon::query()
+                ->whereIn('drafted_by', $opponentTeamIds)
+                ->where('league_id', $selectedLeagueId)
+                ->with('pokemon')
+                ->orderByDesc('cost')
+                ->get()
+                ->groupBy('drafted_by');
+
+            // Load all notes for these sets in one query
+            $allNotes = MatchPrepNote::query()
+                ->where('user_id', $user->id)
+                ->whereIn('set_id', $sets->pluck('id')->all())
+                ->get()
+                ->keyBy('set_id');
+
             $logoAction = new LogoToUrlAction;
 
             foreach ($sets->sortBy('round') as $set) {
-                $set->loadMissing(['team1', 'team2']);
                 $opponentTeam = $set->team1_id === $team->id ? $set->team2 : $set->team1;
                 if ($opponentTeam === null) {
                     continue;
@@ -63,24 +96,8 @@ class ReadMatchPrepIndexPayloadAction
                     $opponentLogo = $logoAction->logoToUrl($opponentLogo);
                 }
 
-                $opponentRoster = LeaguePokemon::query()
-                    ->where('drafted_by', $opponentTeam->id)
-                    ->where('league_id', $set->league_id)
-                    ->with('pokemon')
-                    ->orderByDesc('cost')
-                    ->get();
-
-                $myRoster = LeaguePokemon::query()
-                    ->where('drafted_by', $team->id)
-                    ->where('league_id', $set->league_id)
-                    ->with('pokemon')
-                    ->orderByDesc('cost')
-                    ->get();
-
-                $note = MatchPrepNote::query()
-                    ->where('user_id', $user->id)
-                    ->where('set_id', $set->id)
-                    ->first();
+                $opponentRoster = $allOpponentRosters->get($opponentTeam->id) ?? collect();
+                $note = $allNotes->get($set->id);
 
                 $setsPayload[] = [
                     'my_team_id' => $team->id,
@@ -102,7 +119,7 @@ class ReadMatchPrepIndexPayloadAction
                         'logo' => $opponentLogo,
                         'roster' => ($this->buildDraftPreview)($opponentRoster),
                     ],
-                    'my_roster' => ($this->buildDraftPreview)($myRoster),
+                    'my_roster' => $myRosterBuilt,
                     'note' => MatchPrepNotePayload::forNote($note),
                 ];
             }

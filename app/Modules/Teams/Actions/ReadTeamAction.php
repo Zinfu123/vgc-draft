@@ -2,8 +2,6 @@
 
 namespace App\Modules\Teams\Actions;
 
-use App\Models\User;
-use App\Modules\Pokedex\Models\Pokedex;
 use App\Modules\Shared\Actions\LogoToUrlAction;
 use App\Modules\Teams\Models\Team;
 
@@ -30,7 +28,7 @@ class ReadTeamAction
                 return $team;
             });
             $teams = $teams->map(function ($team) {
-                $team->coach = User::find($team->user_id)?->name ?? '—';
+                $team->coach = $team->user?->name ?? '—';
 
                 return $team;
             });
@@ -38,21 +36,19 @@ class ReadTeamAction
             return $teams;
         } elseif ($data['command'] == 'team') {
             $team = Team::where('id', $data['team_id'])
-                ->with('pokemon')
+                ->with([
+                    'user',
+                    'pokemon.pokemon' => fn ($q) => $q->select('id', 'name', 'sprite_url', 'type1', 'type2'),
+                ])
                 ->first();
 
-            $team->pokemon = $team->pokemon->map(function ($pokemon) {
-                $pokemon->pokemon = Pokedex::where('id', $pokemon->pokedex_id)->select('id', 'name', 'sprite_url', 'type1', 'type2')->first();
-
-                return $pokemon;
-            });
             if ($team->logo !== null && trim($team->logo) !== '') {
                 $action = new LogoToUrlAction;
                 $team->logo = $action->logoToUrl($team->logo);
             } else {
                 $team->logo = null;
             }
-            $team->coach = User::find($team->user_id)->name;
+            $team->coach = $team->user->name;
 
             return $team;
         } elseif ($data['command'] == 'standings') {

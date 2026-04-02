@@ -185,16 +185,20 @@ class TeamCoveragePlannerController extends Controller
             ->orderBy('name')
             ->get();
 
+        // Batch-load all game data for the roster in one query
+        $dexIds = $roster->pluck('pokedex_id')->filter()->unique()->values()->all();
+        $gameDataByDexId = ($versionGroup !== null && $dexIds !== [])
+            ? PokemonGenerationData::query()
+                ->whereIn('pokedex_id', $dexIds)
+                ->where('version_group_id', $versionGroup->id)
+                ->get()
+                ->keyBy('pokedex_id')
+            : collect();
+
         $slots = [];
         foreach ($roster as $lp) {
             $dex = $lp->pokemon;
-            $gameData = null;
-            if ($dex !== null && $versionGroup !== null) {
-                $gameData = PokemonGenerationData::query()
-                    ->where('pokedex_id', $dex->id)
-                    ->where('version_group_id', $versionGroup->id)
-                    ->first();
-            }
+            $gameData = $dex !== null ? $gameDataByDexId->get($dex->id) : null;
 
             $type1 = $gameData?->type1 ?? $dex?->type1;
             $type2 = $gameData?->type2 ?? $dex?->type2;

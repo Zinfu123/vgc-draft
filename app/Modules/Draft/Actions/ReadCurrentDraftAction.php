@@ -3,7 +3,6 @@
 namespace App\Modules\Draft\Actions;
 
 /* Define Models */
-use App\Models\User;
 use App\Modules\Draft\Models\BanOrder;
 use App\Modules\Draft\Models\Bans;
 use App\Modules\Draft\Models\Draft;
@@ -71,7 +70,7 @@ class ReadCurrentDraftAction
             return $teams;
         } elseif ($data['command'] == 'currentbanner') {
             $currentBanner = BanOrder::where('league_id', $data['league_id'])
-                ->with('team')
+                ->with('team.user')
                 ->where('status', 1)
                 ->orderBy('round_number', 'asc')
                 ->orderBy('ban_number', 'asc')
@@ -81,7 +80,7 @@ class ReadCurrentDraftAction
                 if ($currentBanner->team->logo !== null) {
                     $currentBanner->team->logo = str_replace('\\', '/', Storage::disk('s3-team-logos')->url($currentBanner->team->logo));
                 }
-                $currentBanner->team->coach = User::where('id', $currentBanner->team->user_id)->value('name');
+                $currentBanner->team->coach = $currentBanner->team->user?->name;
             }
 
             return $currentBanner;
@@ -148,13 +147,12 @@ class ReadCurrentDraftAction
         } elseif ($data['command'] == 'lastpick') {
             $lastpick = DraftPick::where('league_id', $data['league_id'])->with('leaguePokemon.pokemon')->orderBy('round_number', 'desc')->orderBy('pick_number', 'desc')->first();
             if ($lastpick !== null) {
-                $lastpick->team = Team::where('id', $lastpick->team_id)->where('league_id', $lastpick->league_id)->first();
+                $lastpick->team = Team::with('user')->where('id', $lastpick->team_id)->where('league_id', $lastpick->league_id)->first();
                 if ($lastpick->team !== null) {
                     if ($lastpick->team->logo !== null) {
                         $lastpick->team->logo = str_replace('\\', '/', Storage::disk('s3-team-logos')->url($lastpick->team->logo));
                     }
-                    $user = User::where('id', $lastpick->team->user_id)->value('name');
-                    $lastpick->team->coach = $user ?? null;
+                    $lastpick->team->coach = $lastpick->team->user?->name;
                 }
             }
 
