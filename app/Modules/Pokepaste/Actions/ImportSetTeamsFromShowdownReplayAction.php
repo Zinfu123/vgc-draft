@@ -14,6 +14,7 @@ use App\Modules\Pokepaste\Services\ShowdownReplayLogFetcher;
 use App\Modules\Pokepaste\Services\ShowdownReplayLogUrl;
 use App\Modules\Pokepaste\Services\ShowdownReplayTeamPreviewParser;
 use App\Modules\Teams\Models\Team;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -190,7 +191,17 @@ class ImportSetTeamsFromShowdownReplayAction
 
         ($this->ensureSlotRows)($paste);
 
-        $normalized = $this->slotValidator->validateAndNormalize($team, $league, $slots, allowPartialSave: true);
+        $existingRows = SetTeamPokepasteSlot::query()
+            ->where('set_team_pokepaste_id', $paste->id)
+            ->orderBy('slot_index')
+            ->get();
+
+        $slotsToNormalize = $slots;
+        if ($this->existingPasteSpeciesMatchIncoming($slots, $existingRows)) {
+            $slotsToNormalize = $this->mergeIncomingSlotsPreservingSavedDetails($slots, $existingRows);
+        }
+
+        $normalized = $this->slotValidator->validateAndNormalize($team, $league, $slotsToNormalize, allowPartialSave: true);
 
         foreach ($normalized as $index => $slot) {
             SetTeamPokepasteSlot::query()->updateOrCreate(
@@ -201,6 +212,74 @@ class ImportSetTeamsFromShowdownReplayAction
                 SetTeamPokepasteSlot::attributesFromNormalizedSlot($slot)
             );
         }
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $incomingSlots
+     * @param  EloquentCollection<int, SetTeamPokepasteSlot>  $existingRows
+     */
+    private function existingPasteSpeciesMatchIncoming(array $incomingSlots, EloquentCollection $existingRows): bool
+    {
+        $incomingIds = collect($incomingSlots)
+            ->pluck('league_pokemon_id')
+            ->map(fn ($id) => is_numeric($id) ? (int) $id : 0)
+            ->filter(fn (int $id) => $id > 0)
+            ->sort()
+            ->values()
+            ->all();
+
+        $existingIds = $existingRows
+            ->pluck('league_pokemon_id')
+            ->map(fn ($id) => $id !== null ? (int) $id : 0)
+            ->filter(fn (int $id) => $id > 0)
+            ->sort()
+            ->values()
+            ->all();
+
+        if (count($incomingIds) !== 6 || count($existingIds) !== 6) {
+            return false;
+        }
+
+        return $incomingIds === $existingIds;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $incomingSlots
+     * @param  EloquentCollection<int, SetTeamPokepasteSlot>  $existingRows
+     * @return array<int, array<string, mixed>>
+     */
+    private function mergeIncomingSlotsPreservingSavedDetails(array $incomingSlots, EloquentCollection $existingRows): array
+    {
+        $byLeaguePokemon = [];
+        foreach ($existingRows as $row) {
+            if ($row->league_pokemon_id !== null) {
+                $byLeaguePokemon[(int) $row->league_pokemon_id] = $row->toFrontendSlotArray();
+            }
+        }
+
+        $merged = [];
+        foreach ($incomingSlots as $slot) {
+            $rawId = $slot['league_pokemon_id'] ?? null;
+            $lpId = is_numeric($rawId) ? (int) $rawId : 0;
+            if ($lpId <= 0 || ! isset($byLeaguePokemon[$lpId])) {
+                $merged[] = $slot;
+
+                continue;
+            }
+
+            $prev = $byLeaguePokemon[$lpId];
+            $merged[] = [
+                'league_pokemon_id' => $lpId,
+                'ability' => $prev['ability'] ?? '',
+                'moves' => $prev['moves'] ?? ['', '', '', ''],
+                'version_group_held_item_id' => $prev['version_group_held_item_id'] ?? null,
+                'nature' => $prev['nature'] ?? null,
+                'tera_type' => $prev['tera_type'] ?? null,
+                'evs' => $prev['evs'] ?? null,
+            ];
+        }
+
+        return $merged;
     }
 
     /**

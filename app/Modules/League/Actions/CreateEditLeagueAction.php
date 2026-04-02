@@ -2,19 +2,37 @@
 
 namespace App\Modules\League\Actions;
 
+use App\Enums\Playoffs\PlayoffFormat;
+use App\Enums\Playoffs\PlayoffStatus;
 use App\Enums\PokemonGame;
+use App\Models\User;
 use App\Modules\Draft\Models\DraftConfig;
 use App\Modules\League\Models\League;
 use App\Modules\Matches\Models\MatchConfig;
 use App\Modules\Matches\Models\Pool;
+use App\Modules\Playoffs\Models\Playoff;
+use App\Modules\Playoffs\Services\PlayoffBracketService;
+use App\Modules\Teams\Models\Team;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
 class CreateEditLeagueAction
 {
+    private function normalizeOptionalWebhookUrl(mixed $value): ?string
+    {
+        if (! is_string($value)) {
+            return null;
+        }
+
+        $trimmed = trim($value);
+
+        return $trimmed === '' ? null : $trimmed;
+    }
+
     public function __invoke($data)
     {
         if ($data['command'] == 'create') {
@@ -31,6 +49,11 @@ class CreateEditLeagueAction
             'pokemon_game' => (string) config('pokemon.default_league_game'),
         ]);
 
+        $request->merge([
+            'discord_webhook_url' => $this->normalizeOptionalWebhookUrl($request->input('discord_webhook_url')),
+            'discord_replay_webhook_url' => $this->normalizeOptionalWebhookUrl($request->input('discord_replay_webhook_url')),
+        ]);
+
         $request->validate([
             'name' => 'required|string|max:255',
             'draft_date' => 'required|date',
@@ -38,6 +61,7 @@ class CreateEditLeagueAction
             'set_frequency' => 'required|integer',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
             'draft_points' => 'required|integer',
+            'minimum_drafts' => ['required', 'integer', 'min:0'],
             'enforce_round_count' => 'required|boolean',
             'round_count' => 'required|integer',
             'ban_enabled' => 'boolean',
@@ -45,6 +69,10 @@ class CreateEditLeagueAction
             'minimum_cost_to_ban' => 'nullable|integer|min:0',
             'pokemon_generation' => ['required', 'integer', 'min:1', 'max:99'],
             'pokemon_game' => ['required', Rule::enum(PokemonGame::class)],
+            'discord_webhook_url' => ['nullable', 'string', 'url', 'max:500'],
+            'discord_replay_webhook_url' => ['nullable', 'string', 'url', 'max:500'],
+            'playoff_format' => ['required', Rule::enum(PlayoffFormat::class)],
+            'playoff_bracket_size' => ['required', 'integer', Rule::in(PlayoffBracketService::allowedBracketSizes())],
         ]);
 
         $this->assertPokemonGameMatchesGeneration($request);
@@ -58,6 +86,8 @@ class CreateEditLeagueAction
             'set_start_date' => $request->set_start_date,
             'set_frequency' => $request->set_frequency,
             'logo' => $logo,
+            'discord_webhook_url' => $request->input('discord_webhook_url'),
+            'discord_replay_webhook_url' => $request->input('discord_replay_webhook_url'),
             'league_owner' => Auth::user()->id,
             'pokemon_generation' => $request->integer('pokemon_generation'),
             'pokemon_game' => $request->string('pokemon_game')->toString(),
@@ -67,6 +97,7 @@ class CreateEditLeagueAction
             'league_id' => $league->id,
             'draft_date' => $request->draft_date,
             'draft_points' => $request->draft_points,
+            'minimum_drafts' => $request->integer('minimum_drafts'),
             'ban_enabled' => $request->boolean('ban_enabled'),
             'bans_per_user' => $request->ban_enabled ? $request->bans_per_user : null,
             'minimum_cost_to_ban' => $request->ban_enabled ? $request->minimum_cost_to_ban : null,
@@ -85,11 +116,37 @@ class CreateEditLeagueAction
             'league_id' => $league->id,
         ]);
 
+        Playoff::query()->create([
+            'league_id' => $league->id,
+            'format' => PlayoffFormat::from($request->string('playoff_format')->toString()),
+            'bracket_size' => $request->integer('playoff_bracket_size'),
+            'status' => PlayoffStatus::Draft,
+            'seed_order' => null,
+        ]);
+
+        $owner = Auth::user();
+        $pool = Pool::query()->where('league_id', $league->id)->orderBy('id')->first();
+
+        Team::query()->create([
+            'name' => $this->defaultLeagueOwnerTeamName($owner),
+            'league_id' => $league->id,
+            'user_id' => $owner->id,
+            'pick_position' => 1,
+            'draft_points' => $request->integer('draft_points'),
+            'admin_flag' => 1,
+            'pool_id' => $pool?->id,
+        ]);
+
         return $league;
     }
 
     public function edit(Request $request)
     {
+        $request->merge([
+            'discord_webhook_url' => $this->normalizeOptionalWebhookUrl($request->input('discord_webhook_url')),
+            'discord_replay_webhook_url' => $this->normalizeOptionalWebhookUrl($request->input('discord_replay_webhook_url')),
+        ]);
+
         $request->validate([
             'name' => 'required|string|max:255',
             'draft_date' => 'required|date',
@@ -105,6 +162,10 @@ class CreateEditLeagueAction
             'minimum_cost_to_ban' => 'nullable|integer|min:0',
             'pokemon_generation' => ['required', 'integer', 'min:1', 'max:99'],
             'pokemon_game' => ['required', Rule::enum(PokemonGame::class)],
+            'discord_webhook_url' => ['nullable', 'string', 'url', 'max:500'],
+            'discord_replay_webhook_url' => ['nullable', 'string', 'url', 'max:500'],
+            'playoff_format' => ['required', Rule::enum(PlayoffFormat::class)],
+            'playoff_bracket_size' => ['required', 'integer', Rule::in(PlayoffBracketService::allowedBracketSizes())],
         ]);
 
         $this->assertPokemonGameMatchesGeneration($request);
@@ -122,6 +183,8 @@ class CreateEditLeagueAction
         $league->logo = $logo ?? $league->logo;
         $league->pokemon_generation = $request->integer('pokemon_generation');
         $league->pokemon_game = $request->string('pokemon_game')->toString();
+        $league->discord_webhook_url = $request->input('discord_webhook_url');
+        $league->discord_replay_webhook_url = $request->input('discord_replay_webhook_url');
         $league->save();
 
         $league->draftConfig()->updateOrCreate(
@@ -144,7 +207,39 @@ class CreateEditLeagueAction
             ]
         );
 
+        $playoff = Playoff::query()->where('league_id', $league->id)->first();
+        $format = PlayoffFormat::from($request->string('playoff_format')->toString());
+        $bracketSize = $request->integer('playoff_bracket_size');
+
+        if ($playoff === null) {
+            Playoff::query()->create([
+                'league_id' => $league->id,
+                'format' => $format,
+                'bracket_size' => $bracketSize,
+                'status' => PlayoffStatus::Draft,
+                'seed_order' => null,
+            ]);
+        } elseif ($playoff->status === PlayoffStatus::Draft) {
+            $playoff->format = $format;
+            $playoff->bracket_size = $bracketSize;
+            $playoff->save();
+        }
+
         return $league;
+    }
+
+    private function defaultLeagueOwnerTeamName(User $user): string
+    {
+        $label = trim($user->name);
+        if ($label === '') {
+            $label = 'Commissioner';
+        }
+
+        $suffix = '\'s Team';
+        $maxBaseLength = max(0, 255 - Str::length($suffix));
+        $base = Str::limit($label, $maxBaseLength, '');
+
+        return $base.$suffix;
     }
 
     private function assertPokemonGameMatchesGeneration(Request $request): void

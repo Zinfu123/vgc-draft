@@ -226,6 +226,20 @@ function replayLogFixtureOppMonVsPasteMon(): string
     return implode("\n", $lines);
 }
 
+/** Same species multiset as replayLogFixturePasteMonVsOppMon; p1 line order reversed (PasteMon 6→1). */
+function replayLogFixturePasteMonReversedVsOppMon(): string
+{
+    $lines = ['|player|p1|a|', '|player|p2|b|'];
+    foreach (range(6, 1) as $i) {
+        $lines[] = "|poke|p1|PasteMon{$i}, L50, M|";
+    }
+    foreach (range(1, 6) as $i) {
+        $lines[] = "|poke|p2|OppMon{$i}, L50, M|";
+    }
+
+    return implode("\n", $lines);
+}
+
 it('imports both teams match pokepaste species from a saved showdown replay log', function () {
     $data = createSetWithTwoSixPokemonRosters();
 
@@ -271,6 +285,63 @@ it('imports both teams match pokepaste species from a saved showdown replay log'
         ->all();
 
     expect($ids2)->toBe($data['team2PokemonIdsOrdered']);
+});
+
+it('preserves saved match pokepaste details when re-importing the same six species in replay order', function () {
+    $data = createSetWithTwoSixPokemonRosters();
+
+    $replayLogUrl = 'https://replay.pokemonshowdown.com/gen9replay-import-test-abc.log';
+    Http::fake([
+        $replayLogUrl => Http::sequence()
+            ->push(replayLogFixturePasteMonVsOppMon(), 200)
+            ->push(replayLogFixturePasteMonReversedVsOppMon(), 200),
+    ]);
+
+    $this->actingAs($data['coach1'])->post(route('sets.import-replay-teams'), [
+        'set_id' => $data['set']->id,
+        'replay_slot' => 1,
+        'p1_team_id' => $data['team1']->id,
+    ])->assertRedirect(route('sets.show', ['set_id' => $data['set']->id]));
+
+    $paste1 = SetTeamPokepaste::query()
+        ->where('matchable_type', Set::class)
+        ->where('matchable_id', $data['set']->id)
+        ->where('team_id', $data['team1']->id)
+        ->first();
+    expect($paste1)->not->toBeNull();
+
+    $slots = [];
+    foreach ($data['team1PokemonIdsOrdered'] as $i => $id) {
+        $slots[] = [
+            'league_pokemon_id' => $id,
+            'ability' => $i === 0 ? 'Keen Eye' : '',
+            'moves' => ['', '', '', ''],
+            'version_group_held_item_id' => null,
+            'nature' => null,
+            'tera_type' => null,
+            'evs' => null,
+        ];
+    }
+
+    $this->actingAs($data['coach1'])
+        ->put(route('pokepaste.update', ['pokepaste' => $paste1->public_id]), ['slots' => $slots])
+        ->assertRedirect(route('pokepaste.show', ['pokepaste' => $paste1->public_id]));
+
+    $this->actingAs($data['coach1'])->post(route('sets.import-replay-teams'), [
+        'set_id' => $data['set']->id,
+        'replay_slot' => 1,
+        'p1_team_id' => $data['team1']->id,
+    ])->assertRedirect(route('sets.show', ['set_id' => $data['set']->id]));
+
+    $firstMonId = $data['team1PokemonIdsOrdered'][0];
+    $slotRow = SetTeamPokepasteSlot::query()
+        ->where('set_team_pokepaste_id', $paste1->id)
+        ->where('league_pokemon_id', $firstMonId)
+        ->first();
+
+    expect($slotRow)->not->toBeNull()
+        ->and($slotRow->ability)->toBe('Keen Eye')
+        ->and($slotRow->slot_index)->toBe(5);
 });
 
 it('maps p2 roster when p1 team is team two', function () {

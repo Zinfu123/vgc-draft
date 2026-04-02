@@ -18,6 +18,7 @@ interface Set {
         id: number;
         name: string;
         logo: string;
+        showdown_username?: string | null;
         user: {
             id: number;
             name: string;
@@ -42,6 +43,7 @@ interface Set {
         id: number;
         name: string;
         logo: string;
+        showdown_username?: string | null;
         user: {
             id: number;
             name: string;
@@ -338,10 +340,10 @@ const winnerCoach = computed((): string | null => {
 
 const winnerShowdownUsername = computed((): string | null => {
     if (props.set.winner_id === props.set.team1.id) {
-        return showdownDisplay(props.set.team1.user.showdown_username) || null;
+        return coachShowdownDisplay(props.set.team1) || null;
     }
     if (props.set.winner_id === props.set.team2.id) {
-        return showdownDisplay(props.set.team2.user.showdown_username) || null;
+        return coachShowdownDisplay(props.set.team2) || null;
     }
     return null;
 });
@@ -365,15 +367,22 @@ function showdownDisplay(username: string | null | undefined): string {
     return t !== undefined && t !== '' ? t : '';
 }
 
+function coachShowdownDisplay(team: {
+    showdown_username?: string | null;
+    user: { showdown_username?: string | null };
+}): string {
+    return showdownDisplay(team.showdown_username) || showdownDisplay(team.user.showdown_username);
+}
+
 const currentUserMissingShowdown = computed((): boolean => {
     const id = authUserId.value;
     if (id === null) {
         return false;
     }
-    if (props.set.team1.user.id === id && !showdownDisplay(props.set.team1.user.showdown_username)) {
+    if (props.set.team1.user.id === id && !coachShowdownDisplay(props.set.team1)) {
         return true;
     }
-    if (props.set.team2.user.id === id && !showdownDisplay(props.set.team2.user.showdown_username)) {
+    if (props.set.team2.user.id === id && !coachShowdownDisplay(props.set.team2)) {
         return true;
     }
     return false;
@@ -434,8 +443,8 @@ const handleReopenMatch = () => {
                     <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                         <dt class="min-w-0 font-medium">{{ props.set.team1.name }}</dt>
                         <dd class="text-muted-foreground shrink-0 font-mono text-xs sm:text-sm">
-                            <template v-if="showdownDisplay(props.set.team1.user.showdown_username)">
-                                {{ showdownDisplay(props.set.team1.user.showdown_username) }}
+                            <template v-if="coachShowdownDisplay(props.set.team1)">
+                                {{ coachShowdownDisplay(props.set.team1) }}
                             </template>
                             <span v-else class="italic">Not set</span>
                         </dd>
@@ -443,8 +452,8 @@ const handleReopenMatch = () => {
                     <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
                         <dt class="min-w-0 font-medium">{{ props.set.team2.name }}</dt>
                         <dd class="text-muted-foreground shrink-0 font-mono text-xs sm:text-sm">
-                            <template v-if="showdownDisplay(props.set.team2.user.showdown_username)">
-                                {{ showdownDisplay(props.set.team2.user.showdown_username) }}
+                            <template v-if="coachShowdownDisplay(props.set.team2)">
+                                {{ coachShowdownDisplay(props.set.team2) }}
                             </template>
                             <span v-else class="italic">Not set</span>
                         </dd>
@@ -467,8 +476,8 @@ const handleReopenMatch = () => {
                     <p class="text-center text-muted-foreground transition-colors hover:text-primary">Coach: {{ props.set.team1.user.name }}</p>
                     <p class="text-center text-xs text-muted-foreground">
                         <span class="text-foreground/80 font-medium">Showdown</span>:
-                        <span v-if="showdownDisplay(props.set.team1.user.showdown_username)" class="font-mono">{{
-                            showdownDisplay(props.set.team1.user.showdown_username)
+                        <span v-if="coachShowdownDisplay(props.set.team1)" class="font-mono">{{
+                            coachShowdownDisplay(props.set.team1)
                         }}</span>
                         <span v-else class="italic">Not set</span>
                     </p>
@@ -741,8 +750,8 @@ const handleReopenMatch = () => {
                     <p class="text-center text-muted-foreground transition-colors hover:text-primary">Coach: {{ props.set.team2.user.name }}</p>
                     <p class="text-center text-xs text-muted-foreground">
                         <span class="text-foreground/80 font-medium">Showdown</span>:
-                        <span v-if="showdownDisplay(props.set.team2.user.showdown_username)" class="font-mono">{{
-                            showdownDisplay(props.set.team2.user.showdown_username)
+                        <span v-if="coachShowdownDisplay(props.set.team2)" class="font-mono">{{
+                            coachShowdownDisplay(props.set.team2)
                         }}</span>
                         <span v-else class="italic">Not set</span>
                     </p>
@@ -771,8 +780,10 @@ const handleReopenMatch = () => {
             >
                 <h2 id="import-replay-title" class="text-lg font-semibold text-foreground">Import rosters from Showdown replay</h2>
                 <p class="text-muted-foreground mt-2 text-sm">
-                    Uses the saved replay log to set both teams’ match paste species. Choose which replay and which league team is
-                    Showdown player 1 (p1); then complete abilities, moves, and items in each team paste.
+                    Uses the saved replay log to set both teams’ match paste species (replay order). If a team’s paste already has the
+                    same six Pokémon in any order, abilities, moves, items, and EVs you entered are kept and only slot order and any new
+                    species mapping are updated. Choose which replay and which league team is Showdown player 1 (p1); a coach’s Showdown
+                    name from Profile or team that matches the replay can pre-select p1.
                 </p>
                 <div class="mt-4 space-y-4">
                     <fieldset>
@@ -820,8 +831,7 @@ const handleReopenMatch = () => {
                             }}).
                         </p>
                         <p v-else class="text-muted-foreground text-sm">
-                            Add your Pokémon Showdown username under Settings → Profile for automatic p1 matching, or choose manually
-                            below.
+                            Add a Showdown username on your Profile or team for automatic p1 matching, or choose manually below.
                         </p>
                     </template>
                     <fieldset v-if="replayPreviewLoading || !replayPreviewData || replayPreviewData.needs_manual_p1_map">

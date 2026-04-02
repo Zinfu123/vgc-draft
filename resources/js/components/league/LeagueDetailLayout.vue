@@ -29,6 +29,7 @@ interface Team {
     coach: string;
     logo: string | null;
     user_id: number;
+    showdown_username?: string | null;
     set_wins: number;
     set_losses: number;
     victory_points: number;
@@ -96,22 +97,20 @@ const draftHref = computed(() => {
                     <TeamForm
                         v-if="!coachexists && (!props.draft || props.draft?.status === 1)"
                         :league_id="props.league.id"
-                        :user_id="user?.id"
                         command="create"
                         :user_team="null"
                     />
-                    <TeamForm v-if="coachexists" :league_id="props.league.id" :user_id="user?.id" command="edit" :user_team="userTeam" />
+                    <TeamForm v-if="coachexists" :league_id="props.league.id" command="edit" :user_team="userTeam" />
                 </template>
                 <div v-if="props.adminFlag === true || props.adminFlag === 1" class="flex flex-col items-end gap-2">
                     <AdminPanel :league="props.league" :draft="props.draft" />
                     <TeamForm
                         v-if="!coachexists && (!props.draft || props.draft?.status === 1)"
                         :league_id="props.league.id"
-                        :user_id="user?.id"
                         command="create"
                         :user_team="null"
                     />
-                    <TeamForm v-if="coachexists" :league_id="props.league.id" :user_id="user?.id" command="edit" :user_team="userTeam" />
+                    <TeamForm v-if="coachexists" :league_id="props.league.id" command="edit" :user_team="userTeam" />
                 </div>
             </div>
             <div class="mt-6 flex flex-col items-center">

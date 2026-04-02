@@ -43,12 +43,12 @@ class Set extends Model
 
     public function team1()
     {
-        return $this->belongsTo(Team::class, 'team1_id', 'id')->select('id', 'name', 'logo', 'user_id')->with('user:id,name,showdown_username');
+        return $this->belongsTo(Team::class, 'team1_id', 'id')->select('id', 'name', 'logo', 'user_id', 'showdown_username')->with('user:id,name,showdown_username');
     }
 
     public function team2()
     {
-        return $this->belongsTo(Team::class, 'team2_id', 'id')->select('id', 'name', 'logo', 'user_id')->with('user:id,name,showdown_username');
+        return $this->belongsTo(Team::class, 'team2_id', 'id')->select('id', 'name', 'logo', 'user_id', 'showdown_username')->with('user:id,name,showdown_username');
     }
 
     public function league(): BelongsTo

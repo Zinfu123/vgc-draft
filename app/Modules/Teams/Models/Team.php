@@ -24,6 +24,7 @@ class Team extends Model
 
     protected $fillable = [
         'name',
+        'showdown_username',
         'logo',
         'league_id',
         'user_id',
@@ -71,6 +72,23 @@ class Team extends Model
     public function user()
     {
         return $this->belongsTo(\App\Models\User::class, 'user_id');
+    }
+
+    /**
+     * Showdown name for replay matching: team-specific override, otherwise the coach's profile value.
+     */
+    public function effectiveShowdownUsername(): ?string
+    {
+        if (is_string($this->showdown_username) && trim($this->showdown_username) !== '') {
+            return trim($this->showdown_username);
+        }
+
+        $fromUser = $this->user?->showdown_username;
+        if (is_string($fromUser) && trim($fromUser) !== '') {
+            return trim($fromUser);
+        }
+
+        return null;
     }
 
     public function draftPicks()

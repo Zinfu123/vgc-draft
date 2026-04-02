@@ -328,7 +328,32 @@ it('returns showdown player names and suggests p1 team when profile usernames ma
         ->assertJsonPath('suggested_p1_team_id', $set->team1_id);
 });
 
-it('requires manual p1 mapping when only one coach has a showdown username on file', function () {
+it('suggests p1 when only the second coach has a showdown username and it matches replay player two', function () {
+    [$user1, $user2, , $set] = createOpenSetForReplayPolicyTests();
+    $user1->update(['showdown_username' => null]);
+    $user2->update(['showdown_username' => 'CoachB']);
+    $set->refresh();
+    $set->update(['replay1' => 'https://replay.pokemonshowdown.com/gen9preview-p2-only']);
+
+    Http::fake([
+        'https://replay.pokemonshowdown.com/gen9preview-p2-only.log' => Http::response(
+            replayLogMinimalWithPlayersAndWinner('CoachA', 'CoachB', 'CoachA'),
+            200
+        ),
+    ]);
+
+    $response = $this->actingAs($user2)->postJson(route('sets.preview-replay-players'), [
+        'set_id' => $set->id,
+        'replay_slot' => 1,
+    ]);
+
+    $response->assertOk()
+        ->assertJsonPath('ok', true)
+        ->assertJsonPath('needs_manual_p1_map', false)
+        ->assertJsonPath('suggested_p1_team_id', $set->team1_id);
+});
+
+it('suggests p1 from replay when only one coach has a showdown username and it matches a replay slot', function () {
     [$user1, $user2, , $set] = createOpenSetForReplayPolicyTests();
     $user2->update(['showdown_username' => null]);
     $set->refresh();
@@ -348,8 +373,8 @@ it('requires manual p1 mapping when only one coach has a showdown username on fi
 
     $response->assertOk()
         ->assertJsonPath('ok', true)
-        ->assertJsonPath('needs_manual_p1_map', true)
-        ->assertJsonPath('suggested_p1_team_id', null);
+        ->assertJsonPath('needs_manual_p1_map', false)
+        ->assertJsonPath('suggested_p1_team_id', $set->team1_id);
 });
 
 // ── Require replays before results ──────────────────────────────────────────

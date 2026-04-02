@@ -41,9 +41,9 @@ class TeamController extends Controller
         ]);
     }
 
-    public function edit(Request $request)
+    public function edit(Request $request, int $team_id)
     {
-        $team = (new CreateEditTeamAction)->edit($request);
+        $team = (new CreateEditTeamAction)->edit($request->merge(['team_id' => $team_id]));
 
         return redirect()->route('teams.detail', ['team_id' => $team->id]);
     }

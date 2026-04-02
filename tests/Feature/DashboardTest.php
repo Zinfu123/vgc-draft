@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use App\Modules\Draft\Models\DraftConfig;
 use App\Modules\League\Models\League;
 use App\Modules\Teams\Models\Team;
 
@@ -115,6 +116,82 @@ test('dashboard excludes open leagues the user has already joined', function () 
     $response->assertOk();
     $response->assertInertia(
         fn ($page) => $page->has('openLeagues', 0)
+    );
+});
+
+test('dashboard active leagues expose draft_date as Y-m-d', function () {
+    $user = User::factory()->create();
+
+    $league = League::create([
+        'name' => 'Draft Format League',
+        'status' => 1,
+        'open' => true,
+        'draft_points' => 100,
+        'league_owner' => $user->id,
+        'set_start_date' => '2026-04-10',
+        'maximum_teams' => 10,
+    ]);
+
+    DraftConfig::create([
+        'league_id' => $league->id,
+        'draft_date' => '2026-04-03',
+        'draft_points' => 100,
+        'ban_enabled' => false,
+    ]);
+
+    Team::create([
+        'name' => 'My Team',
+        'league_id' => $league->id,
+        'user_id' => $user->id,
+        'admin_flag' => 1,
+        'pick_position' => 1,
+        'draft_points' => 100,
+        'victory_points' => 0,
+        'set_wins' => 0,
+        'set_losses' => 0,
+        'game_wins' => 0,
+        'game_losses' => 0,
+    ]);
+
+    $response = $this->actingAs($user)->get('/dashboard');
+
+    $response->assertOk();
+    $response->assertInertia(
+        fn ($page) => $page
+            ->where('usersActiveLeagues.0.draft_date', '2026-04-03')
+            ->where('usersActiveLeagues.0.set_start_date', '2026-04-10')
+    );
+});
+
+test('dashboard open leagues expose draft_date as Y-m-d', function () {
+    $owner = User::factory()->create();
+    $visitor = User::factory()->create();
+
+    $league = League::create([
+        'name' => 'Open Draft League',
+        'status' => 1,
+        'open' => true,
+        'draft_points' => 100,
+        'league_owner' => $owner->id,
+        'set_start_date' => '2026-04-15',
+        'maximum_teams' => 10,
+    ]);
+
+    DraftConfig::create([
+        'league_id' => $league->id,
+        'draft_date' => '2026-04-05',
+        'draft_points' => 100,
+        'ban_enabled' => false,
+    ]);
+
+    $response = $this->actingAs($visitor)->get('/dashboard');
+
+    $response->assertOk();
+    $response->assertInertia(
+        fn ($page) => $page
+            ->has('openLeagues', 1)
+            ->where('openLeagues.0.draft_date', '2026-04-05')
+            ->where('openLeagues.0.set_start_date', '2026-04-15')
     );
 });
 

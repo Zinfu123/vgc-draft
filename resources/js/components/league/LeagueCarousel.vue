@@ -10,7 +10,7 @@ interface Podium {
 interface Leagues {
     id: number;
     name: string;
-    draft_date: string;
+    draft_date: string | null;
     set_start_date: string;
     logo: string | null;
     winner: string | null;

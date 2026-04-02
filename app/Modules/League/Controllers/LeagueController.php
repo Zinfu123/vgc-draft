@@ -404,9 +404,11 @@ class LeagueController extends Controller
     public function createEditShow(Request $request, ReadLeagueAction $readLeagueAction)
     {
         $league = $readLeagueAction(['league_id' => $request->league_id, 'command' => 'league']);
+        $league?->loadMissing('playoff');
 
         $draftConfig = $league?->draftConfig;
         $matchConfig = $league?->matchConfig;
+        $playoff = $league?->playoff;
 
         return Inertia::render('league/LeagueCreateEdit', [
             'command' => $request->command,
@@ -436,6 +438,19 @@ class LeagueController extends Controller
                 ->filter(fn (int $generation) => count(PokemonGame::forGeneration($generation)) > 0)
                 ->values()
                 ->all(),
+            'discord_webhook_url' => $league?->discord_webhook_url ?? '',
+            'discord_replay_webhook_url' => $league?->discord_replay_webhook_url ?? '',
+            'playoff_format' => $playoff?->format?->value ?? PlayoffFormat::SingleElimination->value,
+            'playoff_bracket_size' => $playoff?->bracket_size ?? 4,
+            'playoff_format_options' => collect(PlayoffFormat::cases())->map(fn (PlayoffFormat $f) => [
+                'value' => $f->value,
+                'label' => match ($f) {
+                    PlayoffFormat::SingleElimination => 'Single elimination',
+                    PlayoffFormat::DoubleElimination => 'Double elimination',
+                },
+                'bracket_generation_supported' => $f === PlayoffFormat::SingleElimination,
+            ])->values()->all(),
+            'playoff_bracket_size_options' => PlayoffBracketService::allowedBracketSizes(),
         ]);
     }
 }

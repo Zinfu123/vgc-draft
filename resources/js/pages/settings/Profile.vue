@@ -82,11 +82,12 @@ const disconnectDiscord = () => {
                             class="mt-1 block w-full"
                             v-model="form.showdown_username"
                             autocomplete="off"
-                            placeholder="Same name as in Showdown battles (optional)"
+                            placeholder="Same name as in Showdown battles"
                         />
                         <InputError class="mt-2" :message="form.errors.showdown_username" />
                         <p class="text-sm text-muted-foreground">
-                            Used to match replay logs to your team when importing rosters or when the league auto-grades from replays.
+                            Used to match replay logs to your team when importing rosters or when the league auto-grades from replays. Joining a league requires
+                            this or a Showdown name on your team.
                         </p>
                     </div>
 

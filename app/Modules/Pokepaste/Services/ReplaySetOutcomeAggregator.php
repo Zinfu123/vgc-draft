@@ -21,8 +21,8 @@ class ReplaySetOutcomeAggregator
     {
         $set->loadMissing(['team1.user', 'team2.user']);
 
-        $u1 = ShowdownUsernameNormalizer::normalize($set->team1?->user?->showdown_username);
-        $u2 = ShowdownUsernameNormalizer::normalize($set->team2?->user?->showdown_username);
+        $u1 = ShowdownUsernameNormalizer::normalize($set->team1?->effectiveShowdownUsername());
+        $u2 = ShowdownUsernameNormalizer::normalize($set->team2?->effectiveShowdownUsername());
         if ($u1 === null || $u2 === null) {
             return null;
         }
