@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { bracketLabel, multiplier, normalizeTypeName, TYPE_ORDER } from '@/lib/typeEffectiveness';
+import { multiplier, normalizeTypeName, TYPE_ORDER } from '@/lib/typeEffectiveness';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/vue3';
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
@@ -242,41 +242,6 @@ function damagingLearnsetRows(rows: LearnsetRow[]): LearnsetRow[] {
     );
 }
 
-const offensiveByEnemy = computed(() =>
-    enemySlots.value.map((enemy, ei) => {
-        if (!enemy.type1.trim()) {
-            return { index: ei, label: '', lines: [] as { ally: string; move: string; mult: number; bracket: string }[] };
-        }
-        const lines: { ally: string; move: string; mult: number; bracket: string }[] = [];
-        const el = enemy.label.trim() || `Enemy ${ei + 1}`;
-
-        for (const slot of allySlots.value) {
-            if (!slot.label.trim()) {
-                continue;
-            }
-            for (let mi = 0; mi < 4; mi++) {
-                const mid = slot.moveIds[mi];
-                if (mid === null) {
-                    continue;
-                }
-                const mv = slot.learnset.find((r) => r.move_id === mid);
-                if (!mv?.type_slug) {
-                    continue;
-                }
-                const m = multiplier(String(mv.type_slug), enemy.type1, enemy.type2 || null, enemy.teraType || null);
-                lines.push({
-                    ally: slot.label.trim() || '—',
-                    move: mv.move_name,
-                    mult: m,
-                    bracket: bracketLabel(m),
-                });
-            }
-        }
-
-        return { index: ei, label: el, lines };
-    }),
-);
-
 async function jsonFetch(url: string): Promise<Response> {
     return fetch(url, {
         credentials: 'same-origin',
@@ -297,7 +262,7 @@ function scheduleSearch(side: 'ally' | 'enemy', index: number): void {
     const timer = setTimeout(() => {
         void runSearch(side, index);
         searchTimers.delete(key);
-    }, 280);
+    }, 120);
     searchTimers.set(key, timer);
 }
 
@@ -585,304 +550,160 @@ function blurSuggestions(side: 'ally' | 'enemy', index: number): void {
         slot.suggestionsOpen = false;
     }, 150);
 }
+
+const activeAllyIdx = ref<number | null>(null);
+const activeEnemyIdx = ref<number | null>(null);
+
+const activeAllySlot = computed(() => (activeAllyIdx.value !== null ? allySlots.value[activeAllyIdx.value] : null));
+const activeEnemySlot = computed(() => (activeEnemyIdx.value !== null ? enemySlots.value[activeEnemyIdx.value] : null));
+
+function toggleAllySlot(idx: number): void {
+    activeAllyIdx.value = activeAllyIdx.value === idx ? null : idx;
+}
+
+function toggleEnemySlot(idx: number): void {
+    activeEnemyIdx.value = activeEnemyIdx.value === idx ? null : idx;
+}
+
+function typeBadgeStyle(type: string): Record<string, string> {
+    if (!type.trim()) {
+        return {};
+    }
+
+    return { backgroundColor: `var(--${type.toLowerCase()}type)` };
+}
+
+const offensiveEnemyCols = computed(() => enemySlots.value.filter((e) => e.type1.trim()));
+
+interface OffensiveRow {
+    allyLabel: string;
+    moveName: string;
+    typeSlug: string;
+    cells: DefensiveCell[];
+}
+
+const offensiveRows = computed((): OffensiveRow[] => {
+    const enemyCols = offensiveEnemyCols.value;
+    if (!enemyCols.length) {
+        return [];
+    }
+
+    const rows: OffensiveRow[] = [];
+
+    for (const slot of allySlots.value) {
+        if (!slot.label.trim()) {
+            continue;
+        }
+        for (let mi = 0; mi < 4; mi++) {
+            const mid = slot.moveIds[mi];
+            if (mid === null) {
+                continue;
+            }
+            const mv = slot.learnset.find((r) => r.move_id === mid);
+            if (!mv?.type_slug) {
+                continue;
+            }
+            const cells = enemyCols.map((enemy) => {
+                const m = multiplier(String(mv.type_slug), enemy.type1, enemy.type2 || null, enemy.teraType || null);
+
+                return defensiveCellForMultiplier(m);
+            });
+            rows.push({ allyLabel: slot.label.trim() || '—', moveName: mv.move_name, typeSlug: String(mv.type_slug), cells });
+        }
+    }
+
+    return rows;
+});
 </script>
 
 <template>
     <Head title="Team coverage planner" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
-        <div class="mx-auto max-w-6xl space-y-8 p-4 md:p-6">
+        <div class="mx-auto max-w-6xl space-y-6 p-4 md:p-6">
+            <!-- Header -->
             <div>
                 <h1 class="text-foreground text-2xl font-semibold tracking-tight">Team coverage planner</h1>
                 <p class="text-muted-foreground mt-1 max-w-3xl text-sm">
-                    Type matchup tables for six-on-six planning. Pick moves from Scarlet & Violet learnsets (or your league’s game). For exact damage ranges, use the
-                    <a
-                        href="https://calc.pokemonshowdown.com/"
-                        class="text-primary underline-offset-4 hover:underline"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        >Pokémon Damage Calculator</a
-                    >.
+                    Type matchup tables for six-on-six planning. Pick moves from your league's game learnsets. For exact damage ranges, use the
+                    <a href="https://calc.pokemonshowdown.com/" class="text-primary underline-offset-4 hover:underline" target="_blank" rel="noopener noreferrer">Pokémon Damage Calculator</a>.
                 </p>
             </div>
 
+            <!-- Controls -->
             <Card>
-                <CardHeader>
-                    <CardTitle>Game version</CardTitle>
-                    <CardDescription>Learnsets and typings use this version group.</CardDescription>
-                </CardHeader>
-                <CardContent class="flex flex-col gap-4 sm:flex-row sm:items-end">
+                <CardContent class="flex flex-wrap items-end gap-4 pt-6">
                     <div class="flex flex-col gap-1">
                         <Label for="vg-slug">Version</Label>
-                        <select
-                            id="vg-slug"
-                            v-model="selectedVersionSlug"
-                            class="border-input bg-background h-9 w-full rounded-md border px-2 text-sm shadow-xs sm:w-72 dark:bg-transparent"
-                        >
+                        <select id="vg-slug" v-model="selectedVersionSlug" class="border-input bg-background h-9 w-full rounded-md border px-2 text-sm shadow-xs sm:w-72 dark:bg-transparent">
                             <option v-for="g in versionGroups" :key="g.slug" :value="g.slug">{{ g.name }}</option>
                         </select>
                     </div>
                     <div v-if="myTeams.length" class="flex flex-col gap-1">
-                        <Label for="import-team">Import your drafted team (optional)</Label>
-                        <div class="flex flex-wrap items-center gap-2">
-                            <select
-                                id="import-team"
-                                v-model="importTeamId"
-                                class="border-input bg-background h-9 min-w-[12rem] rounded-md border px-2 text-sm shadow-xs dark:bg-transparent"
-                            >
+                        <Label for="import-team">Import drafted team</Label>
+                        <div class="flex items-center gap-2">
+                            <select id="import-team" v-model="importTeamId" class="border-input bg-background h-9 min-w-[12rem] rounded-md border px-2 text-sm shadow-xs dark:bg-transparent">
                                 <option value="">— Select team —</option>
-                                <option v-for="t in myTeams" :key="t.id" :value="t.id">
-                                    {{ t.league_name }} — {{ t.name }}
-                                </option>
+                                <option v-for="t in myTeams" :key="t.id" :value="t.id">{{ t.league_name }} — {{ t.name }}</option>
                             </select>
                             <Button type="button" variant="secondary" size="sm" :disabled="importTeamId === '' || rosterLoading" @click="loadRoster">
-                                {{ rosterLoading ? 'Loading…' : 'Load roster' }}
+                                {{ rosterLoading ? 'Loading...' : 'Load' }}
                             </Button>
                         </div>
                     </div>
-                    <div class="flex gap-2">
-                        <Button type="button" variant="outline" size="sm" @click="clearAll"> Clear all </Button>
-                    </div>
+                    <Button type="button" variant="outline" size="sm" @click="clearAll">Clear all</Button>
                 </CardContent>
             </Card>
 
-            <div class="flex flex-col gap-8 lg:flex-row lg:items-start lg:gap-8">
-                <div class="flex min-w-0 flex-1 flex-col gap-3">
-                    <h2 class="text-lg font-medium">Your team</h2>
-                    <p class="text-muted-foreground min-h-[2.75rem] text-xs leading-snug">
-                        Add up to six Pokémon and moves. The defensive matrix uses typings (and Tera) from this side.
-                    </p>
-                    <div class="flex flex-col gap-4">
-                        <Card v-for="(_, idx) in allySlots" :key="'ally-' + idx">
-                            <CardHeader class="py-3">
-                                <CardTitle class="text-base">Slot {{ idx + 1 }}</CardTitle>
-                            </CardHeader>
-                            <CardContent class="space-y-3">
-                                <div class="relative">
-                                    <Label class="text-muted-foreground text-xs">Pokémon</Label>
-                                    <Input
-                                        v-model="allySlots[idx].search"
-                                        placeholder="Search name…"
-                                        class="mt-1"
-                                        autocomplete="off"
-                                        @input="scheduleSearch('ally', idx)"
-                                        @focus="allySlots[idx].suggestionsOpen = allySlots[idx].suggestions.length > 0"
-                                        @blur="blurSuggestions('ally', idx)"
-                                    />
-                                    <ul
-                                        v-if="allySlots[idx].suggestionsOpen && allySlots[idx].suggestions.length"
-                                        class="bg-popover text-popover-foreground absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border text-sm shadow-md"
-                                    >
-                                        <li
-                                            v-for="h in allySlots[idx].suggestions"
-                                            :key="h.id"
-                                            class="hover:bg-accent cursor-pointer px-2 py-1.5"
-                                            @mousedown.prevent="pickSuggestion('ally', idx, h)"
-                                        >
-                                            {{ h.name }}
-                                            <span class="text-muted-foreground text-xs"
-                                                >({{ h.type1 }}{{ h.type2 ? ` / ${h.type2}` : '' }})</span
-                                            >
-                                        </li>
-                                    </ul>
-                                </div>
-                                <div v-if="allySlots[idx].pokedexId" class="grid gap-2 sm:grid-cols-2">
-                                    <div>
-                                        <Label class="text-muted-foreground text-xs">Tera type</Label>
-                                        <select
-                                            v-model="allySlots[idx].teraType"
-                                            class="border-input bg-background mt-1 h-9 w-full rounded-md border px-2 text-sm shadow-xs dark:bg-transparent"
-                                        >
-                                            <option value="">— None —</option>
-                                            <option v-for="t in typeOptions" :key="t" :value="t">{{ t }}</option>
-                                        </select>
-                                    </div>
-                                    <div class="text-muted-foreground flex items-end text-xs">
-                                        <span v-if="allySlots[idx].loadingLearnset">Loading learnset…</span>
-                                        <span v-else>
-                                            {{ allySlots[idx].type1 }}{{ allySlots[idx].type2 ? ` / ${allySlots[idx].type2}` : '' }}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div v-if="allySlots[idx].pokedexId && !allySlots[idx].loadingLearnset" class="grid gap-2 sm:grid-cols-2">
-                                    <div v-for="mi in 4" :key="mi" class="flex flex-col gap-1">
-                                        <Label class="text-muted-foreground text-xs">Move {{ mi }}</Label>
-                                        <select
-                                            v-model="allySlots[idx].moveIds[mi - 1]"
-                                            class="border-input bg-background h-9 w-full rounded-md border px-2 text-sm shadow-xs dark:bg-transparent"
-                                        >
-                                            <option :value="null">—</option>
-                                            <option v-for="mv in moveOptions(allySlots[idx])" :key="mv.move_id" :value="mv.move_id">
-                                                {{ mv.move_name }} ({{ mv.type_slug }})
-                                            </option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <Button v-if="allySlots[idx].pokedexId" type="button" variant="ghost" size="sm" class="text-destructive" @click="clearSlot('ally', idx)">
-                                    Remove
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    </div>
-                </div>
-                <div class="flex min-w-0 flex-1 flex-col gap-3">
-                    <h2 class="text-lg font-medium">Enemy team (optional)</h2>
-                    <p class="text-muted-foreground min-h-[2.75rem] text-xs leading-snug">
-                        Used for offensive move coverage. Typings follow the selected game version.
-                    </p>
-                    <div class="flex flex-col gap-4">
-                        <Card v-for="(_, idx) in enemySlots" :key="'enemy-' + idx">
-                            <CardHeader class="py-3">
-                                <CardTitle class="text-base">Opponent {{ idx + 1 }}</CardTitle>
-                            </CardHeader>
-                            <CardContent class="space-y-3">
-                                <div class="relative">
-                                    <Label class="text-muted-foreground text-xs">Pokémon</Label>
-                                    <Input
-                                        v-model="enemySlots[idx].search"
-                                        placeholder="Search name…"
-                                        class="mt-1"
-                                        autocomplete="off"
-                                        @input="scheduleSearch('enemy', idx)"
-                                        @focus="enemySlots[idx].suggestionsOpen = enemySlots[idx].suggestions.length > 0"
-                                        @blur="blurSuggestions('enemy', idx)"
-                                    />
-                                    <ul
-                                        v-if="enemySlots[idx].suggestionsOpen && enemySlots[idx].suggestions.length"
-                                        class="bg-popover text-popover-foreground absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border text-sm shadow-md"
-                                    >
-                                        <li
-                                            v-for="h in enemySlots[idx].suggestions"
-                                            :key="h.id"
-                                            class="hover:bg-accent cursor-pointer px-2 py-1.5"
-                                            @mousedown.prevent="pickSuggestion('enemy', idx, h)"
-                                        >
-                                            {{ h.name }}
-                                            <span class="text-muted-foreground text-xs"
-                                                >({{ h.type1 }}{{ h.type2 ? ` / ${h.type2}` : '' }})</span
-                                            >
-                                        </li>
-                                    </ul>
-                                </div>
-                                <div v-if="enemySlots[idx].pokedexId" class="grid gap-2 sm:grid-cols-2">
-                                    <div>
-                                        <Label class="text-muted-foreground text-xs">Tera type</Label>
-                                        <select
-                                            v-model="enemySlots[idx].teraType"
-                                            class="border-input bg-background mt-1 h-9 w-full rounded-md border px-2 text-sm shadow-xs dark:bg-transparent"
-                                        >
-                                            <option value="">— None —</option>
-                                            <option v-for="t in typeOptions" :key="'et-' + t" :value="t">{{ t }}</option>
-                                        </select>
-                                    </div>
-                                    <div class="text-muted-foreground flex items-end text-xs">
-                                        {{ enemySlots[idx].type1 }}{{ enemySlots[idx].type2 ? ` / ${enemySlots[idx].type2}` : '' }}
-                                    </div>
-                                </div>
-                                <Button
-                                    v-if="enemySlots[idx].pokedexId"
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    class="text-destructive"
-                                    @click="clearSlot('enemy', idx)"
-                                >
-                                    Remove
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    </div>
-                </div>
-            </div>
-
+            <!-- Defensive Coverage — hoisted above slots -->
             <Card>
                 <CardHeader>
                     <CardTitle>Defensive coverage</CardTitle>
-                    <CardDescription>
-                        Per incoming move type: effectiveness on each of your Pokémon (2× / 4× / ½ / ¼ / immune). Totals count how many Pokémon are weak or resisting that type.
-                    </CardDescription>
+                    <CardDescription>Effectiveness of each incoming type against your team. Add Pokémon below to populate the table.</CardDescription>
                 </CardHeader>
                 <CardContent class="overflow-x-auto">
-                    <p v-if="defensiveAllyColumns.length === 0" class="text-muted-foreground text-sm">
-                        Add at least one Pokémon with typings to see the matrix.
+                    <p v-if="defensiveAllyColumns.length === 0" class="text-muted-foreground text-sm italic">
+                        Add Pokémon to your team below to see the matrix.
                     </p>
                     <table v-else class="w-full border-collapse text-sm">
                         <thead>
                             <tr class="bg-muted/60 border-b">
-                                <th class="text-foreground w-24 p-2 text-left text-xs font-semibold uppercase tracking-wide">Move</th>
-                                <th
-                                    v-for="col in defensiveAllyColumns"
-                                    :key="'dhdr-' + col.index"
-                                    class="text-foreground min-w-[4.5rem] p-2 text-center text-xs font-semibold"
-                                >
-                                    <img
-                                        v-if="col.slot.spriteUrl"
-                                        :src="col.slot.spriteUrl"
-                                        :alt="col.slot.label"
-                                        class="mx-auto mb-0.5 size-6 object-contain sm:size-7"
-                                    />
+                                <th class="text-foreground w-28 p-2 text-left text-xs font-semibold uppercase tracking-wide">Type</th>
+                                <th v-for="col in defensiveAllyColumns" :key="'dhdr-' + col.index" class="text-foreground min-w-[4.5rem] p-2 text-center text-xs font-semibold">
+                                    <img v-if="col.slot.spriteUrl" :src="col.slot.spriteUrl" :alt="col.slot.label" class="mx-auto mb-0.5 size-8 object-contain" />
                                     <span class="line-clamp-2">{{ col.slot.label.trim() || `Slot ${col.index + 1}` }}</span>
                                 </th>
-                                <th class="text-foreground w-16 p-2 text-center text-xs font-semibold">Total weak</th>
-                                <th class="text-foreground w-16 p-2 text-center text-xs font-semibold">Total resist</th>
+                                <th class="text-foreground w-14 p-2 text-center text-xs font-semibold">Weak</th>
+                                <th class="text-foreground w-14 p-2 text-center text-xs font-semibold">Resist</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <tr
-                                v-for="row in defensiveRows"
-                                :key="row.attack"
-                                class="border-border/80 hover:bg-muted/30 border-b"
-                            >
-                                <td class="text-foreground p-2 font-medium">{{ row.attack }}</td>
-                                <td
-                                    v-for="(cell, ci) in row.cells"
-                                    :key="row.attack + '-' + ci"
-                                    class="text-foreground border-border/40 border-l p-2 text-center align-middle"
-                                >
-                                    <span
-                                        v-if="cell.kind === 'weak4'"
-                                        class="inline-block rounded-md bg-red-600 px-2 py-0.5 text-xs font-bold text-white dark:bg-red-500"
-                                    >
-                                        {{ cell.display }}
+                            <tr v-for="row in defensiveRows" :key="row.attack" class="border-border/80 hover:bg-muted/30 border-b">
+                                <td class="p-2">
+                                    <span class="inline-block rounded px-2 py-0.5 text-xs font-semibold text-white" :style="typeBadgeStyle(row.attack)">
+                                        {{ row.attack }}
                                     </span>
-                                    <span
-                                        v-else-if="cell.kind === 'weak2'"
-                                        class="text-destructive text-xs font-semibold"
-                                    >
-                                        {{ cell.display }}
-                                    </span>
-                                    <span
-                                        v-else-if="cell.kind === 'resistQuarter'"
-                                        class="inline-block rounded-md bg-emerald-600 px-2 py-0.5 text-xs font-bold text-white dark:bg-emerald-500"
-                                    >
-                                        {{ cell.display }}
-                                    </span>
-                                    <span
-                                        v-else-if="cell.kind === 'resistHalf'"
-                                        class="text-xs font-semibold text-emerald-600 dark:text-emerald-400"
-                                    >
-                                        {{ cell.display }}
-                                    </span>
-                                    <span
-                                        v-else-if="cell.kind === 'immune'"
-                                        class="bg-muted text-muted-foreground inline-block rounded-md px-2 py-0.5 text-xs font-medium"
-                                    >
-                                        {{ cell.display }}
-                                    </span>
+                                </td>
+                                <td v-for="(cell, ci) in row.cells" :key="row.attack + '-' + ci" class="border-border/40 border-l p-2 text-center align-middle">
+                                    <span v-if="cell.kind === 'weak4'" class="inline-block rounded bg-red-600 px-2 py-0.5 text-xs font-bold text-white dark:bg-red-500">{{ cell.display }}</span>
+                                    <span v-else-if="cell.kind === 'weak2'" class="text-destructive text-xs font-semibold">{{ cell.display }}</span>
+                                    <span v-else-if="cell.kind === 'resistQuarter'" class="inline-block rounded bg-emerald-600 px-2 py-0.5 text-xs font-bold text-white dark:bg-emerald-500">{{ cell.display }}</span>
+                                    <span v-else-if="cell.kind === 'resistHalf'" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{{ cell.display }}</span>
+                                    <span v-else-if="cell.kind === 'immune'" class="bg-muted text-muted-foreground inline-block rounded px-2 py-0.5 text-xs font-medium">immune</span>
                                 </td>
                                 <td
                                     class="border-border/40 border-l p-2 text-center text-sm font-semibold tabular-nums transition-colors"
                                     :class="row.totalWeak > 0 ? 'text-white' : 'text-muted-foreground'"
                                     :style="totalWeakCellStyle(row.totalWeak, defensiveAllyColumns.length)"
                                 >
-                                    {{ row.totalWeak }}
+                                    {{ row.totalWeak > 0 ? row.totalWeak : '' }}
                                 </td>
                                 <td
                                     class="border-border/40 border-l p-2 text-center text-sm font-semibold tabular-nums transition-colors"
                                     :class="row.totalResist > 0 ? 'text-white' : 'text-muted-foreground'"
                                     :style="totalResistCellStyle(row.totalResist, defensiveAllyColumns.length)"
                                 >
-                                    {{ row.totalResist }}
+                                    {{ row.totalResist > 0 ? row.totalResist : '' }}
                                 </td>
                             </tr>
                         </tbody>
@@ -890,32 +711,264 @@ function blurSuggestions(side: 'ally' | 'enemy', index: number): void {
                 </CardContent>
             </Card>
 
-            <Card>
-                <CardHeader>
-                    <CardTitle>Offensive coverage (selected moves)</CardTitle>
-                    <CardDescription>Each line is one of your picked moves against an opponent&apos;s typings.</CardDescription>
-                </CardHeader>
-                <CardContent class="space-y-6">
-                    <p v-if="!offensiveByEnemy.some((o) => o.lines.length)" class="text-muted-foreground text-sm">
-                        Choose enemy Pokémon and your moves to see effectiveness.
-                    </p>
-                    <div v-for="block in offensiveByEnemy" v-else :key="'off-' + block.index" class="space-y-2">
-                        <h3 class="text-sm font-medium">{{ block.label }}</h3>
-                        <div v-if="!block.lines.length" class="text-muted-foreground text-xs">—</div>
-                        <ul v-else class="space-y-1 text-sm">
-                            <li v-for="(ln, li) in block.lines" :key="li">
-                                <span class="font-medium">{{ ln.ally }}</span> · {{ ln.move }} →
-                                <span
-                                    :class="{
-                                        'text-destructive font-medium': ln.bracket === 'super',
-                                        'text-blue-600 dark:text-blue-400': ln.bracket === 'resist' || ln.bracket === 'immune',
-                                    }"
-                                >
-                                    ×{{ ln.mult }} ({{ ln.bracket }})
-                                </span>
-                            </li>
-                        </ul>
+            <!-- Team slot inputs -->
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <!-- Your team -->
+                <div class="space-y-3">
+                    <div>
+                        <h2 class="text-lg font-medium">Your team</h2>
+                        <p class="text-muted-foreground text-xs">Click a slot to add or edit. Moves drive the offensive table.</p>
                     </div>
+
+                    <!-- Compact slot chips -->
+                    <div class="grid grid-cols-3 gap-2 sm:grid-cols-6 lg:grid-cols-3">
+                        <button
+                            v-for="(slot, idx) in allySlots"
+                            :key="'ally-chip-' + idx"
+                            type="button"
+                            class="flex h-24 w-full flex-col items-center justify-center gap-0.5 rounded-lg border-2 px-1 transition-colors"
+                            :class="
+                                activeAllyIdx === idx
+                                    ? 'border-primary bg-primary/5'
+                                    : slot.pokedexId
+                                      ? 'border-border hover:border-primary/40'
+                                      : 'border-dashed border-muted-foreground/30 hover:border-muted-foreground/50'
+                            "
+                            @click="toggleAllySlot(idx)"
+                        >
+                            <template v-if="slot.pokedexId">
+                                <img :src="slot.spriteUrl ?? ''" :alt="slot.label" class="size-10 object-contain" />
+                                <span class="w-full truncate text-center text-[11px] font-medium leading-tight">{{ slot.label }}</span>
+                                <div class="flex gap-0.5">
+                                    <span v-if="slot.type1" class="rounded px-1 py-px text-[10px] font-semibold text-white" :style="typeBadgeStyle(slot.teraType || slot.type1)">
+                                        {{ slot.teraType ? slot.teraType : slot.type1 }}
+                                    </span>
+                                    <span v-if="slot.type2 && !slot.teraType" class="rounded px-1 py-px text-[10px] font-semibold text-white" :style="typeBadgeStyle(slot.type2)">{{ slot.type2 }}</span>
+                                </div>
+                            </template>
+                            <template v-else>
+                                <span class="text-muted-foreground text-2xl leading-none">+</span>
+                                <span class="text-muted-foreground text-[11px]">Slot {{ idx + 1 }}</span>
+                            </template>
+                        </button>
+                    </div>
+
+                    <!-- Expanded editor -->
+                    <div v-if="activeAllySlot !== null" class="space-y-4 rounded-lg border p-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-medium">{{ activeAllySlot.label || `Slot ${activeAllyIdx! + 1}` }}</span>
+                            <Button v-if="activeAllySlot.pokedexId" type="button" variant="ghost" size="sm" class="text-destructive h-7 px-2 text-xs" @click="clearSlot('ally', activeAllyIdx!)">
+                                Remove
+                            </Button>
+                        </div>
+
+                        <div class="relative">
+                            <Label class="text-muted-foreground text-xs">Pokémon</Label>
+                            <Input
+                                v-model="activeAllySlot.search"
+                                placeholder="Search name…"
+                                class="mt-1"
+                                autocomplete="off"
+                                @input="scheduleSearch('ally', activeAllyIdx!)"
+                                @focus="activeAllySlot.suggestionsOpen = activeAllySlot.suggestions.length > 0"
+                                @blur="blurSuggestions('ally', activeAllyIdx!)"
+                            />
+                            <ul
+                                v-if="activeAllySlot.suggestionsOpen && activeAllySlot.suggestions.length"
+                                class="bg-popover text-popover-foreground absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border text-sm shadow-md"
+                            >
+                                <li
+                                    v-for="h in activeAllySlot.suggestions"
+                                    :key="h.id"
+                                    class="hover:bg-accent flex cursor-pointer items-center gap-2 px-2 py-1.5"
+                                    @mousedown.prevent="pickSuggestion('ally', activeAllyIdx!, h)"
+                                >
+                                    <img :src="h.sprite_url" :alt="h.name" class="size-6 shrink-0 object-contain" />
+                                    <span>{{ h.name }}</span>
+                                    <span class="ml-auto flex shrink-0 gap-0.5">
+                                        <span class="rounded px-1 py-px text-[10px] font-semibold text-white" :style="typeBadgeStyle(h.type1)">{{ h.type1 }}</span>
+                                        <span v-if="h.type2" class="rounded px-1 py-px text-[10px] font-semibold text-white" :style="typeBadgeStyle(h.type2)">{{ h.type2 }}</span>
+                                    </span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div v-if="activeAllySlot.pokedexId" class="grid grid-cols-2 gap-3">
+                            <div>
+                                <Label class="text-muted-foreground text-xs">Tera type</Label>
+                                <select v-model="activeAllySlot.teraType" class="border-input bg-background mt-1 h-9 w-full rounded-md border px-2 text-sm shadow-xs dark:bg-transparent">
+                                    <option value="">— None —</option>
+                                    <option v-for="t in typeOptions" :key="t" :value="t">{{ t }}</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-col justify-end pb-1">
+                                <span v-if="activeAllySlot.loadingLearnset" class="text-muted-foreground text-xs">Loading learnset…</span>
+                                <div v-else class="flex flex-wrap gap-1">
+                                    <span v-if="activeAllySlot.teraType" class="rounded px-1.5 py-0.5 text-xs font-semibold text-white" :style="typeBadgeStyle(activeAllySlot.teraType)">
+                                        Tera: {{ activeAllySlot.teraType }}
+                                    </span>
+                                    <template v-else>
+                                        <span v-if="activeAllySlot.type1" class="rounded px-1.5 py-0.5 text-xs font-semibold text-white" :style="typeBadgeStyle(activeAllySlot.type1)">{{ activeAllySlot.type1 }}</span>
+                                        <span v-if="activeAllySlot.type2" class="rounded px-1.5 py-0.5 text-xs font-semibold text-white" :style="typeBadgeStyle(activeAllySlot.type2)">{{ activeAllySlot.type2 }}</span>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-if="activeAllySlot.pokedexId && !activeAllySlot.loadingLearnset" class="grid grid-cols-2 gap-2">
+                            <div v-for="mi in 4" :key="mi" class="flex flex-col gap-1">
+                                <Label class="text-muted-foreground text-xs">Move {{ mi }}</Label>
+                                <select v-model="activeAllySlot.moveIds[mi - 1]" class="border-input bg-background h-9 w-full rounded-md border px-2 text-sm shadow-xs dark:bg-transparent">
+                                    <option :value="null">—</option>
+                                    <option v-for="mv in moveOptions(activeAllySlot)" :key="mv.move_id" :value="mv.move_id">{{ mv.move_name }} ({{ mv.type_slug }})</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Enemy team -->
+                <div class="space-y-3">
+                    <div>
+                        <h2 class="text-lg font-medium">
+                            Enemy team
+                            <span class="text-muted-foreground text-sm font-normal">(optional)</span>
+                        </h2>
+                        <p class="text-muted-foreground text-xs">Used for the offensive coverage table. Click a slot to add.</p>
+                    </div>
+
+                    <!-- Compact slot chips -->
+                    <div class="grid grid-cols-3 gap-2 sm:grid-cols-6 lg:grid-cols-3">
+                        <button
+                            v-for="(slot, idx) in enemySlots"
+                            :key="'enemy-chip-' + idx"
+                            type="button"
+                            class="flex h-24 w-full flex-col items-center justify-center gap-0.5 rounded-lg border-2 px-1 transition-colors"
+                            :class="
+                                activeEnemyIdx === idx
+                                    ? 'border-primary bg-primary/5'
+                                    : slot.pokedexId
+                                      ? 'border-border hover:border-primary/40'
+                                      : 'border-dashed border-muted-foreground/30 hover:border-muted-foreground/50'
+                            "
+                            @click="toggleEnemySlot(idx)"
+                        >
+                            <template v-if="slot.pokedexId">
+                                <img :src="slot.spriteUrl ?? ''" :alt="slot.label" class="size-10 object-contain" />
+                                <span class="w-full truncate text-center text-[11px] font-medium leading-tight">{{ slot.label }}</span>
+                                <div class="flex gap-0.5">
+                                    <span v-if="slot.type1" class="rounded px-1 py-px text-[10px] font-semibold text-white" :style="typeBadgeStyle(slot.teraType || slot.type1)">
+                                        {{ slot.teraType ? slot.teraType : slot.type1 }}
+                                    </span>
+                                    <span v-if="slot.type2 && !slot.teraType" class="rounded px-1 py-px text-[10px] font-semibold text-white" :style="typeBadgeStyle(slot.type2)">{{ slot.type2 }}</span>
+                                </div>
+                            </template>
+                            <template v-else>
+                                <span class="text-muted-foreground text-2xl leading-none">+</span>
+                                <span class="text-muted-foreground text-[11px]">Opp {{ idx + 1 }}</span>
+                            </template>
+                        </button>
+                    </div>
+
+                    <!-- Expanded editor -->
+                    <div v-if="activeEnemySlot !== null" class="space-y-4 rounded-lg border p-4">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-medium">{{ activeEnemySlot.label || `Opponent ${activeEnemyIdx! + 1}` }}</span>
+                            <Button v-if="activeEnemySlot.pokedexId" type="button" variant="ghost" size="sm" class="text-destructive h-7 px-2 text-xs" @click="clearSlot('enemy', activeEnemyIdx!)">
+                                Remove
+                            </Button>
+                        </div>
+
+                        <div class="relative">
+                            <Label class="text-muted-foreground text-xs">Pokémon</Label>
+                            <Input
+                                v-model="activeEnemySlot.search"
+                                placeholder="Search name…"
+                                class="mt-1"
+                                autocomplete="off"
+                                @input="scheduleSearch('enemy', activeEnemyIdx!)"
+                                @focus="activeEnemySlot.suggestionsOpen = activeEnemySlot.suggestions.length > 0"
+                                @blur="blurSuggestions('enemy', activeEnemyIdx!)"
+                            />
+                            <ul
+                                v-if="activeEnemySlot.suggestionsOpen && activeEnemySlot.suggestions.length"
+                                class="bg-popover text-popover-foreground absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border text-sm shadow-md"
+                            >
+                                <li
+                                    v-for="h in activeEnemySlot.suggestions"
+                                    :key="h.id"
+                                    class="hover:bg-accent flex cursor-pointer items-center gap-2 px-2 py-1.5"
+                                    @mousedown.prevent="pickSuggestion('enemy', activeEnemyIdx!, h)"
+                                >
+                                    <img :src="h.sprite_url" :alt="h.name" class="size-6 shrink-0 object-contain" />
+                                    <span>{{ h.name }}</span>
+                                    <span class="ml-auto flex shrink-0 gap-0.5">
+                                        <span class="rounded px-1 py-px text-[10px] font-semibold text-white" :style="typeBadgeStyle(h.type1)">{{ h.type1 }}</span>
+                                        <span v-if="h.type2" class="rounded px-1 py-px text-[10px] font-semibold text-white" :style="typeBadgeStyle(h.type2)">{{ h.type2 }}</span>
+                                    </span>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <div v-if="activeEnemySlot.pokedexId" class="grid grid-cols-2 gap-3">
+                            <div>
+                                <Label class="text-muted-foreground text-xs">Tera type</Label>
+                                <select v-model="activeEnemySlot.teraType" class="border-input bg-background mt-1 h-9 w-full rounded-md border px-2 text-sm shadow-xs dark:bg-transparent">
+                                    <option value="">— None —</option>
+                                    <option v-for="t in typeOptions" :key="'et-' + t" :value="t">{{ t }}</option>
+                                </select>
+                            </div>
+                            <div class="flex flex-col justify-end pb-1">
+                                <div class="flex flex-wrap gap-1">
+                                    <span v-if="activeEnemySlot.teraType" class="rounded px-1.5 py-0.5 text-xs font-semibold text-white" :style="typeBadgeStyle(activeEnemySlot.teraType)">
+                                        Tera: {{ activeEnemySlot.teraType }}
+                                    </span>
+                                    <template v-else>
+                                        <span v-if="activeEnemySlot.type1" class="rounded px-1.5 py-0.5 text-xs font-semibold text-white" :style="typeBadgeStyle(activeEnemySlot.type1)">{{ activeEnemySlot.type1 }}</span>
+                                        <span v-if="activeEnemySlot.type2" class="rounded px-1.5 py-0.5 text-xs font-semibold text-white" :style="typeBadgeStyle(activeEnemySlot.type2)">{{ activeEnemySlot.type2 }}</span>
+                                    </template>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Offensive Coverage Table -->
+            <Card v-if="offensiveEnemyCols.length > 0">
+                <CardHeader>
+                    <CardTitle>Offensive coverage</CardTitle>
+                    <CardDescription>Your selected moves against each opponent. Neutral (1×) cells are left blank.</CardDescription>
+                </CardHeader>
+                <CardContent class="overflow-x-auto">
+                    <p v-if="offensiveRows.length === 0" class="text-muted-foreground text-sm italic">Select moves for your Pokémon above to see coverage.</p>
+                    <table v-else class="w-full border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-muted/60 border-b">
+                                <th class="text-foreground p-2 text-left text-xs font-semibold">Pokémon</th>
+                                <th class="text-foreground p-2 text-left text-xs font-semibold">Move</th>
+                                <th v-for="(enemy, ei) in offensiveEnemyCols" :key="'ohdr-' + ei" class="text-foreground min-w-[5rem] p-2 text-center text-xs font-semibold">
+                                    <img v-if="enemy.spriteUrl" :src="enemy.spriteUrl" :alt="enemy.label" class="mx-auto mb-0.5 size-8 object-contain" />
+                                    <span class="line-clamp-2">{{ enemy.label || `Opp ${ei + 1}` }}</span>
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="(row, ri) in offensiveRows" :key="ri" class="border-border/80 hover:bg-muted/30 border-b">
+                                <td class="text-foreground p-2 font-medium">{{ row.allyLabel }}</td>
+                                <td class="p-2">
+                                    <span class="inline-block rounded px-1.5 py-0.5 text-xs font-semibold text-white" :style="typeBadgeStyle(row.typeSlug)">{{ row.moveName }}</span>
+                                </td>
+                                <td v-for="(cell, ci) in row.cells" :key="ri + '-' + ci" class="border-border/40 border-l p-2 text-center align-middle">
+                                    <span v-if="cell.kind === 'weak4'" class="inline-block rounded bg-red-600 px-2 py-0.5 text-xs font-bold text-white dark:bg-red-500">{{ cell.display }}</span>
+                                    <span v-else-if="cell.kind === 'weak2'" class="text-destructive text-xs font-semibold">{{ cell.display }}</span>
+                                    <span v-else-if="cell.kind === 'resistQuarter'" class="inline-block rounded bg-emerald-600 px-2 py-0.5 text-xs font-bold text-white dark:bg-emerald-500">{{ cell.display }}</span>
+                                    <span v-else-if="cell.kind === 'resistHalf'" class="text-xs font-semibold text-emerald-600 dark:text-emerald-400">{{ cell.display }}</span>
+                                    <span v-else-if="cell.kind === 'immune'" class="bg-muted text-muted-foreground inline-block rounded px-2 py-0.5 text-xs font-medium">immune</span>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </CardContent>
             </Card>
         </div>

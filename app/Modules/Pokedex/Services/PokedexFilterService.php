@@ -39,7 +39,7 @@ class PokedexFilterService
         $query = Pokedex::query()
             ->select('pokedex.id', 'pokedex.name', 'pokedex.sprite_url', 'pokedex.type1', 'pokedex.type2', 'pokedex.nationaldex_id')
             ->when($search !== '', function (Builder $query) use ($search): void {
-                $query->where('pokedex.name', 'like', '%'.$search.'%');
+                $query->where('pokedex.name', 'like', $search.'%');
             })
             ->when($type1 !== '', function (Builder $query) use ($type1): void {
                 $query->where(function (Builder $q) use ($type1): void {
@@ -52,8 +52,11 @@ class PokedexFilterService
                 });
             })
             ->when($generation !== null, function (Builder $query) use ($generation): void {
-                $query->whereHas('generationData.versionGroup', function (Builder $q) use ($generation): void {
-                    $q->where('generation', (int) $generation);
+                $query->whereIn('pokedex.id', function (\Illuminate\Database\Query\Builder $sub) use ($generation): void {
+                    $sub->select('pgd.pokedex_id')
+                        ->from('pokemon_generation_data as pgd')
+                        ->join('version_groups as vg', 'vg.id', '=', 'pgd.version_group_id')
+                        ->where('vg.generation', (int) $generation);
                 });
             })
             ->when($excludePokedexIds !== null && $excludePokedexIds !== [], function (Builder $query) use ($excludePokedexIds): void {

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AuthAlert from '@/components/auth/AuthAlert.vue';
 import InputError from '@/components/InputError.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
@@ -25,9 +26,7 @@ const submit = () => {
     <AuthLayout title="Forgot password" description="Enter your email to receive a password reset link">
         <Head title="Forgot password" />
 
-        <div v-if="status" class="mb-4 text-center text-sm font-medium text-green-600">
-            {{ status }}
-        </div>
+        <AuthAlert v-if="status" :message="status" class="mb-4" />
 
         <div class="space-y-6">
             <form @submit.prevent="submit">

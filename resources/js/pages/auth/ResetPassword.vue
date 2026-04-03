@@ -38,8 +38,8 @@ const submit = () => {
             <div class="grid gap-6">
                 <div class="grid gap-2">
                     <Label for="email">Email</Label>
-                    <Input id="email" type="email" name="email" autocomplete="email" v-model="form.email" class="mt-1 block w-full" readonly />
-                    <InputError :message="form.errors.email" class="mt-2" />
+                    <Input id="email" type="email" name="email" autocomplete="email" v-model="form.email" readonly />
+                    <InputError :message="form.errors.email" />
                 </div>
 
                 <div class="grid gap-2">
@@ -50,7 +50,6 @@ const submit = () => {
                         name="password"
                         autocomplete="new-password"
                         v-model="form.password"
-                        class="mt-1 block w-full"
                         autofocus
                         placeholder="Password"
                     />
@@ -58,20 +57,19 @@ const submit = () => {
                 </div>
 
                 <div class="grid gap-2">
-                    <Label for="password_confirmation"> Confirm Password </Label>
+                    <Label for="password_confirmation">Confirm password</Label>
                     <Input
                         id="password_confirmation"
                         type="password"
                         name="password_confirmation"
                         autocomplete="new-password"
                         v-model="form.password_confirmation"
-                        class="mt-1 block w-full"
                         placeholder="Confirm password"
                     />
                     <InputError :message="form.errors.password_confirmation" />
                 </div>
 
-                <Button type="submit" class="mt-4 w-full" :disabled="form.processing">
+                <Button type="submit" class="w-full" :disabled="form.processing">
                     <LoaderCircle v-if="form.processing" class="h-4 w-4 animate-spin" />
                     Reset password
                 </Button>

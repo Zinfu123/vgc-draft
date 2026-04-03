@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { LeagueDetailSection } from '@/components/league/LeagueDetailLayout.vue';
+import BlobBackground from '@/components/BlobBackground.vue';
 import LeagueDetailLayout from '@/components/league/LeagueDetailLayout.vue';
 import LeagueMatches from '@/components/league/LeagueMatches.vue';
 import { Head } from '@inertiajs/vue3';
@@ -82,14 +83,10 @@ defineProps<{
         <Head :title="`Matches · ${league.name}`" />
 
         <div class="relative">
-            <div class="pointer-events-none absolute inset-0 overflow-hidden select-none" aria-hidden="true">
-                <div
-                    class="absolute -top-20 right-0 h-64 w-64 rounded-full bg-fightingtype/10 blur-3xl dark:bg-fightingtype/15"
-                />
-                <div
-                    class="absolute top-1/3 -left-20 h-56 w-56 rounded-full bg-watertype/10 blur-3xl dark:bg-watertype/16"
-                />
-            </div>
+            <BlobBackground>
+                <div class="absolute -top-20 right-0 h-64 w-64 rounded-full bg-fightingtype/10 blur-3xl dark:bg-fightingtype/15" />
+                <div class="absolute top-1/3 -left-20 h-56 w-56 rounded-full bg-watertype/10 blur-3xl dark:bg-watertype/16" />
+            </BlobBackground>
 
             <div class="relative z-10">
                 <LeagueMatches

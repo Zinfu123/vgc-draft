@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BlobBackground from '@/components/BlobBackground.vue';
 import PokemonCard from '@/components/pokemon/PokemonCard.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -64,14 +65,10 @@ function winPct(wins: number, losses: number): string {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="relative mx-auto w-full max-w-7xl px-4 py-6 pb-10 sm:px-6 lg:px-8">
-            <div class="pointer-events-none absolute inset-0 overflow-hidden select-none" aria-hidden="true">
-                <div
-                    class="absolute -top-24 right-1/4 h-64 w-64 rounded-full bg-watertype/15 blur-3xl dark:bg-watertype/20"
-                />
-                <div
-                    class="absolute top-1/3 -left-20 h-56 w-56 rounded-full bg-dragontype/10 blur-3xl dark:bg-dragontype/15"
-                />
-            </div>
+            <BlobBackground>
+                <div class="absolute -top-24 right-1/4 h-64 w-64 rounded-full bg-watertype/15 blur-3xl dark:bg-watertype/20" />
+                <div class="absolute top-1/3 -left-20 h-56 w-56 rounded-full bg-dragontype/10 blur-3xl dark:bg-dragontype/15" />
+            </BlobBackground>
 
             <div class="relative z-10 flex flex-col gap-6">
                 <Card class="overflow-hidden border-border bg-card/80 shadow-sm backdrop-blur-sm dark:bg-card/90">

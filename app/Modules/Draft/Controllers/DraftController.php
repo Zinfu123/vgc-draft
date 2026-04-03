@@ -15,6 +15,7 @@ use App\Modules\League\Actions\ReadLeagueDraftAction;
 use App\Modules\League\Actions\ReadLeaguePokemonAction;
 use App\Modules\League\Models\League;
 use App\Modules\Teams\Models\Team;
+use App\Notifications\DraftStartedBroadcastNotification;
 use App\Notifications\DraftStartedNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -90,6 +91,13 @@ class DraftController extends Controller
         }
 
         $league->notify(new DraftStartedNotification($league));
+
+        $league->load('teams.user');
+        foreach ($league->teams as $team) {
+            if ($team->user !== null) {
+                $team->user->notifyNow(new DraftStartedBroadcastNotification($league));
+            }
+        }
 
         return redirect()->route('draft.detail', ['league_id' => $request->league_id]);
     }

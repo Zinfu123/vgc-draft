@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import BlobBackground from '@/components/BlobBackground.vue';
 import { Head, Link } from '@inertiajs/vue3';
 
 const features = [
@@ -31,17 +32,11 @@ const features = [
     <div
         class="relative flex min-h-dvh flex-col items-center justify-start overflow-x-hidden bg-background pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(3rem,env(safe-area-inset-bottom))] text-foreground sm:justify-center sm:pl-6 sm:pr-6 sm:pt-16 sm:pb-[max(4rem,env(safe-area-inset-bottom))] lg:pl-8 lg:pr-8"
     >
-        <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-            <div
-                class="absolute -top-40 left-1/2 h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-dragontype/20 blur-3xl dark:bg-dragontype/25"
-            />
-            <div
-                class="absolute -bottom-32 -right-24 h-80 w-80 rounded-full bg-watertype/15 blur-3xl dark:bg-watertype/20"
-            />
-            <div
-                class="absolute bottom-1/4 -left-32 h-72 w-72 rounded-full bg-electrictype/10 blur-3xl dark:bg-electrictype/15"
-            />
-        </div>
+        <BlobBackground>
+            <div class="absolute -top-40 left-1/2 h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-dragontype/20 blur-3xl dark:bg-dragontype/25" />
+            <div class="absolute -bottom-32 -right-24 h-80 w-80 rounded-full bg-watertype/15 blur-3xl dark:bg-watertype/20" />
+            <div class="absolute bottom-1/4 -left-32 h-72 w-72 rounded-full bg-electrictype/10 blur-3xl dark:bg-electrictype/15" />
+        </BlobBackground>
 
         <div class="relative z-10 mx-auto flex w-full max-w-3xl flex-col items-center text-center">
             <p

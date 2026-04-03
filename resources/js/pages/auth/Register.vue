@@ -5,6 +5,7 @@ import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { authLinkClass } from '@/lib/authLink';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { LoaderCircle } from 'lucide-vue-next';
 import { computed } from 'vue';
@@ -25,8 +26,7 @@ const submit = () => {
     });
 };
 
-const authLinkClass =
-    'text-sm font-medium text-[oklch(0.48_0.19_25)] underline decoration-[oklch(0.53_0.195_25/0.4)] underline-offset-4 transition-colors hover:text-[oklch(0.4_0.17_25)] dark:text-primary dark:decoration-primary/45 dark:hover:text-primary/90';
+
 </script>
 
 <template>

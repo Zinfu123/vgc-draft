@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import type { LeagueDetailSection } from '@/components/league/LeagueDetailLayout.vue';
+import BlobBackground from '@/components/BlobBackground.vue';
+import PageHeader from '@/components/PageHeader.vue';
 import LeagueDetailLayout from '@/components/league/LeagueDetailLayout.vue';
 import TeamCarousel from '@/components/team/TeamCarousel.vue';
 import { Head } from '@inertiajs/vue3';
@@ -59,33 +61,20 @@ const teamCountLabel = teamCount === 1 ? '1 team' : `${teamCount} teams`;
         <Head :title="`Teams · ${league.name}`" />
 
         <div class="relative">
-            <div class="pointer-events-none absolute inset-0 overflow-hidden select-none" aria-hidden="true">
-                <div
-                    class="absolute -top-20 right-0 h-72 w-72 rounded-full bg-dragontype/12 blur-3xl dark:bg-dragontype/18"
-                />
-                <div
-                    class="absolute top-1/4 -left-24 h-64 w-64 rounded-full bg-watertype/12 blur-3xl dark:bg-watertype/18"
-                />
-                <div
-                    class="absolute bottom-0 left-1/3 h-48 w-64 rounded-full bg-steeltype/10 blur-3xl dark:bg-steeltype/15"
-                />
-            </div>
+            <BlobBackground>
+                <div class="absolute -top-20 right-0 h-72 w-72 rounded-full bg-dragontype/12 blur-3xl dark:bg-dragontype/18" />
+                <div class="absolute top-1/4 -left-24 h-64 w-64 rounded-full bg-watertype/12 blur-3xl dark:bg-watertype/18" />
+                <div class="absolute bottom-0 left-1/3 h-48 w-64 rounded-full bg-steeltype/10 blur-3xl dark:bg-steeltype/15" />
+            </BlobBackground>
 
             <div class="relative z-10 flex flex-col gap-6">
-                <div class="space-y-2">
-                    <p class="flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                        <Users class="size-3.5 opacity-70" aria-hidden="true" />
-                        Rosters
-                    </p>
-                    <h2 class="text-balance text-2xl font-bold tracking-tight sm:text-3xl">Teams</h2>
-                    <p class="max-w-xl text-sm text-muted-foreground sm:text-base">
-                        {{ teamCountLabel }}
-                        <template v-if="teamCount > 0">
-                            — Open a card for full roster, record, and league links. Stats mirror the dashboard cards.
-                        </template>
-                        <template v-else>Create or join a team with the controls above. Cards appear here for each coach.</template>
-                    </p>
-                </div>
+                <PageHeader eyebrow="Rosters" title="Teams" :icon="Users">
+                    {{ teamCountLabel }}
+                    <template v-if="teamCount > 0">
+                        — Open a card for full roster, record, and league links. Stats mirror the dashboard cards.
+                    </template>
+                    <template v-else>Create or join a team with the controls above. Cards appear here for each coach.</template>
+                </PageHeader>
 
                 <div
                     class="rounded-2xl border border-border/80 bg-gradient-to-b from-muted/30 via-card/60 to-card p-4 shadow-sm backdrop-blur-sm dark:from-muted/20 dark:via-card/40 sm:p-6"

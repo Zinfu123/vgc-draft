@@ -1,14 +1,17 @@
 <script setup lang="ts">
+import AuthAlert from '@/components/auth/AuthAlert.vue';
 import DiscordOAuthLink from '@/components/auth/DiscordOAuthLink.vue';
 import MarketingAuthShell from '@/components/auth/MarketingAuthShell.vue';
+import PasswordInput from '@/components/auth/PasswordInput.vue';
 import InputError from '@/components/InputError.vue';
+import { authLinkClass } from '@/lib/authLink';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
-import { Eye, EyeOff, LoaderCircle } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { LoaderCircle } from 'lucide-vue-next';
+import { computed } from 'vue';
 
 defineProps<{
     status?: string;
@@ -29,9 +32,6 @@ const linkForm = useForm({
     link_password: '',
 });
 
-const showPassword = ref(false);
-const showLinkPassword = ref(false);
-
 const submit = () => {
     form.post(route('login'), {
         onFinish: () => form.reset('password'),
@@ -44,8 +44,6 @@ const submitLinkDiscord = () => {
     });
 };
 
-const authLinkClass =
-    'text-sm font-medium text-[oklch(0.48_0.19_25)] underline decoration-[oklch(0.53_0.195_25/0.4)] underline-offset-4 transition-colors hover:text-[oklch(0.4_0.17_25)] dark:text-primary dark:decoration-primary/45 dark:hover:text-primary/90';
 </script>
 
 <template>
@@ -55,9 +53,7 @@ const authLinkClass =
         title="Log in"
         description="Welcome back. Use Discord or your email to access your leagues and drafts."
     >
-        <div v-if="status" class="mb-4 rounded-md border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-800 dark:border-green-900 dark:bg-green-950/40 dark:text-green-200">
-            {{ status }}
-        </div>
+        <AuthAlert v-if="status" :message="status" class="mb-4" />
 
         <div class="flex flex-col gap-6">
             <DiscordOAuthLink label="Log in with Discord" />
@@ -82,27 +78,14 @@ const authLinkClass =
 
                 <div class="grid gap-2">
                     <Label for="password">Password</Label>
-                    <div class="relative">
-                        <Input
-                            id="password"
-                            v-model="form.password"
-                            :type="showPassword ? 'text' : 'password'"
-                            required
-                            :tabindex="2"
-                            autocomplete="current-password"
-                            class="pr-10"
-                            placeholder="Password"
-                        />
-                        <button
-                            type="button"
-                            class="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
-                            tabindex="-1"
-                            @click="showPassword = !showPassword"
-                        >
-                            <EyeOff v-if="showPassword" class="h-4 w-4" />
-                            <Eye v-else class="h-4 w-4" />
-                        </button>
-                    </div>
+                    <PasswordInput
+                        id="password"
+                        v-model="form.password"
+                        :tabindex="2"
+                        autocomplete="current-password"
+                        placeholder="Password"
+                        required
+                    />
                 </div>
 
                 <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-x-4 sm:gap-y-2">
@@ -149,27 +132,14 @@ const authLinkClass =
                     </div>
                     <div class="grid gap-2">
                         <Label for="link_password">Password</Label>
-                        <div class="relative">
-                            <Input
-                                id="link_password"
-                                v-model="linkForm.link_password"
-                                :type="showLinkPassword ? 'text' : 'password'"
-                                required
-                                :tabindex="8"
-                                autocomplete="current-password"
-                                class="pr-10"
-                                placeholder="Your password"
-                            />
-                            <button
-                                type="button"
-                                class="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground"
-                                tabindex="-1"
-                                @click="showLinkPassword = !showLinkPassword"
-                            >
-                                <EyeOff v-if="showLinkPassword" class="h-4 w-4" />
-                                <Eye v-else class="h-4 w-4" />
-                            </button>
-                        </div>
+                        <PasswordInput
+                            id="link_password"
+                            v-model="linkForm.link_password"
+                            :tabindex="8"
+                            autocomplete="current-password"
+                            placeholder="Your password"
+                            required
+                        />
                     </div>
                     <Button type="submit" variant="secondary" class="w-full" :tabindex="9" :disabled="linkForm.processing">
                         <LoaderCircle v-if="linkForm.processing" class="mr-2 h-4 w-4 animate-spin" />

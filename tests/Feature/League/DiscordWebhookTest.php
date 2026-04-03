@@ -6,6 +6,7 @@ use App\Modules\Matches\Models\Pool;
 use App\Modules\Matches\Models\Set;
 use App\Modules\Teams\Models\Team;
 use App\Notifications\DraftEndedNotification;
+use App\Notifications\DraftStartedBroadcastNotification;
 use App\Notifications\DraftStartedNotification;
 use App\Notifications\MatchResultNotification;
 use Illuminate\Support\Facades\Event;
@@ -140,6 +141,29 @@ it('sends a MatchResultNotification when a set result is submitted', function ()
 });
 
 // ── Notification content ─────────────────────────────────────────────────────
+
+it('sends a DraftStartedBroadcastNotification to each team member when a draft is created', function () {
+    Notification::fake();
+    Event::fake();
+
+    [$owner, $league, $team1, $team2, $user1, $user2] = createLeagueForDiscordTests();
+
+    $this->actingAs($owner)->post('/draft/create', ['league_id' => $league->id]);
+
+    Notification::assertSentTo($user1, DraftStartedBroadcastNotification::class);
+    Notification::assertSentTo($user2, DraftStartedBroadcastNotification::class);
+});
+
+it('DraftStartedBroadcastNotification toBroadcast contains the league id and name', function () {
+    $league = new League(['name' => 'VGC Championship']);
+    $league->id = 42;
+    $notification = new DraftStartedBroadcastNotification($league);
+    $user = User::factory()->make();
+    $message = $notification->toBroadcast($user);
+
+    expect($message->data['league_id'])->toBe(42)
+        ->and($message->data['league_name'])->toBe('VGC Championship');
+});
 
 it('DraftStartedNotification toDiscord contains the league name', function () {
     $league = new League(['name' => 'VGC Championship']);

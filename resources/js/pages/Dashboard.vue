@@ -1,9 +1,12 @@
 <script setup lang="ts">
+import EmptyState from '@/components/EmptyState.vue';
 import LeagueCarousel from '@/components/league/LeagueCarousel.vue';
 import { Card, CardContent } from '@/components/ui/card';
+import { isReverbBroadcastClientConfigured } from '@/lib/broadcasting';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
+import { useEchoNotification } from '@laravel/echo-vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -71,6 +74,19 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+
+const page = usePage();
+const userId = page.props.auth?.user?.id;
+
+if (isReverbBroadcastClientConfigured && userId) {
+    useEchoNotification(
+        `App.Models.User.${userId}`,
+        () => {
+            router.reload({ only: ['usersActiveLeagues'] });
+        },
+        'DraftStartedBroadcastNotification',
+    );
+}
 </script>
 
 <template>
@@ -145,7 +161,7 @@ const props = defineProps<Props>();
                     <div v-if="props.usersActiveLeagues.length > 0" class="grid grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-4">
                         <LeagueCarousel :leagues="props.usersActiveLeagues" />
                     </div>
-                    <p v-else class="text-muted-foreground">You are not currently in any active leagues.</p>
+                    <EmptyState v-else message="You are not currently in any active leagues." />
                 </section>
 
                 <section>
@@ -153,7 +169,7 @@ const props = defineProps<Props>();
                     <div v-if="props.usersPastLeagues.length > 0" class="grid grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-4">
                         <LeagueCarousel :leagues="props.usersPastLeagues" />
                     </div>
-                    <p v-else class="text-muted-foreground">You have no past leagues.</p>
+                    <EmptyState v-else message="You have no past leagues." />
                 </section>
             </div>
 
@@ -162,7 +178,7 @@ const props = defineProps<Props>();
                 <div v-if="props.openLeagues.length > 0" class="grid grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-4">
                     <LeagueCarousel :leagues="props.openLeagues" />
                 </div>
-                <p v-else class="text-muted-foreground">There are no open leagues available to join.</p>
+                <EmptyState v-else message="There are no open leagues available to join." />
             </section>
         </div>
     </AppLayout>

@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import PokemonCard from '@/components/pokemon/PokemonCard.vue';
+import MatchTeamPanel from '@/components/match/MatchTeamPanel.vue';
+import ReplayInput from '@/components/match/ReplayInput.vue';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { isReverbBroadcastClientConfigured } from '@/lib/broadcasting';
 import { type BreadcrumbItem } from '@/types';
@@ -466,31 +469,7 @@ const handleReopenMatch = () => {
             </div>
         </div>
         <div class="mt-8 flex w-full flex-col items-stretch gap-10 px-4 lg:flex-row lg:items-start lg:gap-4 lg:px-6">
-            <div class="flex min-w-0 flex-1 flex-col">
-                <!-- Team 1 -->
-                <img v-if="props.set.team1.logo" :src="props.set.team1.logo" alt="Team Logo" class="mx-auto h-30 w-30 rounded-full" />
-                <Link :href="`/teams/${props.set.team1.id}`">
-                    <p class="text-center text-2xl font-bold transition-colors hover:text-primary">
-                        {{ props.set.team1.name }}
-                    </p>
-                    <p class="text-center text-muted-foreground transition-colors hover:text-primary">Coach: {{ props.set.team1.user.name }}</p>
-                    <p class="text-center text-xs text-muted-foreground">
-                        <span class="text-foreground/80 font-medium">Showdown</span>:
-                        <span v-if="coachShowdownDisplay(props.set.team1)" class="font-mono">{{
-                            coachShowdownDisplay(props.set.team1)
-                        }}</span>
-                        <span v-else class="italic">Not set</span>
-                    </p>
-                </Link>
-                <p class="text-center text-2xl font-bold">Pokemon</p>
-                <div class="flex flex-wrap justify-center gap-4">
-                    <PokemonCard
-                        v-for="pokemon in props.set.team1.pokemon"
-                        :key="pokemon.id"
-                        :pokemon="{ ...pokemon.pokemon, cost: pokemon.cost, type2: pokemon.pokemon.type2 || '-' }"
-                    />
-                </div>
-            </div>
+            <MatchTeamPanel :team="props.set.team1" :showdown-display="coachShowdownDisplay(props.set.team1)" />
             <!-- Center Column-->
             <div class="flex min-w-0 flex-1 flex-col px-0 lg:px-4">
                 <form class="top-0" @submit.prevent="handleSubmit">
@@ -601,108 +580,56 @@ const handleReopenMatch = () => {
                                     </div>
                                 </template>
 
-                                <!-- Replay 1 -->
-                                <div class="sm:col-span-6">
-                                    <label for="replay1" class="block text-sm/6 font-medium text-foreground">Game 1 Replay</label>
-                                    <div class="mt-2">
-                                        <input
-                                            v-if="isUserInSet"
-                                            type="url"
-                                            id="replay1"
-                                            placeholder="https://replay.pokemonshowdown.com/..."
-                                            class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
-                                            v-model="replayForm.replay1"
-                                        />
-                                        <a
-                                            v-if="!isUserInSet && replayForm.replay1"
-                                            :href="replayForm.replay1"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            class="block max-w-full truncate text-center text-sm text-muted-foreground transition-colors hover:text-primary"
-                                        >
-                                            {{ replayForm.replay1 }}
-                                        </a>
-                                        <p v-if="replayForm.errors.replay1" class="mt-1 text-sm text-destructive">{{ replayForm.errors.replay1 }}</p>
-                                    </div>
-                                </div>
+                                <ReplayInput
+                                    id="replay1"
+                                    label="Game 1 Replay"
+                                    v-model="replayForm.replay1"
+                                    :is-user-in-set="isUserInSet"
+                                    :error="replayForm.errors.replay1"
+                                />
+                                <ReplayInput
+                                    id="replay2"
+                                    label="Game 2 Replay"
+                                    v-model="replayForm.replay2"
+                                    :is-user-in-set="isUserInSet"
+                                    :error="replayForm.errors.replay2"
+                                />
+                                <ReplayInput
+                                    id="replay3"
+                                    label="Game 3 Replay"
+                                    v-model="replayForm.replay3"
+                                    :is-user-in-set="isUserInSet"
+                                    :error="replayForm.errors.replay3"
+                                />
 
-                                <!-- Replay 2 -->
-                                <div class="sm:col-span-6">
-                                    <label for="replay2" class="block text-sm/6 font-medium text-foreground">Game 2 Replay</label>
-                                    <div class="mt-2">
-                                        <input
-                                            v-if="isUserInSet"
-                                            type="url"
-                                            id="replay2"
-                                            placeholder="https://replay.pokemonshowdown.com/..."
-                                            class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
-                                            v-model="replayForm.replay2"
-                                        />
-                                        <a
-                                            v-if="!isUserInSet && replayForm.replay2"
-                                            :href="replayForm.replay2"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            class="block max-w-full truncate text-center text-sm text-muted-foreground transition-colors hover:text-primary"
-                                        >
-                                            {{ replayForm.replay2 }}
-                                        </a>
-                                        <p v-if="replayForm.errors.replay2" class="mt-1 text-sm text-destructive">{{ replayForm.errors.replay2 }}</p>
-                                    </div>
-                                </div>
-
-                                <!-- Replay 3 -->
-                                <div class="sm:col-span-6">
-                                    <label for="replay3" class="block text-sm/6 font-medium text-foreground">Game 3 Replay</label>
-                                    <div class="mt-2">
-                                        <input
-                                            v-if="isUserInSet"
-                                            type="url"
-                                            id="replay3"
-                                            placeholder="https://replay.pokemonshowdown.com/..."
-                                            class="block w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
-                                            v-model="replayForm.replay3"
-                                        />
-                                        <a
-                                            v-if="!isUserInSet && replayForm.replay3"
-                                            :href="replayForm.replay3"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            class="block max-w-full truncate text-center text-sm text-muted-foreground transition-colors hover:text-primary"
-                                        >
-                                            {{ replayForm.replay3 }}
-                                        </a>
-                                        <p v-if="replayForm.errors.replay3" class="mt-1 text-sm text-destructive">{{ replayForm.errors.replay3 }}</p>
-                                    </div>
-                                </div>
-
-                                <div class="flex min-h-[44px] flex-col gap-3 sm:col-span-6 sm:flex-row sm:flex-wrap">
-                                    <button
+                                <div class="flex flex-col gap-3 sm:col-span-6 sm:flex-row sm:flex-wrap">
+                                    <Button
                                         v-if="!isSetCompleted && isUserInSet"
                                         type="submit"
                                         :disabled="disableForm || !canSubmitSetResult"
-                                        class="min-h-11 touch-manipulation rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-9 sm:px-3 sm:py-2"
+                                        class="touch-manipulation"
                                     >
                                         Update
-                                    </button>
-                                    <button
+                                    </Button>
+                                    <Button
                                         v-if="isUserInSet"
                                         type="button"
                                         :disabled="replayForm.processing"
-                                        class="min-h-11 touch-manipulation rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:min-h-9 sm:px-3 sm:py-2"
+                                        class="touch-manipulation"
                                         @click="handleReplaySubmit"
                                     >
                                         Save Replays
-                                    </button>
-                                    <button
+                                    </Button>
+                                    <Button
                                         v-if="isUserInSet && hasSavedReplayUrl"
                                         type="button"
+                                        variant="outline"
                                         :disabled="importFromReplayForm.processing"
-                                        class="min-h-11 touch-manipulation rounded-md border border-border bg-background px-4 py-2.5 text-sm font-semibold text-foreground shadow-sm transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:min-h-9 sm:px-3 sm:py-2"
+                                        class="touch-manipulation"
                                         @click="importReplayModalOpen = true"
                                     >
                                         Import rosters from replay
-                                    </button>
+                                    </Button>
                                 </div>
                                 <p
                                     v-if="page.props.errors && (page.props.errors as Record<string, string>).replay_import"
@@ -726,14 +653,15 @@ const handleReopenMatch = () => {
                                 </div>
                                 <div v-if="props.isLeagueAdmin && isSetCompleted" class="flex w-full max-w-md flex-col items-center gap-2">
                                     <p v-if="reopenForm.errors.set_id" class="text-center text-sm text-destructive">{{ reopenForm.errors.set_id }}</p>
-                                    <button
+                                    <Button
                                         type="button"
+                                        variant="outline"
                                         :disabled="reopenForm.processing"
-                                        class="rounded-md border border-destructive/60 bg-transparent px-3 py-2 text-sm font-semibold text-destructive shadow-sm transition-colors hover:bg-destructive/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-destructive disabled:cursor-not-allowed disabled:opacity-50"
+                                        class="border-destructive/60 text-destructive hover:bg-destructive/10 hover:text-destructive"
                                         @click="handleReopenMatch"
                                     >
                                         Reopen match (admin)
-                                    </button>
+                                    </Button>
                                 </div>
                             </div>
                         </div>
@@ -741,58 +669,28 @@ const handleReopenMatch = () => {
                 </form>
             </div>
             <!-- Team 2 -->
-            <div class="flex min-w-0 flex-1 flex-col">
-                <img v-if="props.set.team2.logo" :src="props.set.team2.logo" alt="Team Logo" class="mx-auto h-30 w-30 rounded-full" />
-                <Link :href="`/teams/${props.set.team2.id}`">
-                    <p class="text-center text-2xl font-bold transition-colors hover:text-primary">
-                        {{ props.set.team2.name }}
-                    </p>
-                    <p class="text-center text-muted-foreground transition-colors hover:text-primary">Coach: {{ props.set.team2.user.name }}</p>
-                    <p class="text-center text-xs text-muted-foreground">
-                        <span class="text-foreground/80 font-medium">Showdown</span>:
-                        <span v-if="coachShowdownDisplay(props.set.team2)" class="font-mono">{{
-                            coachShowdownDisplay(props.set.team2)
-                        }}</span>
-                        <span v-else class="italic">Not set</span>
-                    </p>
-                </Link>
-                <p class="text-center text-2xl font-bold">Pokemon</p>
-                <div class="flex flex-wrap justify-center gap-4">
-                    <PokemonCard
-                        v-for="pokemon in props.set.team2.pokemon"
-                        :key="pokemon.id"
-                        :pokemon="{ ...pokemon.pokemon, cost: pokemon.cost, type2: pokemon.pokemon.type2 || '-' }"
-                    />
-                </div>
-            </div>
+            <MatchTeamPanel :team="props.set.team2" :showdown-display="coachShowdownDisplay(props.set.team2)" />
         </div>
-        <div
-            v-if="importReplayModalOpen"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="import-replay-title"
-            @click.self="closeImportReplayModal"
-        >
-            <div
-                class="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-lg border border-border bg-background p-6 shadow-lg"
-                @click.stop
-            >
-                <h2 id="import-replay-title" class="text-lg font-semibold text-foreground">Import rosters from Showdown replay</h2>
-                <p class="text-muted-foreground mt-2 text-sm">
-                    Uses the saved replay log to set both teams’ match paste species (replay order). If a team’s paste already has the
-                    same six Pokémon in any order, abilities, moves, items, and EVs you entered are kept and only slot order and any new
-                    species mapping are updated. Choose which replay and which league team is Showdown player 1 (p1); a coach’s Showdown
-                    name from Profile or team that matches the replay can pre-select p1.
-                </p>
-                <div class="mt-4 space-y-4">
+        <Dialog v-model:open="importReplayModalOpen">
+            <DialogContent class="max-h-[90vh] overflow-y-auto sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Import rosters from Showdown replay</DialogTitle>
+                    <DialogDescription>
+                        Uses the saved replay log to set both teams’ match paste species (replay order). If a team’s paste already has the
+                        same six Pokémon in any order, abilities, moves, items, and EVs you entered are kept and only slot order and any new
+                        species mapping are updated. Choose which replay and which league team is Showdown player 1 (p1); a coach’s Showdown
+                        name from Profile or team that matches the replay can pre-select p1.
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div class="space-y-4">
                     <fieldset>
                         <legend class="text-sm font-medium text-foreground">Which replay?</legend>
                         <div class="mt-2 space-y-2">
                             <label
                                 v-for="opt in savedReplayOptions"
                                 :key="opt.slot"
-                                class="hover:bg-muted/50 flex cursor-pointer items-start gap-2 rounded-md border border-transparent p-2"
+                                class="flex cursor-pointer items-start gap-2 rounded-md border border-transparent p-2 hover:bg-muted/50"
                             >
                                 <input
                                     v-model.number="importFromReplayForm.replay_slot"
@@ -802,23 +700,23 @@ const handleReopenMatch = () => {
                                     :value="opt.slot"
                                 />
                                 <span class="text-sm">
-                                    <span class="text-foreground font-medium">{{ opt.label }}</span>
-                                    <span class="text-muted-foreground block truncate text-xs">{{ opt.url }}</span>
+                                    <span class="font-medium text-foreground">{{ opt.label }}</span>
+                                    <span class="block truncate text-xs text-muted-foreground">{{ opt.url }}</span>
                                 </span>
                             </label>
                         </div>
-                        <p v-if="importFromReplayForm.errors.replay_slot" class="text-destructive mt-1 text-sm">
+                        <p v-if="importFromReplayForm.errors.replay_slot" class="mt-1 text-sm text-destructive">
                             {{ importFromReplayForm.errors.replay_slot }}
                         </p>
                     </fieldset>
-                    <p v-if="replayPreviewLoading" class="text-muted-foreground text-sm">Reading replay…</p>
-                    <p v-else-if="replayPreviewError" class="text-destructive text-sm">{{ replayPreviewError }}</p>
+                    <p v-if="replayPreviewLoading" class="text-sm text-muted-foreground">Reading replay…</p>
+                    <p v-else-if="replayPreviewError" class="text-sm text-destructive">{{ replayPreviewError }}</p>
                     <template v-else-if="replayPreviewData">
-                        <p class="text-muted-foreground text-sm">
+                        <p class="text-sm text-muted-foreground">
                             Showdown:
-                            <span class="text-foreground font-medium">{{ replayPreviewData.p1_name }}</span>
+                            <span class="font-medium text-foreground">{{ replayPreviewData.p1_name }}</span>
                             vs
-                            <span class="text-foreground font-medium">{{ replayPreviewData.p2_name }}</span>
+                            <span class="font-medium text-foreground">{{ replayPreviewData.p2_name }}</span>
                         </p>
                         <p
                             v-if="!replayPreviewData.needs_manual_p1_map && replayPreviewData.suggested_p1_team_id"
@@ -830,7 +728,7 @@ const handleReopenMatch = () => {
                                     : props.set.team2.name
                             }}).
                         </p>
-                        <p v-else class="text-muted-foreground text-sm">
+                        <p v-else class="text-sm text-muted-foreground">
                             Add a Showdown username on your Profile or team for automatic p1 matching, or choose manually below.
                         </p>
                     </template>
@@ -839,37 +737,31 @@ const handleReopenMatch = () => {
                         <div class="mt-2 space-y-2">
                             <label class="flex cursor-pointer items-center gap-2">
                                 <input v-model.number="importFromReplayForm.p1_team_id" type="radio" name="p1_team_import" :value="props.set.team1.id" />
-                                <span class="text-foreground text-sm">{{ props.set.team1.name }}</span>
+                                <span class="text-sm text-foreground">{{ props.set.team1.name }}</span>
                             </label>
                             <label class="flex cursor-pointer items-center gap-2">
                                 <input v-model.number="importFromReplayForm.p1_team_id" type="radio" name="p1_team_import" :value="props.set.team2.id" />
-                                <span class="text-foreground text-sm">{{ props.set.team2.name }}</span>
+                                <span class="text-sm text-foreground">{{ props.set.team2.name }}</span>
                             </label>
                         </div>
-                        <p v-if="importFromReplayForm.errors.p1_team_id" class="text-destructive mt-1 text-sm">
+                        <p v-if="importFromReplayForm.errors.p1_team_id" class="mt-1 text-sm text-destructive">
                             {{ importFromReplayForm.errors.p1_team_id }}
                         </p>
                     </fieldset>
-                    <p v-if="importFromReplayForm.errors.set_id" class="text-destructive text-sm">{{ importFromReplayForm.errors.set_id }}</p>
+                    <p v-if="importFromReplayForm.errors.set_id" class="text-sm text-destructive">{{ importFromReplayForm.errors.set_id }}</p>
                 </div>
-                <div class="mt-6 flex flex-wrap justify-end gap-2">
-                    <button
-                        type="button"
-                        class="border-border bg-background text-foreground hover:bg-muted rounded-md border px-3 py-2 text-sm font-semibold"
-                        @click="closeImportReplayModal"
-                    >
-                        Cancel
-                    </button>
-                    <button
+
+                <DialogFooter class="flex-wrap gap-2">
+                    <Button type="button" variant="outline" @click="closeImportReplayModal">Cancel</Button>
+                    <Button
                         type="button"
                         :disabled="importFromReplayForm.processing || savedReplayOptions.length === 0"
-                        class="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-3 py-2 text-sm font-semibold disabled:opacity-50"
                         @click="submitImportFromReplay"
                     >
                         Import both teams
-                    </button>
-                </div>
-            </div>
-        </div>
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </AppLayout>
 </template>

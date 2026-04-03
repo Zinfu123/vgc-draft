@@ -256,12 +256,14 @@ if (isReverbBroadcastClientConfigured) {
         });
     });
 
-    useEchoPublic(`end.draft.${props.draft?.id ?? 0}`, 'EndDraftEvent', () => {
-        router.visit(route('leagues.detail', { league: props.league.id }), {
-            preserveState: true,
-            preserveScroll: true,
+    if (props.draft?.id) {
+        useEchoPublic(`end.draft.${props.draft.id}`, 'EndDraftEvent', () => {
+            router.visit(route('leagues.detail', { league: props.league.id }), {
+                preserveState: true,
+                preserveScroll: true,
+            });
         });
-    });
+    }
 }
 
 const revertLastPick = () => router.post(route('draft.revert-last-pick'), { league_id: props.league.id });

@@ -19,16 +19,29 @@ const props = defineProps<{
     leagueName: string;
 }>();
 
-const sidebarNavItems = computed(() => [
-    { title: 'Match Config', href: `/leagues/${props.leagueId}/admin/match-config` },
-    { title: 'Pokémon pool', href: `/leagues/${props.leagueId}/admin/pokemon-pool` },
-    { title: 'Draft', href: `/leagues/${props.leagueId}/admin/draft` },
-    { title: 'League admins', href: `/leagues/${props.leagueId}/admin/league-admins` },
-    { title: 'Playoffs', href: `/leagues/${props.leagueId}/admin/playoffs` },
-    { title: 'Discord', href: `/leagues/${props.leagueId}/admin/discord` },
-    { title: 'Trades', href: `/leagues/${props.leagueId}/admin/trades` },
-    { title: 'Reopen match', href: `/leagues/${props.leagueId}/admin/reopen-match` },
-    { title: 'Winner', href: `/leagues/${props.leagueId}/admin/winner` },
+const sidebarNavGroups = computed(() => [
+    {
+        label: 'Setup',
+        items: [
+            { title: 'Match Config', href: `/leagues/${props.leagueId}/admin/match-config` },
+            { title: 'Pokémon Pool', href: `/leagues/${props.leagueId}/admin/pokemon-pool` },
+            { title: 'Draft', href: `/leagues/${props.leagueId}/admin/draft` },
+        ],
+    },
+    {
+        label: 'Season',
+        items: [
+            { title: 'Trades', href: `/leagues/${props.leagueId}/admin/trades` },
+            { title: 'Playoffs', href: `/leagues/${props.leagueId}/admin/playoffs` },
+        ],
+    },
+    {
+        label: 'League',
+        items: [
+            { title: 'User Management', href: `/leagues/${props.leagueId}/admin/league-admins` },
+            { title: 'Discord', href: `/leagues/${props.leagueId}/admin/discord` },
+        ],
+    },
 ]);
 
 const page = usePage();
@@ -43,31 +56,38 @@ const currentPath = computed(() => (page.props.ziggy?.location ? new URL(page.pr
             <label class="mb-2 block text-sm font-medium text-foreground" for="admin-section-nav">Admin section</label>
             <select
                 id="admin-section-nav"
-                class="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-11 w-full min-h-11 rounded-md border px-3 py-2 text-base shadow-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                class="flex h-11 min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base shadow-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 :value="currentPath"
                 aria-label="Choose admin section"
                 @change="navigateAdminSection"
             >
-                <option v-for="item in sidebarNavItems" :key="item.href" :value="item.href">
-                    {{ item.title }}
-                </option>
+                <optgroup v-for="group in sidebarNavGroups" :key="group.label" :label="group.label">
+                    <option v-for="item in group.items" :key="item.href" :value="item.href">
+                        {{ item.title }}
+                    </option>
+                </optgroup>
             </select>
         </div>
 
-        <div class="flex flex-col space-y-8 md:space-y-0 lg:flex-row lg:space-y-0 lg:space-x-12">
-            <aside class="hidden w-full max-w-xl md:block lg:w-48">
-                <nav class="flex flex-col space-y-1 space-x-0">
-                    <Button
-                        v-for="item in sidebarNavItems"
-                        :key="item.href"
-                        variant="ghost"
-                        :class="['w-full justify-start touch-manipulation', { 'bg-muted': currentPath === item.href }]"
-                        as-child
-                    >
-                        <Link :href="item.href">
-                            {{ item.title }}
-                        </Link>
-                    </Button>
+        <div class="flex flex-col space-y-8 lg:flex-row lg:space-x-12 lg:space-y-0">
+            <aside class="hidden w-48 shrink-0 md:block">
+                <nav class="flex flex-col gap-6">
+                    <div v-for="group in sidebarNavGroups" :key="group.label">
+                        <p class="mb-1 px-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                            {{ group.label }}
+                        </p>
+                        <div class="flex flex-col space-y-1">
+                            <Button
+                                v-for="item in group.items"
+                                :key="item.href"
+                                variant="ghost"
+                                :class="['w-full justify-start touch-manipulation', { 'bg-muted': currentPath === item.href }]"
+                                as-child
+                            >
+                                <Link :href="item.href">{{ item.title }}</Link>
+                            </Button>
+                        </div>
+                    </div>
                 </nav>
             </aside>
 

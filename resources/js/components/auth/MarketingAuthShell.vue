@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import BlobBackground from '@/components/BlobBackground.vue';
+import { authLinkClass } from '@/lib/authLink';
 import { Link } from '@inertiajs/vue3';
 
 defineProps<{
@@ -11,17 +13,11 @@ defineProps<{
     <div
         class="relative flex min-h-dvh flex-col items-center justify-start overflow-x-hidden bg-background pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(3rem,env(safe-area-inset-bottom))] text-foreground sm:justify-center sm:pl-6 sm:pr-6 sm:pt-16 sm:pb-[max(4rem,env(safe-area-inset-bottom))]"
     >
-        <div class="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
-            <div
-                class="absolute -top-40 left-1/2 h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-dragontype/20 blur-3xl dark:bg-dragontype/25"
-            />
-            <div
-                class="absolute -bottom-32 -right-24 h-80 w-80 rounded-full bg-watertype/15 blur-3xl dark:bg-watertype/20"
-            />
-            <div
-                class="absolute bottom-1/4 -left-32 h-72 w-72 rounded-full bg-electrictype/10 blur-3xl dark:bg-electrictype/15"
-            />
-        </div>
+        <BlobBackground>
+            <div class="absolute -top-40 left-1/2 h-[28rem] w-[28rem] -translate-x-1/2 rounded-full bg-dragontype/20 blur-3xl dark:bg-dragontype/25" />
+            <div class="absolute -bottom-32 -right-24 h-80 w-80 rounded-full bg-watertype/15 blur-3xl dark:bg-watertype/20" />
+            <div class="absolute bottom-1/4 -left-32 h-72 w-72 rounded-full bg-electrictype/10 blur-3xl dark:bg-electrictype/15" />
+        </BlobBackground>
 
         <div class="relative z-10 mx-auto flex w-full max-w-md flex-col items-center">
             <p class="mb-3 text-center text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground sm:text-sm">Pokémon VGC</p>
@@ -37,12 +33,7 @@ defineProps<{
                 <slot />
             </div>
             <p class="mt-6 text-center text-sm text-muted-foreground">
-                <Link
-                    :href="route('home')"
-                    class="font-medium text-[oklch(0.48_0.19_25)] underline decoration-[oklch(0.53_0.195_25/0.4)] underline-offset-4 transition-colors hover:text-[oklch(0.4_0.17_25)] dark:text-primary dark:decoration-primary/45 dark:hover:text-primary/90"
-                >
-                    Back to home
-                </Link>
+                <Link :href="route('home')" :class="authLinkClass">Back to home</Link>
             </p>
         </div>
     </div>
