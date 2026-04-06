@@ -8,6 +8,7 @@ const sections = [
     { id: 'draft', label: 'Draft' },
     { id: 'teams', label: 'Teams' },
     { id: 'matches', label: 'Matches' },
+    { id: 'battle-simulator', label: 'Battle Simulator' },
     { id: 'pokepaste', label: 'Pokepaste & Rosters' },
     { id: 'trades', label: 'Trades' },
     { id: 'playoffs', label: 'Playoffs' },
@@ -319,6 +320,102 @@ const sections = [
                             <p><strong class="text-foreground">Replays</strong> — Upload up to three Pokémon Showdown replay URLs per match. When a Discord replay webhook is configured, links are posted automatically.</p>
                             <p><strong class="text-foreground">Bye rounds</strong> — If a team has no opponent in a round, a bye match is created automatically and does not require a result.</p>
                             <p><strong class="text-foreground">Pools</strong> — Teams in the same pool only play each other during the regular season. Standings are calculated per pool.</p>
+                        </div>
+                    </section>
+
+                    <hr class="border-border" />
+
+                    <!-- Battle Simulator -->
+                    <section id="battle-simulator" class="space-y-4">
+                        <h2 class="text-2xl font-bold tracking-tight">Battle Simulator</h2>
+                        <p class="text-muted-foreground">
+                            VGC Draft includes a built-in 4v4 battle simulator powered by the Pokémon Showdown engine. Both players can battle directly inside the app without leaving to an external site.
+                        </p>
+
+                        <div class="space-y-3">
+                            <h3 class="text-lg font-semibold">How it works</h3>
+                            <ol class="space-y-4">
+                                <li class="flex gap-4">
+                                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">1</span>
+                                    <div>
+                                        <p class="font-medium">Navigate to the battle</p>
+                                        <p class="text-sm text-muted-foreground">From any match page, click <strong>Battle</strong>. A battle room is created for that match automatically.</p>
+                                    </div>
+                                </li>
+                                <li class="flex gap-4">
+                                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">2</span>
+                                    <div>
+                                        <p class="font-medium">Submit your team</p>
+                                        <p class="text-sm text-muted-foreground">Each player pastes their Pokémon Showdown <strong>packed team string</strong> into the team submission panel. The battle does not start until both players have submitted. Your team must only contain Pokémon from your drafted roster.</p>
+                                    </div>
+                                </li>
+                                <li class="flex gap-4">
+                                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">3</span>
+                                    <div>
+                                        <p class="font-medium">Team preview</p>
+                                        <p class="text-sm text-muted-foreground">Both players see each other's six Pokémon. Select the order of the four you are bringing into the game by submitting a team order (e.g. <code class="rounded bg-muted px-1 text-xs">team 1 2 3 4</code>).</p>
+                                    </div>
+                                </li>
+                                <li class="flex gap-4">
+                                    <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-bold text-primary-foreground">4</span>
+                                    <div>
+                                        <p class="font-medium">Battle</p>
+                                        <p class="text-sm text-muted-foreground">Each turn, choose a move or switch from the action panel. Both players' choices are submitted simultaneously. The battle log updates in real time for both players and any spectators.</p>
+                                    </div>
+                                </li>
+                            </ol>
+                        </div>
+
+                        <div class="space-y-3">
+                            <h3 class="text-lg font-semibold">Getting a packed team string</h3>
+                            <p class="text-sm text-muted-foreground">The packed team format is a compact single-line string used by Pokémon Showdown internally. To get yours:</p>
+                            <ol class="space-y-1 list-decimal list-inside text-sm text-muted-foreground">
+                                <li>Open <strong>Pokémon Showdown → Teambuilder</strong>.</li>
+                                <li>Build or import your team using your drafted Pokémon.</li>
+                                <li>Click the team name to open the team menu, then choose <strong>Export</strong>.</li>
+                                <li>Switch the export format to <strong>Packed</strong>.</li>
+                                <li>Copy the string and paste it into the battle team submission panel.</li>
+                            </ol>
+                        </div>
+
+                        <div class="space-y-3">
+                            <h3 class="text-lg font-semibold">Format</h3>
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="border-b border-border text-left text-muted-foreground">
+                                        <th class="pb-2 pr-4 font-medium">Setting</th>
+                                        <th class="pb-2 font-medium">Value</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-border">
+                                    <tr>
+                                        <td class="py-2 pr-4 font-mono text-xs">Format</td>
+                                        <td class="py-2 text-muted-foreground">Gen 9 VGC 2024 Regulation G (doubles)</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2 pr-4 font-mono text-xs">Team size</td>
+                                        <td class="py-2 text-muted-foreground">Bring 6, pick 4 during team preview</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2 pr-4 font-mono text-xs">Battle style</td>
+                                        <td class="py-2 text-muted-foreground">Simultaneous — both players choose each turn at the same time</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="py-2 pr-4 font-mono text-xs">Real-time updates</td>
+                                        <td class="py-2 text-muted-foreground">Battle log streams live to both players via WebSockets (Reverb)</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="rounded-lg border border-border bg-muted/40 p-4 text-sm">
+                            <p class="font-medium">Spectating</p>
+                            <p class="mt-1 text-muted-foreground">Any league member can open the battle page for a match and watch the battle log update in real time. Spectators cannot submit actions.</p>
+                        </div>
+
+                        <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm dark:border-amber-900 dark:bg-amber-950/30">
+                            <p class="font-medium text-amber-900 dark:text-amber-200">Self-hosted requirement</p>
+                            <p class="mt-1 text-amber-800 dark:text-amber-300">The battle simulator requires a Node.js battle service running alongside the app. If battles are unavailable, contact your league admin to confirm the service is running.</p>
                         </div>
                     </section>
 

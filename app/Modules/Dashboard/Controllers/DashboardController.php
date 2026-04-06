@@ -3,12 +3,13 @@
 namespace App\Modules\Dashboard\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Calendar\Actions\ReadCalendarEventsAction;
 use App\Modules\Dashboard\Actions\ReadDashboardAction;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
-    public function index(ReadDashboardAction $readDashboardAction)
+    public function index(ReadDashboardAction $readDashboardAction, ReadCalendarEventsAction $readCalendarEventsAction)
     {
         $user = auth()->user();
         $userId = $user->id;
@@ -31,6 +32,9 @@ class DashboardController extends Controller
                 'command' => 'openLeagues',
                 'user_id' => $userId,
             ]),
+            'calendarEvents' => Inertia::defer(function () use ($user, $readCalendarEventsAction): array {
+                return $readCalendarEventsAction($user);
+            }),
         ]);
     }
 }

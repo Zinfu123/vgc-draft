@@ -3,9 +3,13 @@
 namespace App\Modules\Draft\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 class Bans extends Model
 {
+    use LogsActivity;
+
     protected $table = 'draft_bans';
 
     protected $fillable = [
@@ -15,6 +19,14 @@ class Bans extends Model
         'round_number',
         'status',
     ];
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logFillable()
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges();
+    }
 
     public function league(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {

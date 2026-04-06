@@ -1,13 +1,17 @@
 <?php
 
 /* Define Controllers */
+use App\Modules\Calendar\Controllers\CalendarController;
 use App\Modules\Dashboard\Controllers\DashboardController;
 use App\Modules\Draft\Controllers\DraftController;
 use App\Modules\League\Controllers\LeagueController;
 use App\Modules\League\Controllers\LeaguePokemonAdminController;
 use App\Modules\League\Controllers\LeaguePokemonController;
 use App\Modules\League\Controllers\PoolTemplateCatalogController;
+use App\Modules\Matches\Controllers\BattleController;
 use App\Modules\Matches\Controllers\MatchConfigController;
+use App\Modules\Matches\Controllers\MatchMessageController;
+use App\Modules\Matches\Controllers\MatchScheduleRequestController;
 use App\Modules\Matches\Controllers\PoolController;
 use App\Modules\Matches\Controllers\SetController;
 use App\Modules\MatchPrep\Controllers\MatchPrepController;
@@ -39,6 +43,8 @@ Route::get('docs', function () {
 })->name('docs');
 
 Route::get('dashboard', [DashboardController::class, 'index'])->middleware(['auth', 'verified'])->name('dashboard');
+
+Route::get('calendar', [CalendarController::class, 'index'])->middleware(['auth', 'verified'])->name('calendar.index');
 
 Route::get('/match-prep/share/{share_uuid}', [MatchPrepController::class, 'showShare'])
     ->whereUuid('share_uuid')
@@ -144,6 +150,16 @@ Route::prefix('match')->group(function () {
     Route::put('/replays', [SetController::class, 'updateReplays'])->middleware(['auth', 'verified'])->name('sets.update-replays');
     Route::post('/replays/import-teams', [SetController::class, 'importReplayTeams'])->middleware(['auth', 'verified'])->name('sets.import-replay-teams');
     Route::post('/replays/preview-players', [SetController::class, 'previewReplayPlayers'])->middleware(['auth', 'verified'])->name('sets.preview-replay-players');
+
+    Route::get('/set/{set}/messages', [MatchMessageController::class, 'index'])->middleware(['auth', 'verified'])->name('sets.messages.index');
+    Route::post('/set/{set}/messages', [MatchMessageController::class, 'store'])->middleware(['auth', 'verified'])->name('sets.messages.store');
+    Route::post('/set/{set}/schedule-requests', [MatchScheduleRequestController::class, 'store'])->middleware(['auth', 'verified'])->name('sets.schedule-requests.store');
+    Route::patch('/set/{set}/schedule-requests/{scheduleRequest}', [MatchScheduleRequestController::class, 'update'])->middleware(['auth', 'verified'])->name('sets.schedule-requests.update');
+
+    // Battle simulator routes
+    Route::get('/set/{set}/battle', [BattleController::class, 'show'])->middleware(['auth', 'verified'])->name('battles.show');
+    Route::post('/battles/{battle}/team', [BattleController::class, 'submitTeam'])->middleware(['auth', 'verified'])->name('battles.team');
+    Route::post('/battles/{battle}/action', [BattleController::class, 'action'])->middleware(['auth', 'verified'])->name('battles.action');
 });
 
 Route::get('/pokepaste/{pokepaste}', [PokepasteController::class, 'show'])->name('pokepaste.show');

@@ -7,10 +7,16 @@ use App\Modules\Pokepaste\Models\SetTeamPokepaste;
 use App\Modules\Teams\Models\Team;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 class Set extends Model
 {
+    use LogsActivity;
+
     protected $table = 'sets';
 
     protected $fillable = [
@@ -29,7 +35,16 @@ class Set extends Model
         'round',
         'status',
         'is_bye',
+        'scheduled_at',
     ];
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['status', 'team1_score', 'team2_score', 'winner_id', 'scheduled_at'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges();
+    }
 
     /**
      * @return array<string, string>
@@ -38,6 +53,7 @@ class Set extends Model
     {
         return [
             'is_bye' => 'boolean',
+            'scheduled_at' => 'datetime',
         ];
     }
 
@@ -59,5 +75,15 @@ class Set extends Model
     public function setTeamPokepastes(): MorphMany
     {
         return $this->morphMany(SetTeamPokepaste::class, 'matchable');
+    }
+
+    public function matchMessages(): HasMany
+    {
+        return $this->hasMany(MatchMessage::class, 'set_id');
+    }
+
+    public function pendingScheduleRequest(): HasOne
+    {
+        return $this->hasOne(MatchScheduleRequest::class, 'set_id')->where('status', 'pending')->latest();
     }
 }

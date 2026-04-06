@@ -1,0 +1,15 @@
+{
+  "name": "vgc-draft-battle-service",
+  "version": "1.0.0",
+  "description": "Pokemon battle simulator microservice for VGC Draft",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "@pkmn/sim": "^0.8.0",
+    "@pkmn/sets": "^5.0.0",
+    "express": "^4.18.0"
+  }
+}

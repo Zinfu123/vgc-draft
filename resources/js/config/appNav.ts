@@ -1,11 +1,12 @@
 import type { NavMainGroup } from '@/types';
-import { BarChart3, BookOpen, ClipboardList, LayoutDashboard, LayoutList, Shield, Trophy } from 'lucide-vue-next';
+import { BarChart3, BookOpen, CalendarDays, ClipboardList, LayoutDashboard, LayoutList, Shield, Trophy } from 'lucide-vue-next';
 
 export const appNavGroups: NavMainGroup[] = [
     {
         label: 'Home & play',
         items: [
             { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+            { title: 'Calendar', href: '/calendar', icon: CalendarDays },
             { title: 'Leagues', href: '/leagues', icon: Trophy },
             { title: 'Match prep', href: '/match-prep', icon: ClipboardList },
         ],

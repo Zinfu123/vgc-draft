@@ -5,9 +5,13 @@ namespace App\Modules\Teams\Models;
 use App\Modules\Matches\Models\Pool;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 class Team extends Model
 {
+    use LogsActivity;
+
     protected $table = 'teams';
 
     protected static function booted(): void
@@ -44,6 +48,14 @@ class Team extends Model
         'created_at',
         'updated_at',
     ];
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['draft_points', 'trades', 'dropped_at'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges();
+    }
 
     /**
      * @return array<string, string>

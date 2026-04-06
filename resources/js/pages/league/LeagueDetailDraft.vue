@@ -11,7 +11,9 @@ import TabsContent from '@/components/ui/tabs/TabsContent.vue';
 import TabsList from '@/components/ui/tabs/TabsList.vue';
 import TabsTrigger from '@/components/ui/tabs/TabsTrigger.vue';
 import { useMobileLayout } from '@/composables/useMobileLayout';
-import { Head, Link } from '@inertiajs/vue3';
+import { isReverbBroadcastClientConfigured } from '@/lib/broadcasting';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
+import { useEchoNotification } from '@laravel/echo-vue';
 import { ClipboardList, ScrollText, Swords, Users } from 'lucide-vue-next';
 import { computed } from 'vue';
 
@@ -95,6 +97,21 @@ const props = defineProps<{
 }>();
 
 const { isMobile } = useMobileLayout();
+
+const page = usePage();
+const userId = page.props.auth?.user?.id;
+
+if (isReverbBroadcastClientConfigured && userId) {
+    useEchoNotification<{ league_id: number }>(
+        `App.Models.User.${userId}`,
+        (payload) => {
+            if (payload.league_id === props.league.id) {
+                router.reload();
+            }
+        },
+        'DraftStartedBroadcastNotification',
+    );
+}
 
 const isDraftCompleted = computed(() => props.draft !== null && props.draft.status === 0);
 const isDraftLive = computed(() => props.draft !== null && (props.draft.status === 1 || props.draft.status === 2));

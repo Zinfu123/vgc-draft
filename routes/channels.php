@@ -22,3 +22,11 @@ Broadcast::channel('end.draft.{draft_id}', function () {
 Broadcast::channel('match.submission.{match_id}', function () {
     return true;
 });
+
+Broadcast::channel('match.chat.{set_id}', function () {
+    return true;
+});
+
+Broadcast::channel('battle.{battle_id}', function () {
+    return true;
+});

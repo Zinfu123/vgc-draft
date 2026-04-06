@@ -69,6 +69,8 @@ class PokeApiPokemonGameDataImporter
             return false;
         }
 
+        $learnset = $this->mergeReminderMovesFromPriorGenerations($learnset, $pokemon, $slug);
+
         $stats = $this->mapStats($pokemon);
         [$type1, $type2] = $this->mapTypes($pokemon);
         [$primaryId, $secondaryId, $hiddenId] = $this->mapAbilityIds($pokemon);
@@ -365,6 +367,66 @@ class PokeApiPokemonGameDataImporter
             }
 
             usleep(50_000);
+        }
+
+        usort($learnset, fn (array $a, array $b) => strcmp($a['move_name'], $b['move_name']));
+
+        return $learnset;
+    }
+
+    /**
+     * The Move Reminder NPC allows any Pokémon to relearn moves it could learn via level-up in any
+     * previous game in the series. PokéAPI only lists moves explicitly available for each version group,
+     * so level-up moves from prior version groups are missing from the current learnset. This method
+     * scans the already-fetched $pokemon response (no extra API calls) and adds any historical level-up
+     * moves that are not already present, tagging them with method "reminder".
+     *
+     * @param  list<array{move_id: int, move_name: string, method: string, level: int}>  $learnset
+     * @param  array<string, mixed>  $pokemon
+     * @return list<array{move_id: int, move_name: string, method: string, level: int}>
+     */
+    private function mergeReminderMovesFromPriorGenerations(array $learnset, array $pokemon, string $currentVersionGroupSlug): array
+    {
+        $seenSlugs = [];
+        foreach ($learnset as $row) {
+            $seenSlugs[$this->moveNameToSlugKey((string) ($row['move_name'] ?? ''))] = true;
+        }
+
+        foreach ($pokemon['moves'] ?? [] as $move) {
+            if (! is_array($move) || empty($move['move']['url'])) {
+                continue;
+            }
+
+            $moveId = $this->extractTrailingId((string) $move['move']['url']);
+            $moveName = isset($move['move']['name']) ? (string) $move['move']['name'] : '';
+            $slug = $this->moveNameToSlugKey($moveName);
+
+            if ($moveId === null || $slug === '' || isset($seenSlugs[$slug])) {
+                continue;
+            }
+
+            foreach ($move['version_group_details'] ?? [] as $detail) {
+                if (! is_array($detail)) {
+                    continue;
+                }
+
+                $vgName = (string) ($detail['version_group']['name'] ?? '');
+                $method = (string) ($detail['move_learn_method']['name'] ?? '');
+
+                if ($vgName === $currentVersionGroupSlug || $method !== 'level-up') {
+                    continue;
+                }
+
+                $learnset[] = [
+                    'move_id' => $moveId,
+                    'move_name' => $moveName,
+                    'method' => 'reminder',
+                    'level' => 0,
+                ];
+                $seenSlugs[$slug] = true;
+
+                break;
+            }
         }
 
         usort($learnset, fn (array $a, array $b) => strcmp($a['move_name'], $b['move_name']));

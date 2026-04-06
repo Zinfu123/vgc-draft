@@ -4,9 +4,13 @@ namespace App\Modules\League\Models;
 
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 class LeaguePokemon extends Model
 {
+    use LogsActivity;
+
     protected $table = 'league_pokemon';
 
     protected $fillable = [
@@ -18,6 +22,14 @@ class LeaguePokemon extends Model
         'drafted_by',
         'is_drafted',
     ];
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['drafted_by', 'is_drafted', 'banned', 'cost'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges();
+    }
 
     protected function casts(): array
     {

@@ -6,10 +6,12 @@ use App\Enums\PokemonGame;
 use App\Modules\Pokedex\Models\VersionGroup;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 class League extends Model
 {
-    use Notifiable;
+    use LogsActivity, Notifiable;
 
     protected $table = 'leagues';
 
@@ -30,6 +32,14 @@ class League extends Model
         'created_at',
         'updated_at',
     ];
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['name', 'status', 'open', 'winner'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges();
+    }
 
     /**
      * @return array<string, string>

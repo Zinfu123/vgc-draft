@@ -5,9 +5,12 @@ namespace App\Modules\Pokedex\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Laravel\Scout\Searchable;
 
 class Pokedex extends Model
 {
+    use Searchable;
+
     protected $table = 'pokedex';
 
     protected $fillable = [
@@ -17,6 +20,19 @@ class Pokedex extends Model
         'type2',
         'sprite_url',
     ];
+
+    /**
+     * @return array<string, string|int|float|null>
+     */
+    public function toSearchableArray(): array
+    {
+        return [
+            'name' => $this->name,
+            'type1' => $this->type1,
+            'type2' => $this->type2,
+            'nationaldex_id' => $this->nationaldex_id,
+        ];
+    }
 
     /**
      * @return array<string, string>

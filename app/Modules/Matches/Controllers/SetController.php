@@ -10,6 +10,8 @@ use App\Http\Requests\Match\UpdateSetRequest;
 use App\Modules\League\Models\League;
 use App\Modules\Matches\Actions\CreateEditSetsAction;
 use App\Modules\Matches\Actions\ShowSetsAction;
+use App\Modules\Matches\Models\MatchMessage;
+use App\Modules\Matches\Models\MatchScheduleRequest;
 use App\Modules\Matches\Models\Set;
 use App\Modules\Pokepaste\Actions\ImportSetTeamsFromShowdownReplayAction;
 use App\Modules\Pokepaste\Actions\ReadMatchPokepastePayloadAction;
@@ -74,6 +76,9 @@ class SetController extends Controller
             && $user !== null
             && $user->can('admin', $league);
 
+        $isParticipant = $currentUserTeam !== null
+            && ($currentUserTeam->id === $set->team1_id || $currentUserTeam->id === $set->team2_id);
+
         return Inertia::render('match/MatchDetail', [
             'set' => fn () => $set,
             'currentUserTeam' => fn () => $currentUserTeam,
@@ -82,6 +87,49 @@ class SetController extends Controller
             'isLeagueAdmin' => fn () => $isLeagueAdmin,
             'requireTeamMatchPokepasteBeforeResults' => fn () => (bool) ($league?->matchConfig?->require_team_match_pokepaste_before_results ?? false),
             'requireReplaysBeforeResults' => fn () => (bool) ($league?->matchConfig?->require_replays_before_results ?? false),
+            'matchMessages' => Inertia::defer(function () use ($set): array {
+                return MatchMessage::query()
+                    ->where('set_id', $set->id)
+                    ->with('user:id,name')
+                    ->orderBy('created_at')
+                    ->get()
+                    ->map(fn (MatchMessage $msg) => [
+                        'id' => $msg->id,
+                        'set_id' => $msg->set_id,
+                        'user_id' => $msg->user_id,
+                        'user_name' => $msg->user->name,
+                        'body' => $msg->body,
+                        'created_at' => $msg->created_at?->toISOString(),
+                    ])
+                    ->all();
+            }),
+            'pendingScheduleRequest' => Inertia::defer(function () use ($set): ?array {
+                $req = MatchScheduleRequest::query()
+                    ->where('set_id', $set->id)
+                    ->where('status', 'pending')
+                    ->with('proposedBy:id,name')
+                    ->latest()
+                    ->first();
+
+                if ($req === null) {
+                    $req = MatchScheduleRequest::query()
+                        ->where('set_id', $set->id)
+                        ->where('status', 'accepted')
+                        ->with('proposedBy:id,name')
+                        ->latest()
+                        ->first();
+                }
+
+                return $req ? [
+                    'id' => $req->id,
+                    'set_id' => $req->set_id,
+                    'proposed_by_user_id' => $req->proposed_by_user_id,
+                    'proposed_by_user_name' => $req->proposedBy->name,
+                    'proposed_at' => $req->proposed_at->toISOString(),
+                    'status' => $req->status->value,
+                ] : null;
+            }),
+            'isParticipant' => fn () => $isParticipant,
         ]);
     }
 

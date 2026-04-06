@@ -34,6 +34,11 @@ class CreateEditDraftAction
             $league->open = false;
             $league->save();
 
+            activity()
+                ->performedOn($draft)
+                ->withProperties(['league_id' => $data['league_id']])
+                ->log('Draft started');
+
             return $draft;
         }
         // Create Ban Placeholders
@@ -68,6 +73,11 @@ class CreateEditDraftAction
             $draft->status = 0;
             $draft->save();
 
+            activity()
+                ->performedOn($draft)
+                ->withProperties(['league_id' => $data['league_id']])
+                ->log('Draft finalized');
+
             $league = League::find($data['league_id']);
             $league->notify(new DraftEndedNotification($league));
         } elseif ($data['command'] == 'revert_last_pick') {
@@ -95,9 +105,24 @@ class CreateEditDraftAction
                 $draft->round_number = $draftOrder->round_number;
                 $draft->save();
             }
+
+            activity()
+                ->withProperties([
+                    'league_id' => $data['league_id'],
+                    'team_id' => $lastPick->team_id,
+                    'league_pokemon_id' => $lastPickedPokemonID,
+                ])
+                ->log('Draft pick reverted');
         }
         // Abort Draft
         elseif ($data['command'] == 'abort_draft') {
+            $draftBeforeAbort = Draft::where('league_id', $data['league_id'])->first();
+
+            activity()
+                ->performedOn($draftBeforeAbort)
+                ->withProperties(['league_id' => $data['league_id']])
+                ->log('Draft aborted');
+
             $draft = Draft::where('league_id', $data['league_id'])->get();
             foreach ($draft as $draft) {
                 $draft->delete();

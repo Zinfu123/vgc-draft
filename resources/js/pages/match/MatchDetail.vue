@@ -1,13 +1,16 @@
 <script setup lang="ts">
+import MatchChat from '@/components/match/MatchChat.vue';
 import MatchTeamPanel from '@/components/match/MatchTeamPanel.vue';
 import ReplayInput from '@/components/match/ReplayInput.vue';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { isReverbBroadcastClientConfigured } from '@/lib/broadcasting';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { useEchoPublic } from '@laravel/echo-vue';
+import { MessageSquare } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 const page = usePage();
@@ -93,6 +96,24 @@ interface MatchPokepasteSides {
     team2: { public_id: string; has_data: boolean } | null;
 }
 
+interface MatchMessage {
+    id: number;
+    set_id: number;
+    user_id: number;
+    user_name: string;
+    body: string;
+    created_at: string;
+}
+
+interface ScheduleRequest {
+    id: number;
+    set_id: number;
+    proposed_by_user_id: number;
+    proposed_by_user_name: string;
+    proposed_at: string;
+    status: 'pending' | 'accepted' | 'declined';
+}
+
 interface props {
     set: Set;
     currentUserTeam: CurrentUserTeam | null;
@@ -101,6 +122,9 @@ interface props {
     isLeagueAdmin: boolean;
     requireTeamMatchPokepasteBeforeResults?: boolean;
     requireReplaysBeforeResults?: boolean;
+    matchMessages?: MatchMessage[];
+    pendingScheduleRequest?: ScheduleRequest | null;
+    isParticipant?: boolean;
 }
 
 const props = defineProps<props>();
@@ -127,6 +151,18 @@ const reopenForm = useForm({
 });
 
 const importReplayModalOpen = ref(false);
+const proposeTimeOpen = ref(false);
+const proposeForm = useForm({ proposed_at: '' });
+
+function submitProposal(): void {
+    proposeForm.post(route('sets.schedule-requests.store', { set: props.set.id }), {
+        preserveScroll: true,
+        onSuccess: () => {
+            proposeForm.reset('proposed_at');
+            proposeTimeOpen.value = false;
+        },
+    });
+}
 
 const importFromReplayForm = useForm({
     set_id: props.set.id,
@@ -427,6 +463,49 @@ const handleReopenMatch = () => {
 <template>
     <AppLayout :breadcrumbs="breadcrumbs">
         <Head :title="`${props.set.team1.name} vs ${props.set.team2.name}`" />
+
+        <template v-if="props.isParticipant">
+            <div class="flex w-full justify-end gap-2 px-4 sm:px-6 lg:px-8">
+                <div v-if="props.matchMessages === undefined" class="flex gap-2">
+                    <div class="h-9 w-24 animate-pulse rounded-md bg-muted"></div>
+                    <div class="h-9 w-32 animate-pulse rounded-md bg-muted"></div>
+                </div>
+                <template v-else>
+                    <Sheet>
+                        <SheetTrigger as-child>
+                            <Button variant="outline" size="sm" class="gap-1.5">
+                                <MessageSquare class="size-4" />
+                                Chat
+                                <span
+                                    v-if="props.matchMessages.length > 0"
+                                    class="bg-primary text-primary-foreground ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-xs"
+                                >
+                                    {{ props.matchMessages.length }}
+                                </span>
+                            </Button>
+                        </SheetTrigger>
+                        <SheetContent side="right" class="flex w-full flex-col p-0 sm:max-w-md">
+                            <SheetHeader class="border-border border-b px-4 py-3 shrink-0">
+                                <SheetTitle class="text-base">Schedule & Chat</SheetTitle>
+                            </SheetHeader>
+                            <div class="flex-1 overflow-hidden">
+                                <MatchChat
+                                    :set-id="props.set.id"
+                                    :initial-messages="props.matchMessages"
+                                    :initial-schedule-request="props.pendingScheduleRequest ?? null"
+                                    :current-user-id="authUserId ?? 0"
+                                />
+                            </div>
+                        </SheetContent>
+                    </Sheet>
+
+                    <Button variant="outline" size="sm" @click="proposeTimeOpen = true">
+                        Propose a time
+                    </Button>
+                </template>
+            </div>
+        </template>
+
         <div class="mx-auto mt-6 mb-6 flex max-w-4xl flex-col items-center px-4 sm:mt-8 sm:mb-8">
             <h1 class="text-center text-2xl font-bold sm:text-3xl">{{ props.set.team1.name }} vs {{ props.set.team2.name }}</h1>
             <p
@@ -667,6 +746,39 @@ const handleReopenMatch = () => {
                         </div>
                     </div>
                 </form>
+
+                <template v-if="props.isParticipant">
+                    <Dialog v-model:open="proposeTimeOpen">
+                        <DialogContent class="sm:max-w-sm">
+                            <DialogHeader>
+                                <DialogTitle>Propose a match time</DialogTitle>
+                                <DialogDescription>
+                                    Your opponent will be notified and can accept or decline.
+                                </DialogDescription>
+                            </DialogHeader>
+                            <form class="flex flex-col gap-4" @submit.prevent="submitProposal">
+                                <div class="flex flex-col gap-1.5">
+                                    <label for="propose_at_input" class="text-sm font-medium text-foreground">Date & time</label>
+                                    <input
+                                        id="propose_at_input"
+                                        v-model="proposeForm.proposed_at"
+                                        type="datetime-local"
+                                        class="border-input bg-background text-foreground focus:ring-ring min-h-9 rounded-md border px-3 py-2 text-sm focus:ring-2 focus:outline-none"
+                                    />
+                                    <p v-if="proposeForm.errors.proposed_at" class="text-destructive text-xs">
+                                        {{ proposeForm.errors.proposed_at }}
+                                    </p>
+                                </div>
+                                <DialogFooter>
+                                    <Button type="button" variant="outline" @click="proposeTimeOpen = false">Cancel</Button>
+                                    <Button type="submit" :disabled="proposeForm.processing || !proposeForm.proposed_at">
+                                        Send proposal
+                                    </Button>
+                                </DialogFooter>
+                            </form>
+                        </DialogContent>
+                    </Dialog>
+                </template>
             </div>
             <!-- Team 2 -->
             <MatchTeamPanel :team="props.set.team2" :showdown-display="coachShowdownDisplay(props.set.team2)" />

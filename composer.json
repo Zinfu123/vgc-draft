@@ -12,13 +12,16 @@
         "php": "^8.2",
         "inertiajs/inertia-laravel": "^2.0",
         "laravel/framework": "^12.0",
+        "laravel/horizon": "^5.45",
         "laravel/nightwatch": "^1.26",
         "laravel/reverb": "^1.0",
+        "laravel/scout": "^11.1",
         "laravel/socialite": "^5.25",
         "laravel/tinker": "^2.10.1",
         "league/flysystem-aws-s3-v3": "^3.29",
         "league/flysystem-path-prefixing": "^3.28",
         "socialiteproviders/discord": "^4.2",
+        "spatie/laravel-activitylog": "^5.0",
         "symfony/http-client": "^8.0",
         "symfony/postmark-mailer": "^8.0",
         "tightenco/ziggy": "^2.4"
@@ -65,7 +68,7 @@
         ],
         "dev": [
             "Composer\\Config::disableProcessTimeout",
-            "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"npm run dev\" --names='server,queue,vite'"
+            "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74,#86efac\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"npm run dev\" \"node --watch battle-service/index.js\" --names='server,queue,vite,battle'"
         ],
         "dev:ssr": [
             "npm run build:ssr",

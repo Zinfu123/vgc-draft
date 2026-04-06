@@ -27,6 +27,7 @@ class CreateEditDraftOrderAction
             EndDraftEvent::dispatch([
                 'league_id' => $data['league_id'],
                 'end_draft' => 1,
+                'draft_id' => $draft->id,
             ]);
         } else {
             $draft = Draft::where('league_id', $data['league_id'])->first();

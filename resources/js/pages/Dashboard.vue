@@ -5,8 +5,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { isReverbBroadcastClientConfigured } from '@/lib/broadcasting';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
-import { Head, router, usePage } from '@inertiajs/vue3';
+import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { useEchoNotification } from '@laravel/echo-vue';
+import { computed } from 'vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -65,18 +66,80 @@ function winPct(wins: number, losses: number): string {
     return (wins / total).toLocaleString('en-US', { style: 'percent', minimumFractionDigits: 1 });
 }
 
+interface DraftDay {
+    league_id: number;
+    league_name: string;
+    date: string;
+}
+
+interface MatchWeekStart {
+    league_id: number;
+    league_name: string;
+    date: string;
+}
+
+interface ScheduledMatch {
+    set_id: number;
+    league_id: number;
+    opponent_team_name: string;
+    scheduled_at: string;
+}
+
+interface CalendarEvents {
+    draft_days: DraftDay[];
+    match_week_starts: MatchWeekStart[];
+    scheduled_matches: ScheduledMatch[];
+}
+
 interface Props {
     userName: string;
     userStats: UserStats;
     usersActiveLeagues: League[];
     usersPastLeagues: League[];
     openLeagues: OpenLeague[];
+    calendarEvents?: CalendarEvents;
 }
 
 const props = defineProps<Props>();
 
 const page = usePage();
 const userId = page.props.auth?.user?.id;
+
+const upcomingEvents = computed(() => {
+    if (!props.calendarEvents) {
+        return null;
+    }
+    const now = new Date();
+    const cutoff = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    const events: Array<{
+        type: 'draft' | 'match_week' | 'scheduled_match';
+        label: string;
+        date: Date;
+        set_id?: number;
+    }> = [];
+
+    for (const d of props.calendarEvents.draft_days) {
+        const date = new Date(d.date);
+        if (date >= now && date <= cutoff) {
+            events.push({ type: 'draft', label: `${d.league_name} — Draft Day`, date });
+        }
+    }
+    for (const m of props.calendarEvents.match_week_starts) {
+        const date = new Date(m.date);
+        if (date >= now && date <= cutoff) {
+            events.push({ type: 'match_week', label: `${m.league_name} — Match Week Starts`, date });
+        }
+    }
+    for (const s of props.calendarEvents.scheduled_matches) {
+        const date = new Date(s.scheduled_at);
+        if (date >= now && date <= cutoff) {
+            events.push({ type: 'scheduled_match', label: `vs ${s.opponent_team_name}`, date, set_id: s.set_id });
+        }
+    }
+
+    return events.sort((a, b) => a.date.getTime() - b.date.getTime());
+});
 
 if (isReverbBroadcastClientConfigured && userId) {
     useEchoNotification(
@@ -172,6 +235,52 @@ if (isReverbBroadcastClientConfigured && userId) {
                     <EmptyState v-else message="You have no past leagues." />
                 </section>
             </div>
+
+            <section>
+                <div class="mb-4 flex items-center justify-between">
+                    <h2 class="text-2xl font-bold">Upcoming Events</h2>
+                    <Link :href="route('calendar.index')" class="text-primary text-sm font-medium hover:underline">View calendar →</Link>
+                </div>
+                <div v-if="upcomingEvents === null" class="grid animate-pulse grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <div v-for="i in 3" :key="i" class="h-16 rounded-lg bg-muted"></div>
+                </div>
+                <template v-else-if="upcomingEvents.length > 0">
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        <component
+                            :is="event.set_id ? Link : 'div'"
+                            v-for="(event, idx) in upcomingEvents"
+                            :key="idx"
+                            v-bind="event.set_id ? { href: route('sets.show', { set_id: event.set_id }) } : {}"
+                            class="border-border bg-card flex items-start gap-3 rounded-lg border p-3 shadow-sm"
+                            :class="event.set_id ? 'hover:bg-accent transition-colors cursor-pointer' : ''"
+                        >
+                            <span
+                                class="mt-1 h-3 w-3 shrink-0 rounded-full"
+                                :class="{
+                                    'bg-purple-500': event.type === 'draft',
+                                    'bg-blue-500': event.type === 'match_week',
+                                    'bg-green-500': event.type === 'scheduled_match',
+                                }"
+                            ></span>
+                            <div class="min-w-0">
+                                <p class="text-sm font-medium text-foreground truncate">{{ event.label }}</p>
+                                <p class="text-muted-foreground mt-0.5 text-xs">
+                                    {{
+                                        event.date.toLocaleString(undefined, {
+                                            weekday: 'short',
+                                            month: 'short',
+                                            day: 'numeric',
+                                            hour: event.type === 'scheduled_match' ? 'numeric' : undefined,
+                                            minute: event.type === 'scheduled_match' ? '2-digit' : undefined,
+                                        })
+                                    }}
+                                </p>
+                            </div>
+                        </component>
+                    </div>
+                </template>
+                <EmptyState v-else message="No events in the next 7 days." />
+            </section>
 
             <section>
                 <h2 class="mb-4 text-2xl font-bold">Open Leagues</h2>

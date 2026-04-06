@@ -17,7 +17,7 @@ import { isReverbBroadcastClientConfigured } from '@/lib/broadcasting';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/vue3';
 import { useEchoPublic } from '@laravel/echo-vue';
-import { Ban, CheckCircle, LoaderCircle, ShieldBan, Swords } from 'lucide-vue-next';
+import { ArrowUp, Ban, CheckCircle, LoaderCircle, ShieldBan, Swords } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 interface League {
@@ -258,13 +258,12 @@ if (isReverbBroadcastClientConfigured) {
 
     if (props.draft?.id) {
         useEchoPublic(`end.draft.${props.draft.id}`, 'EndDraftEvent', () => {
-            router.visit(route('leagues.detail', { league: props.league.id }), {
-                preserveState: true,
-                preserveScroll: true,
-            });
+            router.visit(route('leagues.draft', { league: props.league.id }));
         });
     }
 }
+
+const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
 const revertLastPick = () => router.post(route('draft.revert-last-pick'), { league_id: props.league.id });
 const abortDraft = () => router.post(route('draft.abort-draft'), { league_id: props.league.id });
@@ -940,6 +939,24 @@ const submitAction = () => {
                     </div>
                 </div>
             </div>
+        </div>
+
+        <!-- Sticky Points Card -->
+        <div
+            v-if="userTeamData"
+            class="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-lg dark:border-white/10 dark:bg-gray-800"
+        >
+            <div class="flex flex-col">
+                <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Your Points</span>
+                <span class="text-lg font-bold text-gray-900 dark:text-white">{{ userTeamData.draft_points }}</span>
+            </div>
+            <button
+                class="ml-2 flex size-8 items-center justify-center rounded-lg border border-gray-200 bg-gray-50 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:border-white/10 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600 dark:hover:text-gray-200"
+                title="Back to top"
+                @click="scrollToTop"
+            >
+                <ArrowUp class="size-4" />
+            </button>
         </div>
 
         <!-- Confirmation Dialog -->
