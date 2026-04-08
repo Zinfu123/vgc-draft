@@ -6,49 +6,53 @@ use App\Modules\Teams\Models\Team;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Battle extends Model
+class SetGameResult extends Model
 {
+    protected $table = 'set_game_results';
+
     protected $fillable = [
         'set_id',
+        'game_number',
         'p1_team_id',
         'p2_team_id',
-        'format',
-        'p1_packed_team',
-        'p2_packed_team',
-        'status',
-        'winner',
-        'battle_log',
+        'winner_team_id',
+        'p1_pokemon',
+        'p2_pokemon',
+        'p1_knockouts',
+        'p2_knockouts',
     ];
 
     protected function casts(): array
     {
         return [
-            'battle_log' => 'array',
+            'p1_pokemon' => 'array',
+            'p2_pokemon' => 'array',
+            'p1_knockouts' => 'array',
+            'p2_knockouts' => 'array',
         ];
     }
 
+    /** @return BelongsTo<Set, $this> */
     public function set(): BelongsTo
     {
         return $this->belongsTo(Set::class);
     }
 
+    /** @return BelongsTo<Team, $this> */
     public function p1Team(): BelongsTo
     {
         return $this->belongsTo(Team::class, 'p1_team_id');
     }
 
+    /** @return BelongsTo<Team, $this> */
     public function p2Team(): BelongsTo
     {
         return $this->belongsTo(Team::class, 'p2_team_id');
     }
 
-    public function isFinished(): bool
+    /** @return BelongsTo<Team, $this> */
+    public function winnerTeam(): BelongsTo
     {
-        return $this->status === 'finished';
-    }
-
-    public function hasTeams(): bool
-    {
-        return $this->p1_packed_team !== null && $this->p2_packed_team !== null;
+        return $this->belongsTo(Team::class, 'winner_team_id');
     }
 }

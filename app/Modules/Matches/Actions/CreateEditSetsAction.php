@@ -166,6 +166,8 @@ class CreateEditSetsAction
                 $league->notify(new MatchReplaysNotification($set));
             }
 
+            app(ParseSetGameResultsFromReplaysAction::class)($set);
+
             $set->refresh();
             $leagueForAuto = League::with('matchConfig')->find($set->league_id);
             if ((int) $set->status === 1

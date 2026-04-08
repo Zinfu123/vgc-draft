@@ -27,5 +27,20 @@ it('shows usage stats for authenticated users', function () {
             ->component('usage-stats/Index')
             ->has('meta')
             ->has('rows')
-            ->has('charts'));
+            ->has('charts')
+            ->where('charts.top_ko_labels', [])
+            ->where('charts.top_ko_values', []));
+});
+
+it('includes ko stats in rows when data exists', function () {
+    $this->artisan('usage-stats:rebuild');
+
+    $this->actingAs(User::factory()->create())
+        ->get(route('usage-stats.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('usage-stats/Index')
+            ->where('meta.total_picks', 0)
+            ->where('meta.total_bans', 0)
+            ->where('meta.total_bring_units', 0));
 });

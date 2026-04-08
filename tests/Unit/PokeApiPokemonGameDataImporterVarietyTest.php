@@ -130,6 +130,64 @@ it('does not add moves already in the current version group', function () {
     expect($result)->toBeEmpty();
 });
 
+it('matches a variety whose api name has a suffix appended to the pokedex slug', function () {
+    $pokedex = new Pokedex(['name' => 'ogerpon-wellspring']);
+    $species = [
+        'varieties' => [
+            [
+                'is_default' => true,
+                'pokemon' => [
+                    'name' => 'ogerpon',
+                    'url' => 'https://pokeapi.co/api/v2/pokemon/1017/',
+                ],
+            ],
+            [
+                'is_default' => false,
+                'pokemon' => [
+                    'name' => 'ogerpon-wellspring-mask',
+                    'url' => 'https://pokeapi.co/api/v2/pokemon/10274/',
+                ],
+            ],
+        ],
+    ];
+
+    $importer = new PokeApiPokemonGameDataImporter;
+    $method = new ReflectionMethod(PokeApiPokemonGameDataImporter::class, 'resolveVarietyPokemonUrl');
+    $method->setAccessible(true);
+    $url = $method->invoke($importer, $species, $pokedex);
+
+    expect($url)->toEndWith('/10274/');
+});
+
+it('does not let the prefix fallback steal the default variety from the base form', function () {
+    $pokedex = new Pokedex(['name' => 'ogerpon']);
+    $species = [
+        'varieties' => [
+            [
+                'is_default' => true,
+                'pokemon' => [
+                    'name' => 'ogerpon',
+                    'url' => 'https://pokeapi.co/api/v2/pokemon/1017/',
+                ],
+            ],
+            [
+                'is_default' => false,
+                'pokemon' => [
+                    'name' => 'ogerpon-wellspring-mask',
+                    'url' => 'https://pokeapi.co/api/v2/pokemon/10274/',
+                ],
+            ],
+        ],
+    ];
+
+    $importer = new PokeApiPokemonGameDataImporter;
+    $method = new ReflectionMethod(PokeApiPokemonGameDataImporter::class, 'resolveVarietyPokemonUrl');
+    $method->setAccessible(true);
+    $url = $method->invoke($importer, $species, $pokedex);
+
+    expect($url)->toEndWith('/1017/');
+});
+
 it('falls back to the default variety when the name matches the default form', function () {
     $pokedex = new Pokedex(['name' => 'slowbro']);
     $species = [

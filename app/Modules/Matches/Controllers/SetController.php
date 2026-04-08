@@ -87,6 +87,7 @@ class SetController extends Controller
             'isLeagueAdmin' => fn () => $isLeagueAdmin,
             'requireTeamMatchPokepasteBeforeResults' => fn () => (bool) ($league?->matchConfig?->require_team_match_pokepaste_before_results ?? false),
             'requireReplaysBeforeResults' => fn () => (bool) ($league?->matchConfig?->require_replays_before_results ?? false),
+            'autoCompleteFromReplays' => fn () => (bool) ($league?->matchConfig?->auto_complete_set_from_replays ?? false),
             'matchMessages' => Inertia::defer(function () use ($set): array {
                 return MatchMessage::query()
                     ->where('set_id', $set->id)

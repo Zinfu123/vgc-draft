@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import MatchChat from '@/components/match/MatchChat.vue';
 import MatchTeamPanel from '@/components/match/MatchTeamPanel.vue';
-import ReplayInput from '@/components/match/ReplayInput.vue';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -10,7 +9,7 @@ import { isReverbBroadcastClientConfigured } from '@/lib/broadcasting';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { useEchoPublic } from '@laravel/echo-vue';
-import { MessageSquare } from 'lucide-vue-next';
+import { ExternalLink, MessageSquare } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 const page = usePage();
@@ -30,20 +29,18 @@ interface Set {
             name: string;
             showdown_username?: string | null;
         };
-        pokemon: [
-            {
+        pokemon: Array<{
+            id: number;
+            name: string;
+            pokemon: {
                 id: number;
                 name: string;
-                pokemon: {
-                    id: number;
-                    name: string;
-                    sprite_url: string;
-                    type1: string;
-                    type2?: string;
-                };
-                cost: number;
-            },
-        ];
+                sprite_url: string;
+                type1: string;
+                type2?: string;
+            };
+            cost: number;
+        }>;
     };
     team2: {
         id: number;
@@ -55,20 +52,18 @@ interface Set {
             name: string;
             showdown_username?: string | null;
         };
-        pokemon: [
-            {
+        pokemon: Array<{
+            id: number;
+            name: string;
+            pokemon: {
                 id: number;
                 name: string;
-                pokemon: {
-                    id: number;
-                    name: string;
-                    sprite_url: string;
-                    type1: string;
-                    type2?: string;
-                };
-                cost: number;
-            },
-        ];
+                sprite_url: string;
+                type1: string;
+                type2?: string;
+            };
+            cost: number;
+        }>;
     };
     team1_score: number | null;
     team2_score: number | null;
@@ -114,7 +109,7 @@ interface ScheduleRequest {
     status: 'pending' | 'accepted' | 'declined';
 }
 
-interface props {
+interface Props {
     set: Set;
     currentUserTeam: CurrentUserTeam | null;
     matchPokepaste: MatchPokepastePayload | null;
@@ -127,9 +122,10 @@ interface props {
     isParticipant?: boolean;
 }
 
-const props = defineProps<props>();
+const props = defineProps<Props>();
 const setId = props.set.id;
-const form = useForm({
+
+const scoreForm = useForm({
     set_id: props.set.id,
     team1_score: props.set.team1_score || 0,
     team2_score: props.set.team2_score || 0,
@@ -150,19 +146,9 @@ const reopenForm = useForm({
     set_id: props.set.id,
 });
 
-const importReplayModalOpen = ref(false);
 const proposeTimeOpen = ref(false);
 const proposeForm = useForm({ proposed_at: '' });
-
-function submitProposal(): void {
-    proposeForm.post(route('sets.schedule-requests.store', { set: props.set.id }), {
-        preserveScroll: true,
-        onSuccess: () => {
-            proposeForm.reset('proposed_at');
-            proposeTimeOpen.value = false;
-        },
-    });
-}
+const importReplayModalOpen = ref(false);
 
 const importFromReplayForm = useForm({
     set_id: props.set.id,
@@ -170,39 +156,72 @@ const importFromReplayForm = useForm({
     p1_team_id: props.set.team1.id,
 });
 
+// — Echo —
+type SetModel = { id: number; status: number };
+const echoEvent = ref<SetModel>({ id: setId, status: props.set.status });
+if (isReverbBroadcastClientConfigured) {
+    useEchoPublic<SetModel>(`set_updated.${setId}`, 'SetUpdatedEvent', (e) => {
+        echoEvent.value = { id: e.id, status: e.status };
+    });
+}
+
+// — Computed —
+const isSetCompleted = computed(() => echoEvent.value.status === 0 || props.set.status === 0);
+const isUserInSet = computed(() => {
+    if (!props.currentUserTeam) return false;
+    return props.set.team1.id === props.currentUserTeam.id || props.set.team2.id === props.currentUserTeam.id;
+});
+const bothSidesPasteReady = computed(() => !!(props.matchPokepasteSides.team1?.has_data && props.matchPokepasteSides.team2?.has_data));
+const hasServerSavedReplay = computed(() => !!(props.set.replay1?.trim() || props.set.replay2?.trim() || props.set.replay3?.trim()));
+const canSubmitSetResult = computed(() => {
+    const a = Number(scoreForm.team1_score);
+    const b = Number(scoreForm.team2_score);
+    return (a === 2 && b <= 1) || (b === 2 && a <= 1);
+});
+const disableScoreForm = computed(() => {
+    if (isSetCompleted.value || !isUserInSet.value) return true;
+    if (props.requireTeamMatchPokepasteBeforeResults && !bothSidesPasteReady.value) return true;
+    if (props.requireReplaysBeforeResults && !hasServerSavedReplay.value) return true;
+    return false;
+});
+
+const savedReplayOptions = computed(() => {
+    const out: { slot: number; label: string; url: string }[] = [];
+    if (props.set.replay1?.trim()) out.push({ slot: 1, label: 'Game 1', url: props.set.replay1.trim() });
+    if (props.set.replay2?.trim()) out.push({ slot: 2, label: 'Game 2', url: props.set.replay2.trim() });
+    if (props.set.replay3?.trim()) out.push({ slot: 3, label: 'Game 3', url: props.set.replay3.trim() });
+    return out;
+});
+
+const winnerTeam = computed(() => {
+    if (!props.set.winner_id) return null;
+    return props.set.winner_id === props.set.team1.id ? props.set.team1 : props.set.team2;
+});
+
 const flashSuccess = computed((): string | null => {
     const f = page.props.flash as { success?: string } | undefined;
     return f?.success ?? null;
 });
 
-const savedReplayOptions = computed((): { slot: number; label: string; url: string }[] => {
-    const out: { slot: number; label: string; url: string }[] = [];
-    const r1 = props.set.replay1?.trim();
-    const r2 = props.set.replay2?.trim();
-    const r3 = props.set.replay3?.trim();
-    if (r1) {
-        out.push({ slot: 1, label: 'Game 1', url: r1 });
-    }
-    if (r2) {
-        out.push({ slot: 2, label: 'Game 2', url: r2 });
-    }
-    if (r3) {
-        out.push({ slot: 3, label: 'Game 3', url: r3 });
-    }
-
-    return out;
+const authUserId = computed((): number | null => {
+    const u = page.props.auth?.user as { id?: number } | undefined;
+    return u?.id ?? null;
 });
 
-const hasSavedReplayUrl = computed((): boolean => savedReplayOptions.value.length > 0);
+function showdownDisplay(team: { showdown_username?: string | null; user: { showdown_username?: string | null } }): string {
+    const t = team.showdown_username?.trim() || team.user.showdown_username?.trim() || '';
+    return t;
+}
 
-const hasServerSavedReplay = computed((): boolean => {
-    return !!(
-        props.set.replay1?.trim() ||
-        props.set.replay2?.trim() ||
-        props.set.replay3?.trim()
-    );
+const currentUserMissingShowdown = computed(() => {
+    const id = authUserId.value;
+    if (id === null) return false;
+    if (props.set.team1.user.id === id && !showdownDisplay(props.set.team1)) return true;
+    if (props.set.team2.user.id === id && !showdownDisplay(props.set.team2)) return true;
+    return false;
 });
 
+// — Replay preview (for import modal) —
 const replayPreviewLoading = ref(false);
 const replayPreviewError = ref<string | null>(null);
 const replayPreviewData = ref<{
@@ -231,10 +250,7 @@ async function fetchReplayPlayerPreview(): Promise<void> {
                 'X-Requested-With': 'XMLHttpRequest',
                 'X-XSRF-TOKEN': readXsrfToken(),
             },
-            body: JSON.stringify({
-                set_id: props.set.id,
-                replay_slot: importFromReplayForm.replay_slot,
-            }),
+            body: JSON.stringify({ set_id: props.set.id, replay_slot: importFromReplayForm.replay_slot }),
         });
         const json = (await res.json().catch(() => ({}))) as {
             ok?: boolean;
@@ -246,13 +262,9 @@ async function fetchReplayPlayerPreview(): Promise<void> {
             needs_manual_p1_map?: boolean;
         };
         if (!res.ok || !json.ok) {
-            const msg =
-                json.message ||
-                (Array.isArray(json.errors) ? json.errors.join(' ') : null) ||
-                'Could not read Showdown players from this replay.';
-            replayPreviewError.value = msg;
+            replayPreviewError.value =
+                json.message || (Array.isArray(json.errors) ? json.errors.join(' ') : null) || 'Could not read Showdown players from this replay.';
             importFromReplayForm.p1_team_id = props.set.team1.id;
-
             return;
         }
         replayPreviewData.value = {
@@ -261,11 +273,8 @@ async function fetchReplayPlayerPreview(): Promise<void> {
             suggested_p1_team_id: json.suggested_p1_team_id ?? null,
             needs_manual_p1_map: !!json.needs_manual_p1_map,
         };
-        if (json.suggested_p1_team_id != null && json.needs_manual_p1_map === false) {
-            importFromReplayForm.p1_team_id = json.suggested_p1_team_id;
-        } else {
-            importFromReplayForm.p1_team_id = props.set.team1.id;
-        }
+        importFromReplayForm.p1_team_id =
+            json.suggested_p1_team_id != null && !json.needs_manual_p1_map ? json.suggested_p1_team_id : props.set.team1.id;
     } catch {
         replayPreviewError.value = 'Could not load replay preview.';
         importFromReplayForm.p1_team_id = props.set.team1.id;
@@ -278,13 +287,10 @@ watch(importReplayModalOpen, (open) => {
     if (!open) {
         replayPreviewError.value = null;
         replayPreviewData.value = null;
-
         return;
     }
     const first = savedReplayOptions.value[0];
-    if (first) {
-        importFromReplayForm.replay_slot = first.slot;
-    }
+    if (first) importFromReplayForm.replay_slot = first.slot;
     importFromReplayForm.p1_team_id = props.set.team1.id;
     importFromReplayForm.clearErrors();
     void fetchReplayPlayerPreview();
@@ -292,183 +298,54 @@ watch(importReplayModalOpen, (open) => {
 
 watch(
     () => importFromReplayForm.replay_slot,
-    () => {
-        if (importReplayModalOpen.value) {
-            void fetchReplayPlayerPreview();
-        }
-    },
+    () => { if (importReplayModalOpen.value) void fetchReplayPlayerPreview(); },
 );
 
-type SetModel = {
-    id: number;
-    league_id: number;
-    pool_id: number;
-    round: number;
-    team1_score: number | null;
-    team2_score: number | null;
-    replay1: string | null;
-    replay2: string | null;
-    replay3: string | null;
-    winner_id: number | null;
-    winner_name: string;
-    winner_logo: string;
-    status: number;
-};
-const echoEvent = ref<{ id: SetModel['id']; status: SetModel['status'] }>({ id: form.set_id, status: props.set.status });
-
-if (isReverbBroadcastClientConfigured) {
-    useEchoPublic<SetModel>(`set_updated.${setId}`, 'SetUpdatedEvent', (e) => {
-        echoEvent.value = { id: e.id, status: e.status };
+// — Actions —
+function submitProposal(): void {
+    proposeForm.post(route('sets.schedule-requests.store', { set: props.set.id }), {
+        preserveScroll: true,
+        onSuccess: () => { proposeForm.reset('proposed_at'); proposeTimeOpen.value = false; },
     });
+}
+
+function submitScoreForm(): void {
+    scoreForm.command = 'update';
+    scoreForm.put('/match');
+}
+
+function submitReplays(): void {
+    replayForm.put(route('sets.update-replays'));
+}
+
+function submitImportFromReplay(): void {
+    importFromReplayForm.post(route('sets.import-replay-teams'), {
+        preserveScroll: true,
+        onSuccess: () => { importReplayModalOpen.value = false; },
+    });
+}
+
+function handleReopenMatch(): void {
+    if (!confirm('Reopen this match? The set result will be cleared and players can submit a new result.')) return;
+    reopenForm.put('/match');
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'League',
-        href: `/leagues/${props.set.league_id}`,
-    },
-    {
-        title: 'Match',
-        href: `/match/set/${props.set.id}`,
-    },
+    { title: 'League', href: `/leagues/${props.set.league_id}` },
+    { title: 'Match', href: `/match/set/${props.set.id}` },
 ];
-
-const isUserInSet = computed((): boolean => {
-    if (!props.currentUserTeam) {
-        return false;
-    }
-    return props.set.team1.id === props.currentUserTeam.id || props.set.team2.id === props.currentUserTeam.id;
-});
-
-const isSetCompleted = computed((): boolean => {
-    return echoEvent.value.status === 0 || props.set.status === 0;
-});
-
-const bothSidesPasteReady = computed((): boolean => {
-    return !!(props.matchPokepasteSides.team1?.has_data && props.matchPokepasteSides.team2?.has_data);
-});
-
-const disableForm = computed((): boolean => {
-    if (echoEvent.value.status === 0 || props.set.status === 0) {
-        return true;
-    } else if (!isUserInSet.value) {
-        return true;
-    } else if (props.requireTeamMatchPokepasteBeforeResults && !bothSidesPasteReady.value) {
-        return true;
-    } else if (props.requireReplaysBeforeResults && !hasServerSavedReplay.value) {
-        return true;
-    } else {
-        return false;
-    }
-});
-
-const canSubmitSetResult = computed((): boolean => {
-    const a = Number(form.team1_score);
-    const b = Number(form.team2_score);
-    return (a === 2 && b <= 1) || (b === 2 && a <= 1);
-});
-
-const winnerCoach = computed((): string | null => {
-    if (props.set.winner_id === props.set.team1.id) {
-        return props.set.team1.user.name;
-    } else if (props.set.winner_id === props.set.team2.id) {
-        return props.set.team2.user.name;
-    }
-    return null;
-});
-
-const winnerShowdownUsername = computed((): string | null => {
-    if (props.set.winner_id === props.set.team1.id) {
-        return coachShowdownDisplay(props.set.team1) || null;
-    }
-    if (props.set.winner_id === props.set.team2.id) {
-        return coachShowdownDisplay(props.set.team2) || null;
-    }
-    return null;
-});
-
-const winnerLogo = computed((): string | null => {
-    if (props.set.winner_id === props.set.team1.id) {
-        return props.set.team1.logo || null;
-    } else if (props.set.winner_id === props.set.team2.id) {
-        return props.set.team2.logo || null;
-    }
-    return props.set.winner_logo || null;
-});
-
-const authUserId = computed((): number | null => {
-    const u = page.props.auth?.user as { id?: number } | undefined;
-    return u?.id ?? null;
-});
-
-function showdownDisplay(username: string | null | undefined): string {
-    const t = username?.trim();
-    return t !== undefined && t !== '' ? t : '';
-}
-
-function coachShowdownDisplay(team: {
-    showdown_username?: string | null;
-    user: { showdown_username?: string | null };
-}): string {
-    return showdownDisplay(team.showdown_username) || showdownDisplay(team.user.showdown_username);
-}
-
-const currentUserMissingShowdown = computed((): boolean => {
-    const id = authUserId.value;
-    if (id === null) {
-        return false;
-    }
-    if (props.set.team1.user.id === id && !coachShowdownDisplay(props.set.team1)) {
-        return true;
-    }
-    if (props.set.team2.user.id === id && !coachShowdownDisplay(props.set.team2)) {
-        return true;
-    }
-    return false;
-});
-
-const handleSubmit = () => {
-    form.command = 'update';
-    form.put('/match');
-};
-
-const handleReplaySubmit = () => {
-    replayForm.put(route('sets.update-replays'));
-};
-
-const closeImportReplayModal = () => {
-    importReplayModalOpen.value = false;
-};
-
-const submitImportFromReplay = () => {
-    importFromReplayForm.post(route('sets.import-replay-teams'), {
-        preserveScroll: true,
-        onSuccess: () => {
-            importReplayModalOpen.value = false;
-        },
-    });
-};
-
-const handleReopenMatch = () => {
-    if (
-        !confirm(
-            'Reopen this match? The set result will be cleared, standings will be adjusted to remove this match’s points and win/loss totals, and players can submit a new result.',
-        )
-    ) {
-        return;
-    }
-    reopenForm.put('/match');
-};
 </script>
+
 <template>
     <AppLayout :breadcrumbs="breadcrumbs">
-        <Head :title="`${props.set.team1.name} vs ${props.set.team2.name}`" />
+        <Head :title="`${set.team1.name} vs ${set.team2.name}`" />
 
-        <template v-if="props.isParticipant">
+        <!-- Top bar: chat + schedule (participants only) -->
+        <template v-if="isParticipant">
             <div class="flex w-full justify-end gap-2 px-4 sm:px-6 lg:px-8">
-                <div v-if="props.matchMessages === undefined" class="flex gap-2">
-                    <div class="h-9 w-24 animate-pulse rounded-md bg-muted"></div>
-                    <div class="h-9 w-32 animate-pulse rounded-md bg-muted"></div>
+                <div v-if="matchMessages === undefined" class="flex gap-2">
+                    <div class="h-9 w-24 animate-pulse rounded-md bg-muted" />
+                    <div class="h-9 w-32 animate-pulse rounded-md bg-muted" />
                 </div>
                 <template v-else>
                     <Sheet>
@@ -477,399 +354,375 @@ const handleReopenMatch = () => {
                                 <MessageSquare class="size-4" />
                                 Chat
                                 <span
-                                    v-if="props.matchMessages.length > 0"
+                                    v-if="matchMessages.length > 0"
                                     class="bg-primary text-primary-foreground ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-xs"
                                 >
-                                    {{ props.matchMessages.length }}
+                                    {{ matchMessages.length }}
                                 </span>
                             </Button>
                         </SheetTrigger>
                         <SheetContent side="right" class="flex w-full flex-col p-0 sm:max-w-md">
-                            <SheetHeader class="border-border border-b px-4 py-3 shrink-0">
+                            <SheetHeader class="border-border shrink-0 border-b px-4 py-3">
                                 <SheetTitle class="text-base">Schedule & Chat</SheetTitle>
                             </SheetHeader>
                             <div class="flex-1 overflow-hidden">
                                 <MatchChat
-                                    :set-id="props.set.id"
-                                    :initial-messages="props.matchMessages"
-                                    :initial-schedule-request="props.pendingScheduleRequest ?? null"
+                                    :set-id="set.id"
+                                    :initial-messages="matchMessages"
+                                    :initial-schedule-request="pendingScheduleRequest ?? null"
                                     :current-user-id="authUserId ?? 0"
                                 />
                             </div>
                         </SheetContent>
                     </Sheet>
-
-                    <Button variant="outline" size="sm" @click="proposeTimeOpen = true">
-                        Propose a time
-                    </Button>
+                    <Button variant="outline" size="sm" @click="proposeTimeOpen = true">Propose a time</Button>
                 </template>
             </div>
         </template>
 
-        <div class="mx-auto mt-6 mb-6 flex max-w-4xl flex-col items-center px-4 sm:mt-8 sm:mb-8">
-            <h1 class="text-center text-2xl font-bold sm:text-3xl">{{ props.set.team1.name }} vs {{ props.set.team2.name }}</h1>
-            <p
-                v-if="flashSuccess"
-                class="text-green-700 dark:text-green-400 mt-4 max-w-lg text-center text-sm font-medium"
-            >
-                {{ flashSuccess }}
-            </p>
-            <div
-                class="border-border bg-muted/30 text-foreground mx-auto mt-6 w-full max-w-xl rounded-lg border px-4 py-3 text-left shadow-sm sm:text-center"
-            >
-                <h2 class="text-base font-semibold">Pokémon Showdown</h2>
-                <p class="text-muted-foreground mt-1 text-xs">
-                    Names from each coach's profile — useful for challenges and replay import.
-                </p>
-                <dl class="mt-3 space-y-2 text-sm sm:mx-auto sm:max-w-md sm:text-left">
-                    <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                        <dt class="min-w-0 font-medium">{{ props.set.team1.name }}</dt>
-                        <dd class="text-muted-foreground shrink-0 font-mono text-xs sm:text-sm">
-                            <template v-if="coachShowdownDisplay(props.set.team1)">
-                                {{ coachShowdownDisplay(props.set.team1) }}
-                            </template>
-                            <span v-else class="italic">Not set</span>
-                        </dd>
+        <!-- Scoreboard header -->
+        <div class="mt-6 px-4 sm:px-6 lg:px-8">
+            <div class="border-border bg-card mx-auto max-w-2xl rounded-xl border p-6">
+                <p class="text-muted-foreground mb-4 text-center text-xs font-medium uppercase tracking-wider">Round {{ set.round }}</p>
+                <div class="grid grid-cols-3 items-center gap-4">
+                    <!-- Team 1 -->
+                    <div class="flex flex-col items-center gap-2">
+                        <img v-if="set.team1.logo" :src="set.team1.logo" :alt="set.team1.name" class="h-16 w-16 rounded-full object-cover" />
+                        <div v-else class="bg-muted h-16 w-16 rounded-full" />
+                        <Link :href="`/teams/${set.team1.id}`" class="hover:text-primary text-center text-sm font-semibold transition-colors">
+                            {{ set.team1.name }}
+                        </Link>
+                        <p class="text-muted-foreground text-xs">{{ set.team1.user.name }}</p>
+                        <p v-if="showdownDisplay(set.team1)" class="text-muted-foreground font-mono text-xs">{{ showdownDisplay(set.team1) }}</p>
+                        <p v-else-if="currentUserMissingShowdown && set.team1.user.id === authUserId" class="text-xs text-amber-600 dark:text-amber-400">
+                            <Link :href="route('profile.edit')" class="underline">Add Showdown name</Link>
+                        </p>
                     </div>
-                    <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-                        <dt class="min-w-0 font-medium">{{ props.set.team2.name }}</dt>
-                        <dd class="text-muted-foreground shrink-0 font-mono text-xs sm:text-sm">
-                            <template v-if="coachShowdownDisplay(props.set.team2)">
-                                {{ coachShowdownDisplay(props.set.team2) }}
-                            </template>
-                            <span v-else class="italic">Not set</span>
-                        </dd>
+
+                    <!-- Score -->
+                    <div class="flex flex-col items-center gap-1">
+                        <div class="flex items-center gap-3">
+                            <span class="text-5xl font-bold tabular-nums">{{ set.team1_score ?? '–' }}</span>
+                            <span class="text-muted-foreground text-2xl">–</span>
+                            <span class="text-5xl font-bold tabular-nums">{{ set.team2_score ?? '–' }}</span>
+                        </div>
+                        <span
+                            class="mt-1 rounded-full px-2 py-0.5 text-xs font-medium"
+                            :class="isSetCompleted ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-muted text-muted-foreground'"
+                        >
+                            {{ isSetCompleted ? 'Complete' : 'In progress' }}
+                        </span>
+                        <p v-if="winnerTeam" class="mt-1 text-center text-xs font-semibold">
+                            {{ winnerTeam.name }} wins
+                        </p>
                     </div>
-                </dl>
-                <p v-if="currentUserMissingShowdown" class="text-muted-foreground mt-3 text-xs">
-                    <Link :href="route('profile.edit')" class="text-primary font-medium hover:underline">Add your Showdown name in Profile</Link>
-                    to help opponents find you and speed up replay matching.
-                </p>
+
+                    <!-- Team 2 -->
+                    <div class="flex flex-col items-center gap-2">
+                        <img v-if="set.team2.logo" :src="set.team2.logo" :alt="set.team2.name" class="h-16 w-16 rounded-full object-cover" />
+                        <div v-else class="bg-muted h-16 w-16 rounded-full" />
+                        <Link :href="`/teams/${set.team2.id}`" class="hover:text-primary text-center text-sm font-semibold transition-colors">
+                            {{ set.team2.name }}
+                        </Link>
+                        <p class="text-muted-foreground text-xs">{{ set.team2.user.name }}</p>
+                        <p v-if="showdownDisplay(set.team2)" class="text-muted-foreground font-mono text-xs">{{ showdownDisplay(set.team2) }}</p>
+                        <p v-else-if="currentUserMissingShowdown && set.team2.user.id === authUserId" class="text-xs text-amber-600 dark:text-amber-400">
+                            <Link :href="route('profile.edit')" class="underline">Add Showdown name</Link>
+                        </p>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="mt-8 flex w-full flex-col items-stretch gap-10 px-4 lg:flex-row lg:items-start lg:gap-4 lg:px-6">
-            <MatchTeamPanel :team="props.set.team1" :showdown-display="coachShowdownDisplay(props.set.team1)" />
-            <!-- Center Column-->
-            <div class="flex min-w-0 flex-1 flex-col px-0 lg:px-4">
-                <form class="top-0" @submit.prevent="handleSubmit">
-                    <div class="space-y-12">
-                        <div v-if="props.matchPokepaste && isUserInSet" class="pb-2">
-                            <h2 class="text-lg font-semibold text-foreground">Match team paste</h2>
-                            <p class="text-muted-foreground mt-1 text-sm">
-                                Build and save your six in the editor (Showdown-style). Only you can open your paste.
-                            </p>
+
+        <!-- Flash message -->
+        <p v-if="flashSuccess" class="mt-4 text-center text-sm font-medium text-green-700 dark:text-green-400">
+            {{ flashSuccess }}
+        </p>
+
+        <!-- Main content -->
+        <div class="mx-auto mt-8 max-w-5xl space-y-6 px-4 pb-16 sm:px-6 lg:px-8">
+
+            <!-- Replays -->
+            <div class="border-border bg-card rounded-xl border p-6">
+                <div class="mb-4 flex items-center justify-between">
+                    <div>
+                        <h2 class="font-semibold">Replays</h2>
+                        <p class="text-muted-foreground text-sm">Paste your Pokémon Showdown replay links. Rosters and results are imported automatically.</p>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <template v-for="(slot, i) in [{ key: 'replay1', label: 'Game 1' }, { key: 'replay2', label: 'Game 2' }, { key: 'replay3', label: 'Game 3' }]" :key="slot.key">
+                        <div class="flex items-center gap-3">
+                            <span class="text-muted-foreground w-14 shrink-0 text-sm font-medium">{{ slot.label }}</span>
+                            <div class="relative min-w-0 flex-1">
+                                <input
+                                    v-if="isUserInSet && !isSetCompleted"
+                                    v-model="(replayForm as any)[slot.key]"
+                                    type="url"
+                                    :placeholder="`https://replay.pokemonshowdown.com/...`"
+                                    class="border-input bg-background text-foreground placeholder:text-muted-foreground focus:ring-ring block w-full rounded-md border px-3 py-2 pr-9 text-sm focus:ring-2 focus:outline-none"
+                                />
+                                <a
+                                    v-else-if="(set as any)[slot.key]"
+                                    :href="(set as any)[slot.key]"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    class="text-primary flex items-center gap-1 truncate text-sm hover:underline"
+                                >
+                                    <span class="truncate">{{ (set as any)[slot.key] }}</span>
+                                    <ExternalLink class="size-3 shrink-0" />
+                                </a>
+                                <p v-else class="text-muted-foreground text-sm italic">No replay yet</p>
+                                <p v-if="(replayForm.errors as any)[slot.key]" class="text-destructive mt-1 text-xs">
+                                    {{ (replayForm.errors as any)[slot.key] }}
+                                </p>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <div v-if="isUserInSet && !isSetCompleted" class="mt-4 flex flex-wrap gap-2">
+                    <Button :disabled="replayForm.processing" @click="submitReplays">
+                        {{ replayForm.processing ? 'Saving…' : 'Save replays' }}
+                    </Button>
+                    <Button
+                        v-if="savedReplayOptions.length > 0"
+                        variant="outline"
+                        :disabled="importFromReplayForm.processing"
+                        @click="importReplayModalOpen = true"
+                    >
+                        Import rosters from replay
+                    </Button>
+                </div>
+                <p
+                    v-if="page.props.errors && (page.props.errors as Record<string, string>).replay_import"
+                    class="text-destructive mt-2 text-sm"
+                >
+                    {{ (page.props.errors as Record<string, string>).replay_import }}
+                </p>
+            </div>
+
+            <!-- Match Pastes -->
+            <div class="border-border bg-card rounded-xl border p-6">
+                <h2 class="mb-1 font-semibold">Match Pastes</h2>
+                <p class="text-muted-foreground mb-4 text-sm">
+                    Each team's six Pokémon with full build details (moves, items, EVs). Only visible to the submitting player until the match is complete.
+                </p>
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <!-- Team 1 paste -->
+                    <div class="border-border rounded-lg border p-4">
+                        <p class="mb-2 text-sm font-medium">{{ set.team1.name }}</p>
+                        <template v-if="matchPokepaste && isUserInSet && currentUserTeam?.id === set.team1.id">
+                            <p class="text-muted-foreground mb-3 text-xs">Build your team paste with moves, items, and EVs.</p>
                             <Link
-                                :href="'/pokepaste/' + props.matchPokepaste.pokepaste_public_id"
-                                class="bg-primary text-primary-foreground mt-4 inline-flex rounded-md px-4 py-2 text-sm font-semibold shadow-sm transition-colors hover:bg-primary/90"
+                                :href="'/pokepaste/' + matchPokepaste.pokepaste_public_id"
+                                class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
                             >
-                                Open team paste editor
+                                Open paste editor
+                                <ExternalLink class="size-3" />
                             </Link>
-                        </div>
-
-                        <div class="border-b border-border pb-12">
-                            <h2 class="mb-6 text-center text-base/7 font-semibold text-foreground">Set Result</h2>
-                            <div class="grid max-w-2xl grid-cols-1 gap-x-6 gap-y-8 sm:grid-cols-6 md:col-span-2">
-                                <div class="sm:col-span-3">
-                                    <label for="team1_score" class="block text-sm/6 font-medium text-foreground"
-                                        >{{ props.set.team1.name }} Score</label
-                                    >
-                                    <div class="mt-2">
-                                        <select
-                                            name="team1_score"
-                                            id="team1_score"
-                                            class="block min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none sm:min-h-9 sm:py-1.5 sm:text-sm"
-                                            v-model="form.team1_score"
-                                            :disabled="disableForm"
-                                        >
-                                            <option value="0">0</option>
-                                            <option value="1">1</option>
-                                            <option v-if="form.team2_score < 2" value="2">2</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="sm:col-span-3">
-                                    <label for="team2_score" class="block text-sm/6 font-medium text-foreground"
-                                        >{{ props.set.team2.name }} Score</label
-                                    >
-                                    <div class="mt-2">
-                                        <select
-                                            name="team2_score"
-                                            id="team2_score"
-                                            class="block min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none sm:min-h-9 sm:py-1.5 sm:text-sm"
-                                            v-model="form.team2_score"
-                                            :disabled="disableForm"
-                                        >
-                                            <option value="0">0</option>
-                                            <option value="1">1</option>
-                                            <option v-if="form.team1_score < 2" value="2">2</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <p v-if="form.errors.set_result" class="text-destructive sm:col-span-6 text-sm">
-                                    {{ form.errors.set_result }}
-                                </p>
-                                <p
-                                    v-else-if="!isSetCompleted && isUserInSet && requireTeamMatchPokepasteBeforeResults && !bothSidesPasteReady"
-                                    class="text-amber-700 sm:col-span-6 text-sm dark:text-amber-400"
-                                >
-                                    Both teams must submit their match team paste before set results can be entered.
-                                    <span v-if="!matchPokepasteSides.team1?.has_data" class="block">Missing paste: {{ props.set.team1.name }}</span>
-                                    <span v-if="!matchPokepasteSides.team2?.has_data" class="block">Missing paste: {{ props.set.team2.name }}</span>
-                                </p>
-                                <p
-                                    v-else-if="!isSetCompleted && isUserInSet && requireReplaysBeforeResults && !hasServerSavedReplay"
-                                    class="text-amber-700 sm:col-span-6 text-sm dark:text-amber-400"
-                                >
-                                    At least one Showdown replay must be saved (use Save Replays) before you can submit set results for this league.
-                                </p>
-                                <p
-                                    v-else-if="!isSetCompleted && isUserInSet && !canSubmitSetResult"
-                                    class="text-muted-foreground sm:col-span-6 text-sm"
-                                >
-                                    Choose a final set score: one side must have 2 wins (2-0 or 2-1).
-                                </p>
-
-                                <template v-if="isSetCompleted">
-                                    <div class="sm:col-span-3">
-                                        <p class="block text-sm/6 font-medium text-foreground">{{ props.set.team1.name }} team paste</p>
-                                        <div class="mt-2">
-                                            <Link
-                                                v-if="props.matchPokepasteSides.team1?.has_data"
-                                                :href="'/pokepaste/' + props.matchPokepasteSides.team1.public_id"
-                                                class="text-primary text-sm font-medium hover:underline"
-                                            >
-                                                View team paste
-                                            </Link>
-                                            <p v-else class="text-muted-foreground text-sm">No team paste saved for this match.</p>
-                                        </div>
-                                    </div>
-                                    <div class="sm:col-span-3">
-                                        <p class="block text-sm/6 font-medium text-foreground">{{ props.set.team2.name }} team paste</p>
-                                        <div class="mt-2">
-                                            <Link
-                                                v-if="props.matchPokepasteSides.team2?.has_data"
-                                                :href="'/pokepaste/' + props.matchPokepasteSides.team2.public_id"
-                                                class="text-primary text-sm font-medium hover:underline"
-                                            >
-                                                View team paste
-                                            </Link>
-                                            <p v-else class="text-muted-foreground text-sm">No team paste saved for this match.</p>
-                                        </div>
-                                    </div>
-                                </template>
-
-                                <ReplayInput
-                                    id="replay1"
-                                    label="Game 1 Replay"
-                                    v-model="replayForm.replay1"
-                                    :is-user-in-set="isUserInSet"
-                                    :error="replayForm.errors.replay1"
-                                />
-                                <ReplayInput
-                                    id="replay2"
-                                    label="Game 2 Replay"
-                                    v-model="replayForm.replay2"
-                                    :is-user-in-set="isUserInSet"
-                                    :error="replayForm.errors.replay2"
-                                />
-                                <ReplayInput
-                                    id="replay3"
-                                    label="Game 3 Replay"
-                                    v-model="replayForm.replay3"
-                                    :is-user-in-set="isUserInSet"
-                                    :error="replayForm.errors.replay3"
-                                />
-
-                                <div class="flex flex-col gap-3 sm:col-span-6 sm:flex-row sm:flex-wrap">
-                                    <Button
-                                        v-if="!isSetCompleted && isUserInSet"
-                                        type="submit"
-                                        :disabled="disableForm || !canSubmitSetResult"
-                                        class="touch-manipulation"
-                                    >
-                                        Update
-                                    </Button>
-                                    <Button
-                                        v-if="isUserInSet"
-                                        type="button"
-                                        :disabled="replayForm.processing"
-                                        class="touch-manipulation"
-                                        @click="handleReplaySubmit"
-                                    >
-                                        Save Replays
-                                    </Button>
-                                    <Button
-                                        v-if="isUserInSet && hasSavedReplayUrl"
-                                        type="button"
-                                        variant="outline"
-                                        :disabled="importFromReplayForm.processing"
-                                        class="touch-manipulation"
-                                        @click="importReplayModalOpen = true"
-                                    >
-                                        Import rosters from replay
-                                    </Button>
-                                </div>
-                                <p
-                                    v-if="page.props.errors && (page.props.errors as Record<string, string>).replay_import"
-                                    class="text-destructive sm:col-span-6 text-sm"
-                                >
-                                    {{ (page.props.errors as Record<string, string>).replay_import }}
-                                </p>
-                            </div>
-                        </div>
-                        <div v-if="props.set.winner_id" class="mt-8 border-t border-border pt-8">
-                            <h2 class="mb-6 text-center text-base/7 font-semibold text-foreground">Winner</h2>
-                            <div class="flex flex-col items-center justify-center space-y-4">
-                                <img v-if="winnerLogo" :src="winnerLogo" alt="Winner Logo" class="mx-auto h-30 w-30 rounded-full" />
-                                <div class="text-center">
-                                    <p class="text-2xl font-bold text-foreground">{{ props.set.winner_name }}</p>
-                                    <p v-if="winnerCoach" class="text-lg text-muted-foreground">Coach: {{ winnerCoach }}</p>
-                                    <p v-if="winnerShowdownUsername" class="text-muted-foreground text-sm">
-                                        Showdown:
-                                        <span class="text-foreground font-mono font-medium">{{ winnerShowdownUsername }}</span>
-                                    </p>
-                                </div>
-                                <div v-if="props.isLeagueAdmin && isSetCompleted" class="flex w-full max-w-md flex-col items-center gap-2">
-                                    <p v-if="reopenForm.errors.set_id" class="text-center text-sm text-destructive">{{ reopenForm.errors.set_id }}</p>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        :disabled="reopenForm.processing"
-                                        class="border-destructive/60 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                        @click="handleReopenMatch"
-                                    >
-                                        Reopen match (admin)
-                                    </Button>
-                                </div>
-                            </div>
-                        </div>
+                        </template>
+                        <template v-else-if="matchPokepasteSides.team1?.has_data && isSetCompleted">
+                            <Link
+                                :href="'/pokepaste/' + matchPokepasteSides.team1.public_id"
+                                class="text-primary inline-flex items-center gap-1 text-sm hover:underline"
+                            >
+                                View paste <ExternalLink class="size-3" />
+                            </Link>
+                        </template>
+                        <p v-else-if="matchPokepasteSides.team1?.has_data" class="text-muted-foreground text-sm italic">Submitted — visible after match</p>
+                        <p v-else class="text-muted-foreground text-sm italic">No paste submitted</p>
                     </div>
-                </form>
 
-                <template v-if="props.isParticipant">
-                    <Dialog v-model:open="proposeTimeOpen">
-                        <DialogContent class="sm:max-w-sm">
-                            <DialogHeader>
-                                <DialogTitle>Propose a match time</DialogTitle>
-                                <DialogDescription>
-                                    Your opponent will be notified and can accept or decline.
-                                </DialogDescription>
-                            </DialogHeader>
-                            <form class="flex flex-col gap-4" @submit.prevent="submitProposal">
-                                <div class="flex flex-col gap-1.5">
-                                    <label for="propose_at_input" class="text-sm font-medium text-foreground">Date & time</label>
-                                    <input
-                                        id="propose_at_input"
-                                        v-model="proposeForm.proposed_at"
-                                        type="datetime-local"
-                                        class="border-input bg-background text-foreground focus:ring-ring min-h-9 rounded-md border px-3 py-2 text-sm focus:ring-2 focus:outline-none"
-                                    />
-                                    <p v-if="proposeForm.errors.proposed_at" class="text-destructive text-xs">
-                                        {{ proposeForm.errors.proposed_at }}
-                                    </p>
-                                </div>
-                                <DialogFooter>
-                                    <Button type="button" variant="outline" @click="proposeTimeOpen = false">Cancel</Button>
-                                    <Button type="submit" :disabled="proposeForm.processing || !proposeForm.proposed_at">
-                                        Send proposal
-                                    </Button>
-                                </DialogFooter>
-                            </form>
-                        </DialogContent>
-                    </Dialog>
-                </template>
+                    <!-- Team 2 paste -->
+                    <div class="border-border rounded-lg border p-4">
+                        <p class="mb-2 text-sm font-medium">{{ set.team2.name }}</p>
+                        <template v-if="matchPokepaste && isUserInSet && currentUserTeam?.id === set.team2.id">
+                            <p class="text-muted-foreground mb-3 text-xs">Build your team paste with moves, items, and EVs.</p>
+                            <Link
+                                :href="'/pokepaste/' + matchPokepaste.pokepaste_public_id"
+                                class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+                            >
+                                Open paste editor
+                                <ExternalLink class="size-3" />
+                            </Link>
+                        </template>
+                        <template v-else-if="matchPokepasteSides.team2?.has_data && isSetCompleted">
+                            <Link
+                                :href="'/pokepaste/' + matchPokepasteSides.team2.public_id"
+                                class="text-primary inline-flex items-center gap-1 text-sm hover:underline"
+                            >
+                                View paste <ExternalLink class="size-3" />
+                            </Link>
+                        </template>
+                        <p v-else-if="matchPokepasteSides.team2?.has_data" class="text-muted-foreground text-sm italic">Submitted — visible after match</p>
+                        <p v-else class="text-muted-foreground text-sm italic">No paste submitted</p>
+                    </div>
+                </div>
             </div>
-            <!-- Team 2 -->
-            <MatchTeamPanel :team="props.set.team2" :showdown-display="coachShowdownDisplay(props.set.team2)" />
+
+            <!-- Set result (active matches, participants only) -->
+            <div v-if="!isSetCompleted && isUserInSet" class="border-border bg-card rounded-xl border p-6">
+                <h2 class="mb-1 font-semibold">Set Result</h2>
+                <p class="text-muted-foreground mb-4 text-sm">Results are calculated automatically when replays are saved. You can also enter them manually here.</p>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="mb-1.5 block text-sm font-medium">{{ set.team1.name }}</label>
+                        <select
+                            v-model="scoreForm.team1_score"
+                            :disabled="disableScoreForm"
+                            class="border-input bg-background text-foreground focus:ring-ring block w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:outline-none disabled:opacity-50"
+                        >
+                            <option value="0">0</option>
+                            <option value="1">1</option>
+                            <option v-if="scoreForm.team2_score < 2" value="2">2</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="mb-1.5 block text-sm font-medium">{{ set.team2.name }}</label>
+                        <select
+                            v-model="scoreForm.team2_score"
+                            :disabled="disableScoreForm"
+                            class="border-input bg-background text-foreground focus:ring-ring block w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:outline-none disabled:opacity-50"
+                        >
+                            <option value="0">0</option>
+                            <option value="1">1</option>
+                            <option v-if="scoreForm.team1_score < 2" value="2">2</option>
+                        </select>
+                    </div>
+                </div>
+
+                <p v-if="scoreForm.errors.set_result" class="text-destructive mt-2 text-sm">{{ scoreForm.errors.set_result }}</p>
+                <p v-else-if="requireTeamMatchPokepasteBeforeResults && !bothSidesPasteReady" class="mt-2 text-sm text-amber-700 dark:text-amber-400">
+                    Both teams must submit their match paste before results can be entered.
+                    <span v-if="!matchPokepasteSides.team1?.has_data" class="block">Missing: {{ set.team1.name }}</span>
+                    <span v-if="!matchPokepasteSides.team2?.has_data" class="block">Missing: {{ set.team2.name }}</span>
+                </p>
+                <p v-else-if="requireReplaysBeforeResults && !hasServerSavedReplay" class="mt-2 text-sm text-amber-700 dark:text-amber-400">
+                    At least one replay must be saved before submitting results for this league.
+                </p>
+                <p v-else-if="!canSubmitSetResult" class="text-muted-foreground mt-2 text-sm">
+                    Choose a valid score — one team must have 2 wins (2-0 or 2-1).
+                </p>
+
+                <div class="mt-4">
+                    <Button :disabled="disableScoreForm || !canSubmitSetResult || scoreForm.processing" @click="submitScoreForm">
+                        {{ scoreForm.processing ? 'Saving…' : 'Submit result' }}
+                    </Button>
+                </div>
+            </div>
+
+            <!-- Admin reopen -->
+            <div v-if="isLeagueAdmin && isSetCompleted" class="flex justify-center">
+                <Button
+                    variant="outline"
+                    :disabled="reopenForm.processing"
+                    class="border-destructive/60 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                    @click="handleReopenMatch"
+                >
+                    Reopen match (admin)
+                </Button>
+                <p v-if="reopenForm.errors.set_id" class="text-destructive mt-1 text-center text-sm">{{ reopenForm.errors.set_id }}</p>
+            </div>
+
+            <!-- Team rosters -->
+            <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <MatchTeamPanel :team="set.team1" :showdown-display="showdownDisplay(set.team1)" />
+                <MatchTeamPanel :team="set.team2" :showdown-display="showdownDisplay(set.team2)" />
+            </div>
         </div>
+
+        <!-- Propose time dialog -->
+        <Dialog v-model:open="proposeTimeOpen">
+            <DialogContent class="sm:max-w-sm">
+                <DialogHeader>
+                    <DialogTitle>Propose a match time</DialogTitle>
+                    <DialogDescription>Your opponent will be notified and can accept or decline.</DialogDescription>
+                </DialogHeader>
+                <form class="flex flex-col gap-4" @submit.prevent="submitProposal">
+                    <div class="flex flex-col gap-1.5">
+                        <label for="propose_at_input" class="text-sm font-medium">Date & time</label>
+                        <input
+                            id="propose_at_input"
+                            v-model="proposeForm.proposed_at"
+                            type="datetime-local"
+                            class="border-input bg-background text-foreground focus:ring-ring min-h-9 rounded-md border px-3 py-2 text-sm focus:ring-2 focus:outline-none"
+                        />
+                        <p v-if="proposeForm.errors.proposed_at" class="text-destructive text-xs">{{ proposeForm.errors.proposed_at }}</p>
+                    </div>
+                    <DialogFooter>
+                        <Button type="button" variant="outline" @click="proposeTimeOpen = false">Cancel</Button>
+                        <Button type="submit" :disabled="proposeForm.processing || !proposeForm.proposed_at">Send proposal</Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Import rosters from replay dialog -->
         <Dialog v-model:open="importReplayModalOpen">
             <DialogContent class="max-h-[90vh] overflow-y-auto sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>Import rosters from Showdown replay</DialogTitle>
+                    <DialogTitle>Import rosters from replay</DialogTitle>
                     <DialogDescription>
-                        Uses the saved replay log to set both teams’ match paste species (replay order). If a team’s paste already has the
-                        same six Pokémon in any order, abilities, moves, items, and EVs you entered are kept and only slot order and any new
-                        species mapping are updated. Choose which replay and which league team is Showdown player 1 (p1); a coach’s Showdown
-                        name from Profile or team that matches the replay can pre-select p1.
+                        Sets both teams' match paste species from the replay's team preview. Choose which replay and confirm which team was Showdown player 1.
                     </DialogDescription>
                 </DialogHeader>
 
                 <div class="space-y-4">
                     <fieldset>
-                        <legend class="text-sm font-medium text-foreground">Which replay?</legend>
+                        <legend class="text-sm font-medium">Which replay?</legend>
                         <div class="mt-2 space-y-2">
                             <label
                                 v-for="opt in savedReplayOptions"
                                 :key="opt.slot"
-                                class="flex cursor-pointer items-start gap-2 rounded-md border border-transparent p-2 hover:bg-muted/50"
+                                class="hover:bg-muted/50 flex cursor-pointer items-start gap-2 rounded-md border border-transparent p-2"
                             >
-                                <input
-                                    v-model.number="importFromReplayForm.replay_slot"
-                                    type="radio"
-                                    name="replay_slot_import"
-                                    class="mt-1"
-                                    :value="opt.slot"
-                                />
+                                <input v-model.number="importFromReplayForm.replay_slot" type="radio" name="replay_slot_import" class="mt-1" :value="opt.slot" />
                                 <span class="text-sm">
-                                    <span class="font-medium text-foreground">{{ opt.label }}</span>
-                                    <span class="block truncate text-xs text-muted-foreground">{{ opt.url }}</span>
+                                    <span class="font-medium">{{ opt.label }}</span>
+                                    <span class="text-muted-foreground block truncate text-xs">{{ opt.url }}</span>
                                 </span>
                             </label>
                         </div>
-                        <p v-if="importFromReplayForm.errors.replay_slot" class="mt-1 text-sm text-destructive">
-                            {{ importFromReplayForm.errors.replay_slot }}
-                        </p>
+                        <p v-if="importFromReplayForm.errors.replay_slot" class="text-destructive mt-1 text-sm">{{ importFromReplayForm.errors.replay_slot }}</p>
                     </fieldset>
-                    <p v-if="replayPreviewLoading" class="text-sm text-muted-foreground">Reading replay…</p>
-                    <p v-else-if="replayPreviewError" class="text-sm text-destructive">{{ replayPreviewError }}</p>
+
+                    <p v-if="replayPreviewLoading" class="text-muted-foreground text-sm">Reading replay…</p>
+                    <p v-else-if="replayPreviewError" class="text-destructive text-sm">{{ replayPreviewError }}</p>
                     <template v-else-if="replayPreviewData">
-                        <p class="text-sm text-muted-foreground">
-                            Showdown:
-                            <span class="font-medium text-foreground">{{ replayPreviewData.p1_name }}</span>
-                            vs
-                            <span class="font-medium text-foreground">{{ replayPreviewData.p2_name }}</span>
+                        <p class="text-muted-foreground text-sm">
+                            Showdown: <span class="text-foreground font-medium">{{ replayPreviewData.p1_name }}</span>
+                            vs <span class="text-foreground font-medium">{{ replayPreviewData.p2_name }}</span>
                         </p>
-                        <p
-                            v-if="!replayPreviewData.needs_manual_p1_map && replayPreviewData.suggested_p1_team_id"
-                            class="text-sm font-medium text-green-700 dark:text-green-400"
-                        >
-                            Player 1 (p1) matched your Settings → Profile Showdown names ({{
-                                replayPreviewData.suggested_p1_team_id === props.set.team1.id
-                                    ? props.set.team1.name
-                                    : props.set.team2.name
-                            }}).
+                        <p v-if="!replayPreviewData.needs_manual_p1_map && replayPreviewData.suggested_p1_team_id" class="text-sm font-medium text-green-700 dark:text-green-400">
+                            p1 matched to {{ replayPreviewData.suggested_p1_team_id === set.team1.id ? set.team1.name : set.team2.name }}.
                         </p>
-                        <p v-else class="text-sm text-muted-foreground">
-                            Add a Showdown username on your Profile or team for automatic p1 matching, or choose manually below.
-                        </p>
+                        <p v-else class="text-muted-foreground text-sm">Could not auto-match — choose below.</p>
                     </template>
+
                     <fieldset v-if="replayPreviewLoading || !replayPreviewData || replayPreviewData.needs_manual_p1_map">
-                        <legend class="text-sm font-medium text-foreground">Showdown player 1 (p1) is</legend>
+                        <legend class="text-sm font-medium">Showdown p1 is</legend>
                         <div class="mt-2 space-y-2">
                             <label class="flex cursor-pointer items-center gap-2">
-                                <input v-model.number="importFromReplayForm.p1_team_id" type="radio" name="p1_team_import" :value="props.set.team1.id" />
-                                <span class="text-sm text-foreground">{{ props.set.team1.name }}</span>
+                                <input v-model.number="importFromReplayForm.p1_team_id" type="radio" name="p1_team_import" :value="set.team1.id" />
+                                <span class="text-sm">{{ set.team1.name }}</span>
                             </label>
                             <label class="flex cursor-pointer items-center gap-2">
-                                <input v-model.number="importFromReplayForm.p1_team_id" type="radio" name="p1_team_import" :value="props.set.team2.id" />
-                                <span class="text-sm text-foreground">{{ props.set.team2.name }}</span>
+                                <input v-model.number="importFromReplayForm.p1_team_id" type="radio" name="p1_team_import" :value="set.team2.id" />
+                                <span class="text-sm">{{ set.team2.name }}</span>
                             </label>
                         </div>
-                        <p v-if="importFromReplayForm.errors.p1_team_id" class="mt-1 text-sm text-destructive">
-                            {{ importFromReplayForm.errors.p1_team_id }}
-                        </p>
+                        <p v-if="importFromReplayForm.errors.p1_team_id" class="text-destructive mt-1 text-sm">{{ importFromReplayForm.errors.p1_team_id }}</p>
                     </fieldset>
-                    <p v-if="importFromReplayForm.errors.set_id" class="text-sm text-destructive">{{ importFromReplayForm.errors.set_id }}</p>
+
+                    <p v-if="importFromReplayForm.errors.set_id" class="text-destructive text-sm">{{ importFromReplayForm.errors.set_id }}</p>
                 </div>
 
                 <DialogFooter class="flex-wrap gap-2">
-                    <Button type="button" variant="outline" @click="closeImportReplayModal">Cancel</Button>
-                    <Button
-                        type="button"
-                        :disabled="importFromReplayForm.processing || savedReplayOptions.length === 0"
-                        @click="submitImportFromReplay"
-                    >
+                    <Button variant="outline" @click="importReplayModalOpen = false">Cancel</Button>
+                    <Button :disabled="importFromReplayForm.processing || savedReplayOptions.length === 0" @click="submitImportFromReplay">
                         Import both teams
                     </Button>
                 </DialogFooter>

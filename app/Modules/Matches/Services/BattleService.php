@@ -23,7 +23,10 @@ class BattleService
      */
     public function startBattle(Battle $battle): array
     {
-        $response = Http::post("{$this->baseUrl}/battle", [
+        // Clear any stale session in the Node service before starting fresh
+        Http::delete("{$this->baseUrl}/battle/{$battle->id}");
+
+        $response = Http::timeout(60)->post("{$this->baseUrl}/battle", [
             'battleId' => (string) $battle->id,
             'format' => $battle->format,
             'p1Name' => $battle->p1Team->name,

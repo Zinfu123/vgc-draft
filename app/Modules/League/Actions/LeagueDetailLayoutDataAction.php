@@ -37,6 +37,8 @@ class LeagueDetailLayoutDataAction
                 'frequency_value' => 0,
                 'duration' => 0,
                 'status' => 0,
+                'require_replays_before_results' => false,
+                'auto_complete_set_from_replays' => false,
             ];
         }
         $league->load('draftConfig');

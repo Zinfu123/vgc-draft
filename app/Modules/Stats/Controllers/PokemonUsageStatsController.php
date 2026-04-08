@@ -19,7 +19,7 @@ class PokemonUsageStatsController extends Controller
         $totalBringUnits = (int) ($meta?->total_bring_units ?? 0);
 
         $stats = PokemonUsageStat::query()
-            ->with('pokedex:id,name,nationaldex_id')
+            ->with('pokedex:id,name,nationaldex_id,sprite_url')
             ->orderByDesc('draft_pick_count')
             ->limit(500)
             ->get();
@@ -35,11 +35,13 @@ class PokemonUsageStatsController extends Controller
                 'pokedex_id' => $row->pokedex_id,
                 'name' => $row->pokedex?->name,
                 'nationaldex_id' => $row->pokedex?->nationaldex_id,
+                'sprite_url' => $row->pokedex?->sprite_url,
                 'draft_pick_count' => $row->draft_pick_count,
                 'draft_ban_count' => $row->draft_ban_count,
                 'match_bring_count' => $row->match_bring_count,
                 'game_wins' => $row->game_wins,
                 'game_losses' => $row->game_losses,
+                'ko_count' => (int) $row->ko_count,
                 'pick_rate' => round($pickRate, 6),
                 'ban_rate' => round($banRate, 6),
                 'bring_rate' => round($bringRate, 6),
@@ -56,6 +58,7 @@ class PokemonUsageStatsController extends Controller
             ->take(12)
             ->values()
             ->all();
+        $topKo = collect($rows)->sortByDesc('ko_count')->filter(fn (array $r) => $r['ko_count'] > 0)->take(12)->values()->all();
 
         return Inertia::render('usage-stats/Index', [
             'meta' => [
@@ -74,6 +77,8 @@ class PokemonUsageStatsController extends Controller
                 'top_bring_values' => collect($topBring)->pluck('bring_rate')->map(fn ($v) => round((float) $v * 100, 3))->all(),
                 'top_win_labels' => collect($topGameWin)->pluck('name')->all(),
                 'top_win_values' => collect($topGameWin)->pluck('game_win_rate')->map(fn ($v) => $v !== null ? round((float) $v * 100, 2) : 0)->all(),
+                'top_ko_labels' => collect($topKo)->pluck('name')->all(),
+                'top_ko_values' => collect($topKo)->pluck('ko_count')->map(fn ($v) => (int) $v)->all(),
             ],
         ]);
     }

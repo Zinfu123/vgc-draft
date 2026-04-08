@@ -17,6 +17,7 @@ class PokemonUsageStat extends Model
         'match_bring_count',
         'game_wins',
         'game_losses',
+        'ko_count',
     ];
 
     /**

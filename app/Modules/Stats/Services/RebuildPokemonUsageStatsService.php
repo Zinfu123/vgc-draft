@@ -5,6 +5,7 @@ namespace App\Modules\Stats\Services;
 use App\Modules\Draft\Models\Bans;
 use App\Modules\Draft\Models\DraftPick;
 use App\Modules\Matches\Models\Set;
+use App\Modules\Matches\Models\SetGameResult;
 use App\Modules\Playoffs\Models\PlayoffMatch;
 use App\Modules\Stats\Models\PokemonUsageStat;
 use App\Modules\Stats\Models\PokemonUsageStatsMeta;
@@ -36,78 +37,66 @@ class RebuildPokemonUsageStatsService
                 ->get()
                 ->keyBy('pokedex_id');
 
-            $bringPool = DB::selectOne('
-                SELECT COUNT(*) as cnt FROM (
-                    SELECT DISTINCT stp.matchable_type, stp.matchable_id, stp.team_id, lp.pokedex_id
-                    FROM sets s
-                    INNER JOIN set_team_pokepastes stp ON stp.matchable_type = ? AND stp.matchable_id = s.id
-                    INNER JOIN set_team_pokepaste_slots sl ON sl.set_team_pokepaste_id = stp.id AND sl.league_pokemon_id IS NOT NULL
-                    INNER JOIN league_pokemon lp ON lp.id = sl.league_pokemon_id
-                    WHERE s.status = 0 AND s.team1_score IS NOT NULL AND s.team2_score IS NOT NULL
-                ) x
-            ', [$setClass]);
-
-            $bringPlayoff = DB::selectOne('
-                SELECT COUNT(*) as cnt FROM (
-                    SELECT DISTINCT stp.matchable_type, stp.matchable_id, stp.team_id, lp.pokedex_id
-                    FROM playoff_matches pm
-                    INNER JOIN set_team_pokepastes stp ON stp.matchable_type = ? AND stp.matchable_id = pm.id
-                    INNER JOIN set_team_pokepaste_slots sl ON sl.set_team_pokepaste_id = stp.id AND sl.league_pokemon_id IS NOT NULL
-                    INNER JOIN league_pokemon lp ON lp.id = sl.league_pokemon_id
-                    WHERE pm.winner_team_id IS NOT NULL AND pm.completed_at IS NOT NULL
-                      AND pm.team1_score IS NOT NULL AND pm.team2_score IS NOT NULL
-                ) x
-            ', [$playoffClass]);
-
-            $totalBringUnits = (int) (($bringPool->cnt ?? 0) + ($bringPlayoff->cnt ?? 0));
-
+            // Bring counts and game win/loss come from per-game replay data (set_game_results).
+            // Each entry represents a single game; p1_pokemon / p2_pokemon are JSON arrays of pokedex_ids
+            // for the 4 pokemon each side actually selected.
             $bringByDex = [];
-
-            $poolBringGrouped = DB::select('
-                SELECT pokedex_id, COUNT(*) as c FROM (
-                    SELECT DISTINCT stp.matchable_type, stp.matchable_id, stp.team_id, lp.pokedex_id AS pokedex_id
-                    FROM sets s
-                    INNER JOIN set_team_pokepastes stp ON stp.matchable_type = ? AND stp.matchable_id = s.id
-                    INNER JOIN set_team_pokepaste_slots sl ON sl.set_team_pokepaste_id = stp.id AND sl.league_pokemon_id IS NOT NULL
-                    INNER JOIN league_pokemon lp ON lp.id = sl.league_pokemon_id
-                    WHERE s.status = 0 AND s.team1_score IS NOT NULL AND s.team2_score IS NOT NULL
-                ) sub
-                GROUP BY pokedex_id
-            ', [$setClass]);
-
-            foreach ($poolBringGrouped as $row) {
-                $pid = (int) $row->pokedex_id;
-                $bringByDex[$pid] = ($bringByDex[$pid] ?? 0) + (int) $row->c;
-            }
-
-            $playoffBringGrouped = DB::select('
-                SELECT pokedex_id, COUNT(*) as c FROM (
-                    SELECT DISTINCT stp.matchable_type, stp.matchable_id, stp.team_id, lp.pokedex_id AS pokedex_id
-                    FROM playoff_matches pm
-                    INNER JOIN set_team_pokepastes stp ON stp.matchable_type = ? AND stp.matchable_id = pm.id
-                    INNER JOIN set_team_pokepaste_slots sl ON sl.set_team_pokepaste_id = stp.id AND sl.league_pokemon_id IS NOT NULL
-                    INNER JOIN league_pokemon lp ON lp.id = sl.league_pokemon_id
-                    WHERE pm.winner_team_id IS NOT NULL AND pm.completed_at IS NOT NULL
-                      AND pm.team1_score IS NOT NULL AND pm.team2_score IS NOT NULL
-                ) sub
-                GROUP BY pokedex_id
-            ', [$playoffClass]);
-
-            foreach ($playoffBringGrouped as $row) {
-                $pid = (int) $row->pokedex_id;
-                $bringByDex[$pid] = ($bringByDex[$pid] ?? 0) + (int) $row->c;
-            }
-
             $gameWins = [];
             $gameLosses = [];
+            $totalBringUnits = 0;
 
-            $this->mergeGameStatsFromSets($setClass, $gameWins, $gameLosses);
-            $this->mergeGameStatsFromPlayoffs($playoffClass, $gameWins, $gameLosses);
+            $koByDex = [];
+
+            $gameResults = SetGameResult::query()
+                ->whereNotNull('p1_pokemon')
+                ->whereNotNull('p2_pokemon')
+                ->get(['p1_team_id', 'p2_team_id', 'winner_team_id', 'p1_pokemon', 'p2_pokemon', 'p1_knockouts', 'p2_knockouts']);
+
+            foreach ($gameResults as $result) {
+                $p1Ids = $result->p1_pokemon ?? [];
+                $p2Ids = $result->p2_pokemon ?? [];
+
+                foreach ($p1Ids as $dexId) {
+                    $dexId = (int) $dexId;
+                    $bringByDex[$dexId] = ($bringByDex[$dexId] ?? 0) + 1;
+                    $totalBringUnits++;
+                }
+                foreach ($p2Ids as $dexId) {
+                    $dexId = (int) $dexId;
+                    $bringByDex[$dexId] = ($bringByDex[$dexId] ?? 0) + 1;
+                    $totalBringUnits++;
+                }
+
+                if ($result->winner_team_id !== null) {
+                    $winnerIds = (int) $result->winner_team_id === (int) $result->p1_team_id ? $p1Ids : $p2Ids;
+                    $loserIds = (int) $result->winner_team_id === (int) $result->p1_team_id ? $p2Ids : $p1Ids;
+
+                    foreach ($winnerIds as $dexId) {
+                        $dexId = (int) $dexId;
+                        $gameWins[$dexId] = ($gameWins[$dexId] ?? 0) + 1;
+                    }
+                    foreach ($loserIds as $dexId) {
+                        $dexId = (int) $dexId;
+                        $gameLosses[$dexId] = ($gameLosses[$dexId] ?? 0) + 1;
+                    }
+                }
+
+                foreach (array_merge($result->p1_knockouts ?? [], $result->p2_knockouts ?? []) as $dexId) {
+                    $dexId = (int) $dexId;
+                    $koByDex[$dexId] = ($koByDex[$dexId] ?? 0) + 1;
+                }
+            }
+
+            // Fallback: sets/playoffs that have pokepaste data but no game results contribute
+            // bring counts from their match pokepastes (6-pokemon team preview level).
+            $this->mergeFallbackBringFromSets($setClass, $bringByDex, $totalBringUnits);
+            $this->mergeFallbackBringFromPlayoffs($playoffClass, $bringByDex, $totalBringUnits);
 
             $allIds = array_unique(array_merge(
                 array_keys($bringByDex),
                 array_keys($gameWins),
                 array_keys($gameLosses),
+                array_keys($koByDex),
                 $pickRows->keys()->all(),
                 $banRows->keys()->all(),
             ));
@@ -120,6 +109,7 @@ class RebuildPokemonUsageStatsService
                     'match_bring_count' => (int) ($bringByDex[$pokedexId] ?? 0),
                     'game_wins' => (int) ($gameWins[$pokedexId] ?? 0),
                     'game_losses' => (int) ($gameLosses[$pokedexId] ?? 0),
+                    'ko_count' => (int) ($koByDex[$pokedexId] ?? 0),
                 ]);
             }
 
@@ -136,110 +126,61 @@ class RebuildPokemonUsageStatsService
     }
 
     /**
-     * @param  array<int, int>  $gameWins
-     * @param  array<int, int>  $gameLosses
+     * For completed sets that have no set_game_results entries, fall back to the
+     * match pokepaste (6-pokemon team preview) for bring counts only.
+     * These are typically older matches completed before replay parsing was introduced.
+     *
+     * @param  array<int, int>  $bringByDex
      */
-    private function mergeGameStatsFromSets(string $setClass, array &$gameWins, array &$gameLosses): void
+    private function mergeFallbackBringFromSets(string $setClass, array &$bringByDex, int &$totalBringUnits): void
     {
-        $sets = Set::query()
-            ->where('status', 0)
-            ->whereNotNull('team1_score')
-            ->whereNotNull('team2_score')
-            ->get(['id', 'team1_id', 'team2_id', 'team1_score', 'team2_score']);
+        $setsWithGameResults = SetGameResult::query()
+            ->pluck('set_id')
+            ->unique()
+            ->all();
 
-        foreach ($sets as $set) {
-            if ($set->team1_id === null) {
-                continue;
-            }
-            $this->addGameStatsForTeamSide(
-                $setClass,
-                (int) $set->id,
-                (int) $set->team1_id,
-                (int) $set->team1_score,
-                (int) $set->team2_score,
-                $gameWins,
-                $gameLosses
-            );
-            if ($set->team2_id === null) {
-                continue;
-            }
-            $this->addGameStatsForTeamSide(
-                $setClass,
-                (int) $set->id,
-                (int) $set->team2_id,
-                (int) $set->team2_score,
-                (int) $set->team1_score,
-                $gameWins,
-                $gameLosses
-            );
+        $rows = DB::select('
+            SELECT pokedex_id, COUNT(*) as c FROM (
+                SELECT DISTINCT stp.matchable_type, stp.matchable_id, stp.team_id, lp.pokedex_id AS pokedex_id
+                FROM sets s
+                INNER JOIN set_team_pokepastes stp ON stp.matchable_type = ? AND stp.matchable_id = s.id
+                INNER JOIN set_team_pokepaste_slots sl ON sl.set_team_pokepaste_id = stp.id AND sl.league_pokemon_id IS NOT NULL
+                INNER JOIN league_pokemon lp ON lp.id = sl.league_pokemon_id
+                WHERE s.status = 0 AND s.team1_score IS NOT NULL AND s.team2_score IS NOT NULL
+                  AND s.id NOT IN ('.implode(',', count($setsWithGameResults) > 0 ? $setsWithGameResults : [0]).')
+            ) sub
+            GROUP BY pokedex_id
+        ', [$setClass]);
+
+        foreach ($rows as $row) {
+            $pid = (int) $row->pokedex_id;
+            $bringByDex[$pid] = ($bringByDex[$pid] ?? 0) + (int) $row->c;
+            $totalBringUnits += (int) $row->c;
         }
     }
 
     /**
-     * @param  array<int, int>  $gameWins
-     * @param  array<int, int>  $gameLosses
+     * @param  array<int, int>  $bringByDex
      */
-    private function mergeGameStatsFromPlayoffs(string $playoffClass, array &$gameWins, array &$gameLosses): void
+    private function mergeFallbackBringFromPlayoffs(string $playoffClass, array &$bringByDex, int &$totalBringUnits): void
     {
-        $matches = PlayoffMatch::query()
-            ->whereNotNull('winner_team_id')
-            ->whereNotNull('completed_at')
-            ->whereNotNull('team1_score')
-            ->whereNotNull('team2_score')
-            ->get(['id', 'team1_id', 'team2_id', 'team1_score', 'team2_score']);
+        $rows = DB::select('
+            SELECT pokedex_id, COUNT(*) as c FROM (
+                SELECT DISTINCT stp.matchable_type, stp.matchable_id, stp.team_id, lp.pokedex_id AS pokedex_id
+                FROM playoff_matches pm
+                INNER JOIN set_team_pokepastes stp ON stp.matchable_type = ? AND stp.matchable_id = pm.id
+                INNER JOIN set_team_pokepaste_slots sl ON sl.set_team_pokepaste_id = stp.id AND sl.league_pokemon_id IS NOT NULL
+                INNER JOIN league_pokemon lp ON lp.id = sl.league_pokemon_id
+                WHERE pm.winner_team_id IS NOT NULL AND pm.completed_at IS NOT NULL
+                  AND pm.team1_score IS NOT NULL AND pm.team2_score IS NOT NULL
+            ) sub
+            GROUP BY pokedex_id
+        ', [$playoffClass]);
 
-        foreach ($matches as $m) {
-            if ($m->team1_id === null || $m->team2_id === null) {
-                continue;
-            }
-            $this->addGameStatsForTeamSide(
-                $playoffClass,
-                (int) $m->id,
-                (int) $m->team1_id,
-                (int) $m->team1_score,
-                (int) $m->team2_score,
-                $gameWins,
-                $gameLosses
-            );
-            $this->addGameStatsForTeamSide(
-                $playoffClass,
-                (int) $m->id,
-                (int) $m->team2_id,
-                (int) $m->team2_score,
-                (int) $m->team1_score,
-                $gameWins,
-                $gameLosses
-            );
-        }
-    }
-
-    /**
-     * @param  array<int, int>  $gameWins
-     * @param  array<int, int>  $gameLosses
-     */
-    private function addGameStatsForTeamSide(
-        string $matchableType,
-        int $matchableId,
-        int $teamId,
-        int $winsToCredit,
-        int $lossesToCredit,
-        array &$gameWins,
-        array &$gameLosses,
-    ): void {
-        $pokedexIds = DB::table('set_team_pokepastes as stp')
-            ->join('set_team_pokepaste_slots as sl', 'sl.set_team_pokepaste_id', '=', 'stp.id')
-            ->join('league_pokemon as lp', 'lp.id', '=', 'sl.league_pokemon_id')
-            ->where('stp.matchable_type', $matchableType)
-            ->where('stp.matchable_id', $matchableId)
-            ->where('stp.team_id', $teamId)
-            ->whereNotNull('sl.league_pokemon_id')
-            ->distinct()
-            ->pluck('lp.pokedex_id');
-
-        foreach ($pokedexIds as $dexId) {
-            $dexId = (int) $dexId;
-            $gameWins[$dexId] = ($gameWins[$dexId] ?? 0) + $winsToCredit;
-            $gameLosses[$dexId] = ($gameLosses[$dexId] ?? 0) + $lossesToCredit;
+        foreach ($rows as $row) {
+            $pid = (int) $row->pokedex_id;
+            $bringByDex[$pid] = ($bringByDex[$pid] ?? 0) + (int) $row->c;
+            $totalBringUnits += (int) $row->c;
         }
     }
 }

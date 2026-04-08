@@ -252,10 +252,18 @@ class PokeApiPokemonGameDataImporter
         $rowSlug = Str::slug((string) $pokedex->getAttribute('name'));
 
         $matched = $varieties->first(function (array $v) use ($rowSlug): bool {
-            $apiName = isset($v['pokemon']['name']) ? (string) $v['pokemon']['name'] : '';
+            $apiSlug = isset($v['pokemon']['name']) ? Str::slug((string) $v['pokemon']['name']) : '';
 
-            return $apiName !== '' && Str::slug($apiName) === $rowSlug;
+            return $apiSlug !== '' && $apiSlug === $rowSlug;
         });
+
+        if ($matched === null) {
+            $matched = $varieties->first(function (array $v) use ($rowSlug): bool {
+                $apiSlug = isset($v['pokemon']['name']) ? Str::slug((string) $v['pokemon']['name']) : '';
+
+                return $apiSlug !== '' && str_starts_with($apiSlug, $rowSlug.'-');
+            });
+        }
 
         if (is_array($matched) && ! empty($matched['pokemon']['url'])) {
             return (string) $matched['pokemon']['url'];

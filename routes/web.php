@@ -8,7 +8,6 @@ use App\Modules\League\Controllers\LeagueController;
 use App\Modules\League\Controllers\LeaguePokemonAdminController;
 use App\Modules\League\Controllers\LeaguePokemonController;
 use App\Modules\League\Controllers\PoolTemplateCatalogController;
-use App\Modules\Matches\Controllers\BattleController;
 use App\Modules\Matches\Controllers\MatchConfigController;
 use App\Modules\Matches\Controllers\MatchMessageController;
 use App\Modules\Matches\Controllers\MatchScheduleRequestController;
@@ -156,10 +155,6 @@ Route::prefix('match')->group(function () {
     Route::post('/set/{set}/schedule-requests', [MatchScheduleRequestController::class, 'store'])->middleware(['auth', 'verified'])->name('sets.schedule-requests.store');
     Route::patch('/set/{set}/schedule-requests/{scheduleRequest}', [MatchScheduleRequestController::class, 'update'])->middleware(['auth', 'verified'])->name('sets.schedule-requests.update');
 
-    // Battle simulator routes
-    Route::get('/set/{set}/battle', [BattleController::class, 'show'])->middleware(['auth', 'verified'])->name('battles.show');
-    Route::post('/battles/{battle}/team', [BattleController::class, 'submitTeam'])->middleware(['auth', 'verified'])->name('battles.team');
-    Route::post('/battles/{battle}/action', [BattleController::class, 'action'])->middleware(['auth', 'verified'])->name('battles.action');
 });
 
 Route::get('/pokepaste/{pokepaste}', [PokepasteController::class, 'show'])->name('pokepaste.show');
