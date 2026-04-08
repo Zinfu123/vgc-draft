@@ -277,6 +277,9 @@ class CreateEditSetsAction
     protected function rotate($teams)
     {
         $teamsCount = $teams->count();
+        if ($teamsCount <= 2) {
+            return $teams;
+        }
         $lastIndex = $teamsCount - 1;
         $factor = (int) ($teamsCount % 2 === 0 ? $teamsCount / 2 : ceil($teamsCount / 2));
         $topRightIndex = $factor - 1;

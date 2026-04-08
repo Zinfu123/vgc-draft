@@ -135,3 +135,120 @@ it('stores a team showdown override on edit when different from profile', functi
     expect($team->fresh()->name)->toBe('Alpha II');
     expect($team->fresh()->showdown_username)->toBe('OverrideSD');
 });
+
+it('rejects team creation when the effective showdown username matches another team in the same league via profile', function () {
+    $existingUser = User::factory()->create(['showdown_username' => 'SharedSD']);
+    [$league] = createLeagueWithPool();
+    Team::create([
+        'name' => 'Existing Team',
+        'league_id' => $league->id,
+        'user_id' => $existingUser->id,
+        'pick_position' => 1,
+        'draft_points' => 80,
+    ]);
+
+    $newUser = User::factory()->create(['showdown_username' => 'SharedSD']);
+    $adminUser = User::factory()->create();
+
+    $this->actingAs($adminUser)->post('/teams', [
+        'name' => 'Duplicate Team',
+        'league_id' => $league->id,
+        'user_id' => $newUser->id,
+        'pick_position' => 2,
+    ])->assertSessionHasErrors('showdown_username');
+});
+
+it('rejects team creation when the team-level showdown username matches another team effective username in the same league', function () {
+    $existingUser = User::factory()->create(['showdown_username' => 'TakenSD']);
+    [$league] = createLeagueWithPool();
+    Team::create([
+        'name' => 'Existing Team',
+        'league_id' => $league->id,
+        'user_id' => $existingUser->id,
+        'pick_position' => 1,
+        'draft_points' => 80,
+    ]);
+
+    $newUser = User::factory()->create(['showdown_username' => null]);
+    $adminUser = User::factory()->create();
+
+    $this->actingAs($adminUser)->post('/teams', [
+        'name' => 'Clash Team',
+        'league_id' => $league->id,
+        'user_id' => $newUser->id,
+        'pick_position' => 2,
+        'showdown_username' => 'takensd',
+    ])->assertSessionHasErrors('showdown_username');
+});
+
+it('allows the same showdown username in different leagues', function () {
+    $userA = User::factory()->create(['showdown_username' => 'SharedAcrossLeagues']);
+    [$leagueA] = createLeagueWithPool();
+    [$leagueB] = createLeagueWithPool();
+
+    Team::create([
+        'name' => 'Team A',
+        'league_id' => $leagueA->id,
+        'user_id' => $userA->id,
+        'pick_position' => 1,
+        'draft_points' => 80,
+    ]);
+
+    $userB = User::factory()->create(['showdown_username' => 'SharedAcrossLeagues']);
+    $adminUser = User::factory()->create();
+
+    $this->actingAs($adminUser)->post('/teams', [
+        'name' => 'Team B',
+        'league_id' => $leagueB->id,
+        'user_id' => $userB->id,
+        'pick_position' => 1,
+    ])->assertRedirect();
+
+    expect(Team::where('league_id', $leagueB->id)->exists())->toBeTrue();
+});
+
+it('rejects edit when the updated showdown username conflicts with another team in the same league', function () {
+    $userA = User::factory()->create(['showdown_username' => 'ExistingSD']);
+    [$league] = createLeagueWithPool();
+    Team::create([
+        'name' => 'Team A',
+        'league_id' => $league->id,
+        'user_id' => $userA->id,
+        'pick_position' => 1,
+        'draft_points' => 80,
+    ]);
+
+    $userB = User::factory()->create(['showdown_username' => 'OtherSD']);
+    $teamB = Team::create([
+        'name' => 'Team B',
+        'league_id' => $league->id,
+        'user_id' => $userB->id,
+        'pick_position' => 2,
+        'draft_points' => 80,
+    ]);
+
+    $this->actingAs($userB)->post(route('teams.edit', ['team_id' => $teamB->id]), [
+        'name' => 'Team B',
+        'showdown_username' => 'ExistingSD',
+    ])->assertSessionHasErrors('showdown_username');
+});
+
+it('allows editing a team without triggering a self-conflict on showdown username', function () {
+    $user = User::factory()->create(['showdown_username' => null]);
+    [$league] = createLeagueWithPool();
+    $team = Team::create([
+        'name' => 'My Team',
+        'showdown_username' => 'MySD',
+        'league_id' => $league->id,
+        'user_id' => $user->id,
+        'pick_position' => 1,
+        'draft_points' => 80,
+    ]);
+
+    $this->actingAs($user)->post(route('teams.edit', ['team_id' => $team->id]), [
+        'name' => 'My Team Renamed',
+        'showdown_username' => 'MySD',
+    ])->assertRedirect();
+
+    expect($team->fresh()->name)->toBe('My Team Renamed');
+});

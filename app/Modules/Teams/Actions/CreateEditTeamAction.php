@@ -48,6 +48,29 @@ class CreateEditTeamAction
         return $trimmedInput;
     }
 
+    /**
+     * Asserts no other team in the league shares the same effective Showdown username (case-insensitive).
+     */
+    private function assertShowdownUsernameUniqueInLeague(int $leagueId, string $effectiveUsername, ?int $excludeTeamId = null): void
+    {
+        $normalized = ShowdownUsernameNormalizer::normalize($effectiveUsername);
+
+        $teams = Team::query()
+            ->where('league_id', $leagueId)
+            ->when($excludeTeamId !== null, fn ($q) => $q->where('id', '!=', $excludeTeamId))
+            ->with('user')
+            ->get();
+
+        foreach ($teams as $team) {
+            $teamEffective = $team->effectiveShowdownUsername();
+            if ($teamEffective !== null && ShowdownUsernameNormalizer::normalize($teamEffective) === $normalized) {
+                throw ValidationException::withMessages([
+                    'showdown_username' => ['This Showdown username is already registered to another team in this league.'],
+                ]);
+            }
+        }
+    }
+
     private function assertCoachHasShowdownUsername(User $user, ?string $teamOverride): void
     {
         $normalizedUser = $user->showdown_username !== null && trim((string) $user->showdown_username) !== ''
@@ -78,6 +101,11 @@ class CreateEditTeamAction
 
         $rawShowdownInput = (string) $request->input('showdown_username', '');
         $showdownToStore = $this->resolveShowdownUsernameForStorage($rawShowdownInput, $user);
+
+        $effectiveUsername = $showdownToStore ?? $user->showdown_username;
+        if ($effectiveUsername !== null) {
+            $this->assertShowdownUsernameUniqueInLeague($request->integer('league_id'), $effectiveUsername);
+        }
 
         if ($request->hasFile('logo')) {
             $logo = (new TeamLogoUploadAction)->upload($request);
@@ -139,6 +167,11 @@ class CreateEditTeamAction
         }
 
         $this->assertCoachHasShowdownUsername($user, $team->showdown_username);
+
+        $effectiveUsername = $team->showdown_username ?? $user->showdown_username;
+        if ($effectiveUsername !== null) {
+            $this->assertShowdownUsernameUniqueInLeague($team->league_id, $effectiveUsername, $team->id);
+        }
 
         if ($request->hasFile('logo')) {
             if ($team->logo !== null) {

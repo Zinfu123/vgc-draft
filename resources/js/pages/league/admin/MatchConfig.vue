@@ -41,7 +41,6 @@ const matchConfigForm = useForm({
     number_of_pools: props.matchConfig?.number_of_pools ?? 1,
     frequency_type: props.matchConfig?.frequency_type ?? 1,
     frequency_value: props.matchConfig?.frequency_value ?? null,
-    require_team_match_pokepaste_before_results: props.matchConfig?.require_team_match_pokepaste_before_results ?? false,
     require_replays_before_results: props.matchConfig?.require_replays_before_results ?? false,
     auto_complete_set_from_replays: props.matchConfig?.auto_complete_set_from_replays ?? false,
     command: props.matchConfig?.id ? 'update' : 'create',
@@ -103,17 +102,6 @@ const createSets = () => {
                         <label class="text-sm font-medium" for="frequency_value">Frequency Value</label>
                         <Input id="frequency_value" type="number" v-model="matchConfigForm.frequency_value" min="1" />
                         <p v-if="matchConfigForm.errors.frequency_value" class="text-sm text-destructive">{{ matchConfigForm.errors.frequency_value }}</p>
-                    </div>
-                    <div class="flex items-start gap-2 pt-1">
-                        <input
-                            id="require_pokepaste"
-                            v-model="matchConfigForm.require_team_match_pokepaste_before_results"
-                            type="checkbox"
-                            class="mt-1 size-4 rounded border-input"
-                        />
-                        <label for="require_pokepaste" class="text-sm leading-snug">
-                            Require both teams to submit their match team paste (Pokepaste) before pool set or playoff results can be saved.
-                        </label>
                     </div>
                     <div class="flex items-start gap-2 pt-1">
                         <input

@@ -110,3 +110,21 @@ test('creating sets with round_count larger than round-robin generates more roun
     $rounds = Set::where('league_id', $league->id)->distinct()->pluck('round');
     expect($rounds->count())->toBe(5);
 });
+
+test('two-team league with more rounds than round-robin never produces a team vs itself', function () {
+    [$owner, $league, $pool] = createLeagueWithTeams(teamCount: 2, roundCount: 8);
+
+    $this->actingAs($owner)->post("/match/{$league->id}/create", [
+        'league_id' => $league->id,
+    ])->assertRedirect();
+
+    $sets = Set::where('league_id', $league->id)->get();
+
+    // 8 rounds × 1 matchup each = 8 sets
+    expect($sets->count())->toBe(8);
+
+    // No set should ever pit a team against itself
+    foreach ($sets as $set) {
+        expect($set->team1_id)->not->toBe($set->team2_id);
+    }
+});

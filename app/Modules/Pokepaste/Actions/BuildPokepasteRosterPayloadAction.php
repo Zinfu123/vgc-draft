@@ -3,6 +3,7 @@
 namespace App\Modules\Pokepaste\Actions;
 
 use App\Modules\Pokedex\Models\AbilityGenerationData;
+use App\Modules\Pokedex\Models\PokeApiMoveCache;
 use App\Modules\Pokedex\Models\PokemonGenerationData;
 use App\Modules\Pokedex\Models\VersionGroup;
 use App\Modules\Pokepaste\Services\ShowdownFormatHelper;
@@ -85,6 +86,45 @@ class BuildPokepasteRosterPayloadAction
                 'tera_capable' => $teraCapable,
                 'game_data_missing' => $gameData === null,
             ];
+        }
+
+        // Batch-fetch move details from the cache table and merge into each roster entry.
+        if (! empty($out)) {
+            $allSlugs = [];
+            foreach ($out as $entry) {
+                foreach ($entry['moves'] as $move) {
+                    $allSlugs[] = $move['slug'];
+                }
+            }
+
+            $detailsBySlug = [];
+            if (! empty($allSlugs)) {
+                $detailsBySlug = PokeApiMoveCache::query()
+                    ->whereIn('name', array_unique($allSlugs))
+                    ->get(['name', 'type_slug', 'damage_class', 'power', 'accuracy', 'short_effect_en'])
+                    ->keyBy('name')
+                    ->map(fn ($r) => [
+                        'type_slug' => $r->type_slug,
+                        'damage_class' => $r->damage_class,
+                        'power' => $r->power,
+                        'accuracy' => $r->accuracy,
+                        'short_effect' => $r->short_effect_en,
+                    ])
+                    ->all();
+            }
+
+            foreach ($out as &$entry) {
+                foreach ($entry['moves'] as &$move) {
+                    $d = $detailsBySlug[$move['slug']] ?? [];
+                    $move['type_slug'] = $d['type_slug'] ?? null;
+                    $move['damage_class'] = $d['damage_class'] ?? null;
+                    $move['power'] = $d['power'] ?? null;
+                    $move['accuracy'] = $d['accuracy'] ?? null;
+                    $move['short_effect'] = $d['short_effect'] ?? null;
+                }
+                unset($move);
+            }
+            unset($entry);
         }
 
         return $out;

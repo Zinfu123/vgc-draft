@@ -149,6 +149,7 @@ const reopenForm = useForm({
 const proposeTimeOpen = ref(false);
 const proposeForm = useForm({ proposed_at: '' });
 const importReplayModalOpen = ref(false);
+const skipNextPreviewFetch = ref(false);
 
 const importFromReplayForm = useForm({
     set_id: props.set.id,
@@ -289,6 +290,10 @@ watch(importReplayModalOpen, (open) => {
         replayPreviewData.value = null;
         return;
     }
+    if (skipNextPreviewFetch.value) {
+        skipNextPreviewFetch.value = false;
+        return;
+    }
     const first = savedReplayOptions.value[0];
     if (first) importFromReplayForm.replay_slot = first.slot;
     importFromReplayForm.p1_team_id = props.set.team1.id;
@@ -315,7 +320,38 @@ function submitScoreForm(): void {
 }
 
 function submitReplays(): void {
-    replayForm.put(route('sets.update-replays'));
+    if (props.requireReplaysBeforeResults) {
+        replayForm.put(route('sets.update-replays'), {
+            preserveScroll: true,
+            onSuccess: () => void attemptReplayImportAfterSave(),
+        });
+    } else {
+        replayForm.put(route('sets.update-replays'));
+    }
+}
+
+async function attemptReplayImportAfterSave(): Promise<void> {
+    const first = savedReplayOptions.value[0];
+    if (!first) return;
+
+    importFromReplayForm.replay_slot = first.slot;
+    importFromReplayForm.p1_team_id = props.set.team1.id;
+    importFromReplayForm.clearErrors();
+
+    await fetchReplayPlayerPreview();
+
+    if (
+        !replayPreviewError.value &&
+        replayPreviewData.value &&
+        !replayPreviewData.value.needs_manual_p1_map &&
+        replayPreviewData.value.suggested_p1_team_id !== null
+    ) {
+        importFromReplayForm.p1_team_id = replayPreviewData.value.suggested_p1_team_id;
+        importFromReplayForm.post(route('sets.import-replay-teams'), { preserveScroll: true });
+    } else {
+        skipNextPreviewFetch.value = true;
+        importReplayModalOpen.value = true;
+    }
 }
 
 function submitImportFromReplay(): void {
@@ -483,16 +519,8 @@ const breadcrumbs: BreadcrumbItem[] = [
                 </div>
 
                 <div v-if="isUserInSet && !isSetCompleted" class="mt-4 flex flex-wrap gap-2">
-                    <Button :disabled="replayForm.processing" @click="submitReplays">
-                        {{ replayForm.processing ? 'Saving…' : 'Save replays' }}
-                    </Button>
-                    <Button
-                        v-if="savedReplayOptions.length > 0"
-                        variant="outline"
-                        :disabled="importFromReplayForm.processing"
-                        @click="importReplayModalOpen = true"
-                    >
-                        Import rosters from replay
+                    <Button :disabled="replayForm.processing || importFromReplayForm.processing" @click="submitReplays">
+                        {{ replayForm.processing ? 'Saving…' : importFromReplayForm.processing ? 'Importing…' : 'Save replays' }}
                     </Button>
                 </div>
                 <p
@@ -664,9 +692,9 @@ const breadcrumbs: BreadcrumbItem[] = [
         <Dialog v-model:open="importReplayModalOpen">
             <DialogContent class="max-h-[90vh] overflow-y-auto sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>Import rosters from replay</DialogTitle>
+                    <DialogTitle>Confirm team assignment</DialogTitle>
                     <DialogDescription>
-                        Sets both teams' match paste species from the replay's team preview. Choose which replay and confirm which team was Showdown player 1.
+                        Showdown usernames couldn't be matched automatically. Choose which team was Showdown player 1 so rosters can be imported correctly.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -723,7 +751,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                 <DialogFooter class="flex-wrap gap-2">
                     <Button variant="outline" @click="importReplayModalOpen = false">Cancel</Button>
                     <Button :disabled="importFromReplayForm.processing || savedReplayOptions.length === 0" @click="submitImportFromReplay">
-                        Import both teams
+                        Confirm &amp; import
                     </Button>
                 </DialogFooter>
             </DialogContent>

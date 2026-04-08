@@ -105,7 +105,7 @@ const draftHref = computed(() => {
                     <TeamForm v-if="coachexists" :league_id="props.league.id" command="edit" :user_team="userTeam" />
                 </template>
                 <div v-if="props.adminFlag === true || props.adminFlag === 1" class="flex flex-col items-end gap-2">
-                    <AdminPanel :league="props.league" :draft="props.draft" :matchConfig="props.matchConfig" />
+                    <AdminPanel :league="props.league" :draft="props.draft" />
                     <TeamForm
                         v-if="!coachexists && (!props.draft || props.draft?.status === 1)"
                         :league_id="props.league.id"
