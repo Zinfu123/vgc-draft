@@ -7,6 +7,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { useMobileLayout } from '@/composables/useMobileLayout';
 import { Head, Link, usePage } from '@inertiajs/vue3';
+import { AlertTriangle } from 'lucide-vue-next';
 import { computed } from 'vue';
 
 const { isMobile } = useMobileLayout();
@@ -20,6 +21,7 @@ interface League {
     draft_date: string;
     set_start_date: string;
     league_owner: number;
+    require_showdown_username?: boolean;
 }
 
 interface Team {
@@ -62,9 +64,20 @@ const props = defineProps<{
     matchConfig: MatchConfig | null;
 }>();
 
-const user = usePage().props.auth.user;
-const coachexists = props.teams.some((team) => team.coach === user?.name);
-const userTeam = props.teams.find((team) => team.coach === user?.name) ?? null;
+const page = usePage();
+const user = page.props.auth.user as { id?: number; name?: string; showdown_username?: string | null } | null;
+const coachexists = props.teams.some((team) => team.user_id === user?.id);
+const userTeam = props.teams.find((team) => team.user_id === user?.id) ?? null;
+
+const showdownRequired = computed(() => !!props.league.require_showdown_username);
+const userHasShowdown = computed(() => {
+    const teamVal = userTeam?.showdown_username?.trim();
+    const profileVal = user?.showdown_username?.trim();
+    return !!(teamVal || profileVal);
+});
+const needsShowdownWarning = computed(
+    () => showdownRequired.value && coachexists && !userHasShowdown.value,
+);
 
 const breadcrumbs: BreadcrumbItem[] = [
     { title: 'Leagues', href: '/leagues' },
@@ -95,6 +108,21 @@ const draftHref = computed(() => {
     <AppLayout :breadcrumbs="breadcrumbs">
         <Head :title="props.league.name" />
         <div class="mx-auto w-full max-w-7xl px-4 pt-4 pb-10 sm:px-6 lg:px-8">
+            <!-- Showdown username required notice -->
+            <div
+                v-if="needsShowdownWarning"
+                class="mb-4 flex items-start gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-200"
+            >
+                <AlertTriangle class="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                <div class="flex-1">
+                    <p class="font-medium">Showdown username required</p>
+                    <p class="text-amber-800 dark:text-amber-300">
+                        This league requires all coaches to have a Pokémon Showdown username. Add yours via the
+                        <strong>Edit Team</strong> button to participate in matches.
+                    </p>
+                </div>
+            </div>
+
             <div class="flex w-full justify-end">
                 <template v-if="!(props.adminFlag === true || props.adminFlag === 1)">
                     <TeamForm
@@ -103,7 +131,13 @@ const draftHref = computed(() => {
                         command="create"
                         :user_team="null"
                     />
-                    <TeamForm v-if="coachexists" :league_id="props.league.id" command="edit" :user_team="userTeam" />
+                    <TeamForm
+                        v-if="coachexists"
+                        :league_id="props.league.id"
+                        command="edit"
+                        :user_team="userTeam"
+                        :initial-open="needsShowdownWarning"
+                    />
                 </template>
                 <div v-if="props.adminFlag === true || props.adminFlag === 1" class="flex flex-col items-end gap-2">
                     <AdminPanel :league="props.league" :draft="props.draft" />
@@ -113,7 +147,13 @@ const draftHref = computed(() => {
                         command="create"
                         :user_team="null"
                     />
-                    <TeamForm v-if="coachexists" :league_id="props.league.id" command="edit" :user_team="userTeam" />
+                    <TeamForm
+                        v-if="coachexists"
+                        :league_id="props.league.id"
+                        command="edit"
+                        :user_team="userTeam"
+                        :initial-open="needsShowdownWarning"
+                    />
                 </div>
             </div>
             <div class="mt-6 flex flex-col items-center">

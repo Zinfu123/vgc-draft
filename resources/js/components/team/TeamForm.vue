@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useForm, usePage } from '@inertiajs/vue3';
 import { Plus } from 'lucide-vue-next';
-import { watch } from 'vue';
+import { ref, watch } from 'vue';
 
 interface UserTeam {
     id: number;
@@ -20,9 +20,12 @@ interface props {
     league_id: number;
     command: string;
     user_team: UserTeam | null;
+    initialOpen?: boolean;
 }
 
 const props = defineProps<props>();
+
+const dialogOpen = ref(props.initialOpen ?? false);
 
 const page = usePage();
 const auth = page.props.auth.user as { showdown_username?: string | null };
@@ -86,7 +89,7 @@ const submit = () => {
 <template>
     <div class="flex flex-col gap-4 md:items-center md:justify-between">
         <div class="mt-4 mr-14 flex w-full flex-col items-end justify-end">
-            <Dialog>
+            <Dialog v-model:open="dialogOpen">
                 <DialogTrigger>
                     <Button variant="outline">{{ command === 'create' ? 'Create Team' : 'Edit Team' }} <Plus /></Button>
                 </DialogTrigger>
