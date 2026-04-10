@@ -5,13 +5,14 @@ namespace App\Modules\Calendar\Actions;
 use App\Models\User;
 use App\Modules\Matches\Models\Set;
 use App\Modules\Teams\Models\Team;
+use Carbon\Carbon;
 
 class ReadCalendarEventsAction
 {
     /**
      * @return array{
      *     draft_days: list<array{league_id: int, league_name: string, date: string}>,
-     *     match_week_starts: list<array{league_id: int, league_name: string, date: string}>,
+     *     match_week_starts: list<array{league_id: int, league_name: string, date: string, round_label: string}>,
      *     scheduled_matches: list<array{set_id: int, league_id: int, opponent_team_name: string, scheduled_at: string}>
      * }
      */
@@ -20,7 +21,7 @@ class ReadCalendarEventsAction
         $teams = Team::query()
             ->where('user_id', $user->id)
             ->whereHas('league', fn ($query) => $query->where('status', 1))
-            ->with(['league.draftConfig'])
+            ->with(['league.draftConfig', 'league.matchConfig', 'league.draft'])
             ->get();
 
         $leagueIds = $teams->pluck('league_id')->all();
@@ -36,15 +37,52 @@ class ReadCalendarEventsAction
             ->values()
             ->all();
 
-        $matchWeekStarts = $teams
-            ->filter(fn (Team $team) => $team->league?->set_start_date !== null)
-            ->map(fn (Team $team) => [
-                'league_id' => $team->league->id,
-                'league_name' => $team->league->name,
-                'date' => $team->league->set_start_date,
-            ])
-            ->values()
-            ->all();
+        $matchWeekStarts = [];
+
+        if ($leagueIds !== []) {
+            $roundsByLeague = Set::query()
+                ->whereIn('league_id', $leagueIds)
+                ->select('league_id', 'round')
+                ->distinct()
+                ->get()
+                ->groupBy('league_id');
+
+            foreach ($teams->unique('league_id') as $team) {
+                $league = $team->league;
+
+                if ($league === null || $league->set_start_date === null) {
+                    continue;
+                }
+
+                $draft = $league->draft;
+                if ($draft === null || (int) $draft->status !== 0) {
+                    continue;
+                }
+
+                $matchConfig = $league->matchConfig;
+                $frequencyType = (int) ($matchConfig?->frequency_type ?? 2);
+                $frequencyValue = (int) ($matchConfig?->frequency_value ?? 1);
+
+                $leagueRounds = $roundsByLeague->get($league->id);
+
+                if ($leagueRounds === null || $leagueRounds->isEmpty()) {
+                    continue;
+                }
+
+                $startDate = Carbon::parse($league->set_start_date);
+
+                foreach ($leagueRounds->pluck('round')->sort()->values() as $roundNumber) {
+                    $roundDate = $this->calculateRoundDate($startDate, (int) $roundNumber, $frequencyType, $frequencyValue);
+
+                    $matchWeekStarts[] = [
+                        'league_id' => $league->id,
+                        'league_name' => $league->name,
+                        'date' => $roundDate->toDateString(),
+                        'round_label' => 'Round '.$roundNumber,
+                    ];
+                }
+            }
+        }
 
         $scheduledMatches = [];
 
@@ -79,5 +117,18 @@ class ReadCalendarEventsAction
             'match_week_starts' => $matchWeekStarts,
             'scheduled_matches' => $scheduledMatches,
         ];
+    }
+
+    private function calculateRoundDate(Carbon $startDate, int $roundNumber, int $frequencyType, int $frequencyValue): Carbon
+    {
+        $offset = $roundNumber - 1;
+
+        return match ($frequencyType) {
+            1 => $startDate->copy()->addDays($offset),
+            2 => $startDate->copy()->addWeeks($offset),
+            3 => $startDate->copy(),
+            4 => $startDate->copy()->addDays($offset * max(1, $frequencyValue)),
+            default => $startDate->copy()->addWeeks($offset),
+        };
     }
 }

@@ -17,6 +17,7 @@ use App\Modules\Draft\Models\DraftConfig;
 use App\Modules\League\Actions\CreateEditLeagueAction;
 use App\Modules\League\Actions\LeagueDetailLayoutDataAction;
 use App\Modules\League\Actions\ReadLeagueAction;
+use App\Modules\League\Actions\ReadLeagueKillLeadersAction;
 use App\Modules\League\Models\League;
 use App\Modules\League\Services\DropTeamFromLeagueService;
 use App\Modules\Matches\Actions\CreateEditSetsAction;
@@ -88,6 +89,15 @@ class LeagueController extends Controller
             ...$leagueDetailLayoutDataAction($league),
             'section' => 'standings',
             'standings' => $readTeamAction(['league_id' => $league->id, 'command' => 'standings']),
+        ]);
+    }
+
+    public function showStats(League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction, ReadLeagueKillLeadersAction $readLeagueKillLeadersAction): \Inertia\Response
+    {
+        return Inertia::render('league/LeagueDetailStats', [
+            ...$leagueDetailLayoutDataAction($league),
+            'section' => 'stats',
+            'killLeaders' => Inertia::defer(fn () => $readLeagueKillLeadersAction($league)),
         ]);
     }
 
@@ -283,6 +293,7 @@ class LeagueController extends Controller
         $banEnabled = $request->boolean('ban_enabled');
 
         $config->draft_date = $validated['draft_date'] ?? null;
+        $config->draft_start_at = $validated['draft_start_at'] ?? null;
         $config->draft_points = (int) $validated['draft_points'];
         $config->minimum_drafts = (int) $validated['minimum_drafts'];
         $config->ban_enabled = $banEnabled;
@@ -440,6 +451,7 @@ class LeagueController extends Controller
                 ->all(),
             'discord_webhook_url' => $league?->discord_webhook_url ?? '',
             'discord_replay_webhook_url' => $league?->discord_replay_webhook_url ?? '',
+            'require_showdown_username' => (bool) ($league?->require_showdown_username ?? false),
             'playoff_format' => $playoff?->format?->value ?? PlayoffFormat::SingleElimination->value,
             'playoff_bracket_size' => $playoff?->bracket_size ?? 4,
             'playoff_format_options' => collect(PlayoffFormat::cases())->map(fn (PlayoffFormat $f) => [

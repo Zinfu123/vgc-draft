@@ -463,3 +463,30 @@ it('includes original bracket seeds on live layout cells', function () {
             ->where('bracketLayout.rounds.0.matches.0.top.seed_number', 1)
             ->where('bracketLayout.rounds.0.matches.0.bottom.seed_number', 4));
 });
+
+it('re-seeds when seed_order contains stale team ids that no longer exist in the league', function () {
+    [$league, $teams] = createLeagueWithFourTeams();
+    $admin = $teams[0]->user;
+
+    $playoff = Playoff::query()->firstOrCreate(
+        ['league_id' => $league->id],
+        [
+            'format' => \App\Enums\Playoffs\PlayoffFormat::SingleElimination,
+            'bracket_size' => 4,
+            'status' => PlayoffStatus::Draft,
+            'seed_order' => [99999, 99998, 99997, 99996],
+        ]
+    );
+    $playoff->seed_order = [99999, 99998, 99997, 99996];
+    $playoff->save();
+
+    $this->actingAs($admin)
+        ->get(route('leagues.admin.playoffs', $league))
+        ->assertOk();
+
+    $playoff->refresh();
+    $currentTeamIds = array_map(fn (Team $t) => $t->id, $teams);
+
+    expect($playoff->seed_order)->not->toContain(99999)
+        ->and(array_diff($playoff->seed_order, $currentTeamIds))->toBeEmpty();
+});

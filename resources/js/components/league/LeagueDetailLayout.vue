@@ -11,7 +11,7 @@ import { computed } from 'vue';
 
 const { isMobile } = useMobileLayout();
 
-export type LeagueDetailSection = 'teams' | 'matches' | 'standings' | 'trades' | 'draft' | 'pokemon' | 'playoffs';
+export type LeagueDetailSection = 'teams' | 'matches' | 'standings' | 'trades' | 'draft' | 'pokemon' | 'playoffs' | 'stats';
 
 interface League {
     id: number;
@@ -79,6 +79,7 @@ const sections: { value: LeagueDetailSection; label: string; route: string }[] =
     { value: 'trades', label: 'Trades', route: 'leagues.trades' },
     { value: 'draft', label: 'Draft', route: 'leagues.draft' },
     { value: 'pokemon', label: 'Pokemon', route: 'leagues.pokemon' },
+    { value: 'stats', label: 'Stats', route: 'leagues.stats' },
 ];
 
 const draftHref = computed(() => {

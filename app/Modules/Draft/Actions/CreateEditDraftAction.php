@@ -11,6 +11,7 @@ use App\Modules\League\Models\League;
 use App\Modules\League\Models\LeaguePokemon;
 use App\Modules\Teams\Models\Team;
 use App\Notifications\DraftEndedNotification;
+use Carbon\Carbon;
 
 class CreateEditDraftAction
 {
@@ -73,6 +74,8 @@ class CreateEditDraftAction
             $draft->status = 0;
             $draft->save();
 
+            $this->adjustSetStartDateIfNeeded((int) $data['league_id']);
+
             activity()
                 ->performedOn($draft)
                 ->withProperties(['league_id' => $data['league_id']])
@@ -116,6 +119,7 @@ class CreateEditDraftAction
         }
         // Abort Draft
         elseif ($data['command'] == 'abort_draft') {
+
             $draftBeforeAbort = Draft::where('league_id', $data['league_id'])->first();
 
             activity()
@@ -167,6 +171,20 @@ class CreateEditDraftAction
 
             $league = League::where('id', $data['league_id'])->first();
             $league->open = true;
+            $league->save();
+        }
+    }
+
+    private function adjustSetStartDateIfNeeded(int $leagueId): void
+    {
+        $league = League::find($leagueId);
+        if ($league === null) {
+            return;
+        }
+
+        $today = Carbon::today()->toDateString();
+        if ($league->set_start_date === null || $league->set_start_date < $today) {
+            $league->set_start_date = $today;
             $league->save();
         }
     }

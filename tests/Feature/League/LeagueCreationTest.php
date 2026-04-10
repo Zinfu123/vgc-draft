@@ -125,6 +125,32 @@ it('rejects an invalid playoff bracket size when creating a league', function ()
     ]))->assertSessionHasErrors('playoff_bracket_size');
 });
 
+it('stores draft_start_at when provided during league creation', function () {
+    $user = User::factory()->create();
+    $startAt = '2026-05-01T18:00:00.000Z';
+
+    $this->actingAs($user)->post('/leagues', baseLeagueCreatePayload([
+        'name' => 'Scheduled Draft League',
+        'draft_start_at' => $startAt,
+    ]))->assertRedirect();
+
+    $league = \App\Modules\League\Models\League::where('name', 'Scheduled Draft League')->first();
+    expect($league)->not->toBeNull();
+    expect($league->draftConfig->draft_start_at)->not->toBeNull();
+});
+
+it('stores null draft_start_at when not provided during league creation', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->post('/leagues', baseLeagueCreatePayload([
+        'name' => 'No Schedule League',
+    ]))->assertRedirect();
+
+    $league = \App\Modules\League\Models\League::where('name', 'No Schedule League')->first();
+    expect($league)->not->toBeNull();
+    expect($league->draftConfig->draft_start_at)->toBeNull();
+});
+
 it('renders the league create wizard page', function () {
     $user = User::factory()->create();
 
@@ -138,6 +164,32 @@ it('renders the league create wizard page', function () {
             ->where('discord_replay_webhook_url', '')
             ->where('playoff_format', PlayoffFormat::SingleElimination->value)
             ->where('playoff_bracket_size', 4)
+            ->where('require_showdown_username', false)
             ->has('playoff_format_options')
             ->has('playoff_bracket_size_options'));
+});
+
+it('stores require_showdown_username when creating a league', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->post('/leagues', baseLeagueCreatePayload([
+        'name' => 'Showdown Required League',
+        'require_showdown_username' => true,
+    ]))->assertRedirect();
+
+    $league = \App\Modules\League\Models\League::where('name', 'Showdown Required League')->first();
+    expect($league)->not->toBeNull();
+    expect($league->require_showdown_username)->toBeTrue();
+});
+
+it('stores require_showdown_username as false by default when creating a league', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->post('/leagues', baseLeagueCreatePayload([
+        'name' => 'Showdown Optional League',
+    ]))->assertRedirect();
+
+    $league = \App\Modules\League\Models\League::where('name', 'Showdown Optional League')->first();
+    expect($league)->not->toBeNull();
+    expect($league->require_showdown_username)->toBeFalse();
 });

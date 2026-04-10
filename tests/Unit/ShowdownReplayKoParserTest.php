@@ -20,7 +20,9 @@ it('credits a ko to the last direct attacker when a pokemon faints', function ()
     $result = makeKoParser()->parse($log);
 
     expect($result['p1'])->toBe(['Chien-Pao'])
-        ->and($result['p2'])->toBe([]);
+        ->and($result['p2'])->toBe([])
+        ->and($result['p1Deaths'])->toBe([])
+        ->and($result['p2Deaths'])->toBe(['Garchomp']);
 });
 
 it('credits a ko on the correct side when p2 gets the faint', function () {
@@ -35,7 +37,9 @@ it('credits a ko on the correct side when p2 gets the faint', function () {
     $result = makeKoParser()->parse($log);
 
     expect($result['p1'])->toBe([])
-        ->and($result['p2'])->toBe(['Incineroar']);
+        ->and($result['p2'])->toBe(['Incineroar'])
+        ->and($result['p1Deaths'])->toBe(['Amoonguss'])
+        ->and($result['p2Deaths'])->toBe([]);
 });
 
 it('does not credit a ko when the final damage was indirect (burn)', function () {
@@ -51,7 +55,8 @@ it('does not credit a ko when the final damage was indirect (burn)', function ()
     $result = makeKoParser()->parse($log);
 
     expect($result['p1'])->toBe([])
-        ->and($result['p2'])->toBe([]);
+        ->and($result['p2'])->toBe([])
+        ->and($result['p2Deaths'])->toBe(['Garchomp']);
 });
 
 it('does not credit a ko when the final damage was from recoil', function () {
@@ -66,7 +71,8 @@ it('does not credit a ko when the final damage was from recoil', function () {
     $result = makeKoParser()->parse($log);
 
     expect($result['p1'])->toBe([])
-        ->and($result['p2'])->toBe([]);
+        ->and($result['p2'])->toBe([])
+        ->and($result['p2Deaths'])->toBe(['Garchomp']);
 });
 
 it('tracks multiple kos in the same game', function () {
@@ -86,7 +92,9 @@ it('tracks multiple kos in the same game', function () {
     $result = makeKoParser()->parse($log);
 
     expect($result['p1'])->toBe(['Chien-Pao'])
-        ->and($result['p2'])->toBe(['Tornadus']);
+        ->and($result['p2'])->toBe(['Tornadus'])
+        ->and($result['p1Deaths'])->toBe(['Rillaboom'])
+        ->and($result['p2Deaths'])->toBe(['Garchomp']);
 });
 
 it('handles switches mid-game and credits the current slot occupant', function () {
@@ -103,7 +111,9 @@ it('handles switches mid-game and credits the current slot occupant', function (
     $result = makeKoParser()->parse($log);
 
     expect($result['p1'])->toBe(['Flutter Mane'])
-        ->and($result['p2'])->toBe([]);
+        ->and($result['p2'])->toBe([])
+        ->and($result['p1Deaths'])->toBe(['Chien-Pao'])
+        ->and($result['p2Deaths'])->toBe(['Garchomp']);
 });
 
 it('returns empty arrays when no faints occur', function () {
@@ -118,7 +128,9 @@ it('returns empty arrays when no faints occur', function () {
     $result = makeKoParser()->parse($log);
 
     expect($result['p1'])->toBe([])
-        ->and($result['p2'])->toBe([]);
+        ->and($result['p2'])->toBe([])
+        ->and($result['p1Deaths'])->toBe([])
+        ->and($result['p2Deaths'])->toBe([]);
 });
 
 it('handles drag events as slot tracking the same as switch', function () {
@@ -134,5 +146,6 @@ it('handles drag events as slot tracking the same as switch', function () {
     $result = makeKoParser()->parse($log);
 
     expect($result['p1'])->toBe(['Rillaboom'])
-        ->and($result['p2'])->toBe([]);
+        ->and($result['p2'])->toBe([])
+        ->and($result['p2Deaths'])->toBe(['Garchomp']);
 });

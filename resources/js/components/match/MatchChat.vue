@@ -14,30 +14,18 @@ interface Message {
     created_at: string;
 }
 
-interface ScheduleRequest {
-    id: number;
-    set_id: number;
-    proposed_by_user_id: number;
-    proposed_by_user_name: string;
-    proposed_at: string;
-    status: 'pending' | 'accepted' | 'declined';
-}
-
 interface Props {
     setId: number;
     initialMessages: Message[];
-    initialScheduleRequest: ScheduleRequest | null;
     currentUserId: number;
 }
 
 const props = defineProps<Props>();
 
 const messages = ref<Message[]>([...props.initialMessages]);
-const scheduleRequest = ref<ScheduleRequest | null>(props.initialScheduleRequest);
 const messageListRef = ref<HTMLElement | null>(null);
 
 const messageForm = useForm({ body: '' });
-const respondForm = useForm({ status: '' as 'accepted' | 'declined' });
 
 function scrollToBottom(): void {
     nextTick(() => {
@@ -60,25 +48,6 @@ function sendMessage(): void {
     });
 }
 
-function respondToRequest(status: 'accepted' | 'declined'): void {
-    if (!scheduleRequest.value) {
-        return;
-    }
-    respondForm.status = status;
-    respondForm.patch(
-        route('sets.schedule-requests.update', {
-            set: props.setId,
-            scheduleRequest: scheduleRequest.value.id,
-        }),
-        {
-            preserveScroll: true,
-            onSuccess: () => {
-                respondForm.reset('status');
-            },
-        },
-    );
-}
-
 function formatDateTime(iso: string): string {
     return new Date(iso).toLocaleString(undefined, {
         month: 'short',
@@ -89,68 +58,20 @@ function formatDateTime(iso: string): string {
 }
 
 const isCurrentUser = (userId: number): boolean => userId === props.currentUserId;
-const isProposer = (request: ScheduleRequest): boolean => request.proposed_by_user_id === props.currentUserId;
 
 if (isReverbBroadcastClientConfigured) {
     useEchoPublic<Message>(`match.chat.${props.setId}`, 'MatchMessageSentEvent', (event) => {
         messages.value.push(event);
         scrollToBottom();
     });
-
-    useEchoPublic<ScheduleRequest>(`match.chat.${props.setId}`, 'MatchScheduleRequestUpdatedEvent', (event) => {
-        scheduleRequest.value = event;
-    });
 }
 </script>
 
 <template>
     <div class="flex h-full flex-col">
-        <div
-            v-if="scheduleRequest && scheduleRequest.status === 'pending'"
-            class="border-border bg-muted/40 border-b px-4 py-3 shrink-0"
-        >
-            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <p class="text-sm font-medium text-foreground">
-                        <span v-if="isProposer(scheduleRequest)">You proposed</span>
-                        <span v-else>{{ scheduleRequest.proposed_by_user_name }} proposed</span>
-                        a time:
-                        <span class="font-semibold">{{ formatDateTime(scheduleRequest.proposed_at) }}</span>
-                    </p>
-                    <p v-if="isProposer(scheduleRequest)" class="text-muted-foreground mt-0.5 text-xs">
-                        Waiting for your opponent to respond.
-                    </p>
-                </div>
-                <div v-if="!isProposer(scheduleRequest)" class="flex shrink-0 gap-2">
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        class="border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                        :disabled="respondForm.processing"
-                        @click="respondToRequest('declined')"
-                    >
-                        Decline
-                    </Button>
-                    <Button size="sm" :disabled="respondForm.processing" @click="respondToRequest('accepted')">
-                        Accept
-                    </Button>
-                </div>
-            </div>
-        </div>
-
-        <div
-            v-else-if="scheduleRequest && scheduleRequest.status === 'accepted'"
-            class="border-border bg-green-50/60 dark:bg-green-950/20 border-b px-4 py-3 shrink-0"
-        >
-            <p class="text-sm font-medium text-green-700 dark:text-green-400">
-                Match scheduled for
-                <span class="font-semibold">{{ formatDateTime(scheduleRequest.proposed_at) }}</span>
-            </p>
-        </div>
-
         <div ref="messageListRef" class="flex flex-1 flex-col gap-3 overflow-y-auto px-4 py-4">
             <p v-if="messages.length === 0" class="text-muted-foreground py-8 text-center text-sm">
-                No messages yet. Start the conversation to schedule your match.
+                No messages yet. Say hello to your opponent!
             </p>
             <div
                 v-for="msg in messages"

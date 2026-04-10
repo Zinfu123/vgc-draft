@@ -10,7 +10,6 @@ use App\Modules\League\Controllers\LeaguePokemonController;
 use App\Modules\League\Controllers\PoolTemplateCatalogController;
 use App\Modules\Matches\Controllers\MatchConfigController;
 use App\Modules\Matches\Controllers\MatchMessageController;
-use App\Modules\Matches\Controllers\MatchScheduleRequestController;
 use App\Modules\Matches\Controllers\PoolController;
 use App\Modules\Matches\Controllers\SetController;
 use App\Modules\MatchPrep\Controllers\MatchPrepController;
@@ -78,6 +77,7 @@ Route::prefix('leagues')->group(function () {
     Route::get('/{league}/matches', [LeagueController::class, 'showMatches'])->middleware(['auth', 'verified'])->name('leagues.matches');
     Route::get('/{league}/standings', [LeagueController::class, 'showStandings'])->middleware(['auth', 'verified'])->name('leagues.standings');
     Route::get('/{league}/playoffs', [LeagueController::class, 'showPlayoffs'])->middleware(['auth', 'verified'])->name('leagues.playoffs');
+    Route::get('/{league}/stats', [LeagueController::class, 'showStats'])->middleware(['auth', 'verified'])->name('leagues.stats');
     Route::get('/{league}/trades', [TradeController::class, 'index'])->middleware(['auth', 'verified'])->name('leagues.trades');
     Route::post('/{league}/trades', [TradeController::class, 'create'])->middleware(['auth', 'verified'])->name('leagues.trades.create');
     Route::post('/{league}/trades/free-agency', [TradeController::class, 'freeAgency'])->middleware(['auth', 'verified'])->name('leagues.trades.free-agency');
@@ -152,8 +152,6 @@ Route::prefix('match')->group(function () {
 
     Route::get('/set/{set}/messages', [MatchMessageController::class, 'index'])->middleware(['auth', 'verified'])->name('sets.messages.index');
     Route::post('/set/{set}/messages', [MatchMessageController::class, 'store'])->middleware(['auth', 'verified'])->name('sets.messages.store');
-    Route::post('/set/{set}/schedule-requests', [MatchScheduleRequestController::class, 'store'])->middleware(['auth', 'verified'])->name('sets.schedule-requests.store');
-    Route::patch('/set/{set}/schedule-requests/{scheduleRequest}', [MatchScheduleRequestController::class, 'update'])->middleware(['auth', 'verified'])->name('sets.schedule-requests.update');
 
 });
 

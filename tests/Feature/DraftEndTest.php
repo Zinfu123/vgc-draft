@@ -94,3 +94,30 @@ it('broadcasts EndDraftEvent on the correct channel using draft_id', function ()
             && $channels[0]->name === 'end.draft.'.$draft->id;
     });
 });
+
+it('adjusts set_start_date to today when draft ends and set_start_date is in the past', function () {
+    Event::fake([EndDraftEvent::class]);
+
+    [$league, $team, $draft] = createLeagueWithZeroPointTeams();
+
+    $league->set_start_date = now()->subMonth()->toDateString();
+    $league->save();
+
+    (new CreateEditDraftOrderAction)(['league_id' => $league->id]);
+
+    expect($league->fresh()->set_start_date)->toBe(now()->toDateString());
+});
+
+it('does not change set_start_date when it is in the future', function () {
+    Event::fake([EndDraftEvent::class]);
+
+    [$league, $team, $draft] = createLeagueWithZeroPointTeams();
+
+    $futureDate = now()->addMonth()->toDateString();
+    $league->set_start_date = $futureDate;
+    $league->save();
+
+    (new CreateEditDraftOrderAction)(['league_id' => $league->id]);
+
+    expect($league->fresh()->set_start_date)->toBe($futureDate);
+});

@@ -25,6 +25,7 @@ interface DraftConfigPayload {
     id: number;
     league_id: number;
     draft_date: string | null;
+    draft_start_at: string | null;
     draft_points: number;
     minimum_drafts: number;
     ban_enabled: boolean;
@@ -61,8 +62,17 @@ function formatDraftDateInput(d: string | null | undefined): string {
     return String(d).slice(0, 10);
 }
 
+function toDatetimeLocalValue(utcStr: string | null | undefined): string {
+    if (!utcStr) return '';
+    const d = new Date(utcStr);
+    if (isNaN(d.getTime())) return '';
+    const offset = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - offset).toISOString().slice(0, 16);
+}
+
 const configForm = useForm({
     draft_date: formatDraftDateInput(props.draftConfig.draft_date),
+    draft_start_at: toDatetimeLocalValue(props.draftConfig.draft_start_at),
     draft_points: props.draftConfig.draft_points,
     minimum_drafts: props.draftConfig.minimum_drafts,
     ban_enabled: Boolean(props.draftConfig.ban_enabled),
@@ -74,6 +84,7 @@ watch(
     () => props.draftConfig,
     (c) => {
         configForm.draft_date = formatDraftDateInput(c.draft_date);
+        configForm.draft_start_at = toDatetimeLocalValue(c.draft_start_at);
         configForm.draft_points = c.draft_points;
         configForm.minimum_drafts = c.minimum_drafts;
         configForm.ban_enabled = Boolean(c.ban_enabled);
@@ -84,9 +95,14 @@ watch(
 );
 
 const submitConfig = () => {
-    configForm.patch(route('leagues.admin.draft-config.update', { league: props.league.id }), {
-        preserveScroll: true,
-    });
+    configForm
+        .transform((data) => ({
+            ...data,
+            draft_start_at: data.draft_start_at ? new Date(data.draft_start_at).toISOString() : null,
+        }))
+        .patch(route('leagues.admin.draft-config.update', { league: props.league.id }), {
+            preserveScroll: true,
+        });
 };
 
 const orderedTeams = ref<Team[]>([...props.teams]);
@@ -151,6 +167,14 @@ const flashSuccess = computed(() => (page.props as FlashProps).flash?.success ??
                             <Label for="draft_date">Draft date</Label>
                             <Input id="draft_date" v-model="configForm.draft_date" type="date" />
                             <p v-if="configForm.errors.draft_date" class="text-sm text-destructive">{{ configForm.errors.draft_date }}</p>
+                        </div>
+                        <div class="flex flex-col gap-1">
+                            <Label for="draft_start_at">Scheduled draft start (optional)</Label>
+                            <Input id="draft_start_at" v-model="configForm.draft_start_at" type="datetime-local" />
+                            <p class="text-xs text-muted-foreground dark:text-neutral-500">
+                                The draft will start automatically at this time (your local timezone). Leave empty to start manually.
+                            </p>
+                            <p v-if="configForm.errors.draft_start_at" class="text-sm text-destructive">{{ configForm.errors.draft_start_at }}</p>
                         </div>
                         <div class="flex flex-col gap-1">
                             <Label for="draft_points">Draft points (per team)</Label>

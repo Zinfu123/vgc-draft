@@ -15,6 +15,7 @@ interface MatchWeekStart {
     league_id: number;
     league_name: string;
     date: string;
+    round_label: string;
 }
 
 interface ScheduledMatch {
@@ -160,7 +161,7 @@ const upcomingEvents = computed(() => {
     }> = [];
 
     for (const d of props.draftDays) {
-        const date = new Date(d.date);
+        const date = new Date(d.date + 'T00:00:00');
         if (date >= now && date <= cutoff) {
             events.push({
                 type: 'draft',
@@ -172,11 +173,11 @@ const upcomingEvents = computed(() => {
     }
 
     for (const m of props.matchWeekStarts) {
-        const date = new Date(m.date);
+        const date = new Date(m.date + 'T00:00:00');
         if (date >= now && date <= cutoff) {
             events.push({
                 type: 'match_week',
-                label: `${m.league_name} — Match Week Starts`,
+                label: `${m.league_name} — ${m.round_label}`,
                 date,
                 href: route('leagues.matches', { league: m.league_id }),
             });
@@ -265,9 +266,9 @@ const weekDayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                                             :key="`mw-${mi}`"
                                             :href="route('leagues.matches', { league: mw.league_id })"
                                             class="truncate rounded bg-blue-100 px-1 py-0.5 text-xs font-medium text-blue-800 hover:bg-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-900/50"
-                                            :title="`${mw.league_name} — Match Week Starts`"
+                                            :title="`${mw.league_name} — ${mw.round_label}`"
                                         >
-                                            {{ mw.league_name }}
+                                            {{ mw.round_label }}
                                         </Link>
                                         <Link
                                             v-for="(sm, si) in eventsForDate(cell.date).scheduledMatches"
@@ -291,7 +292,7 @@ const weekDayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                                 </div>
                                 <div class="flex items-center gap-1.5">
                                     <span class="h-3 w-3 rounded bg-blue-100 dark:bg-blue-950/50"></span>
-                                    <span class="text-muted-foreground">Match week starts</span>
+                                    <span class="text-muted-foreground">Match round</span>
                                 </div>
                                 <div class="flex items-center gap-1.5">
                                     <span class="h-3 w-3 rounded bg-green-100 dark:bg-green-950/50"></span>

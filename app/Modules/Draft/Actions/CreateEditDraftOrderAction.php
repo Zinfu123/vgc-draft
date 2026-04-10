@@ -8,6 +8,7 @@ use App\Modules\Draft\Models\Draft;
 use App\Modules\Draft\Models\DraftOrder;
 use App\Modules\League\Models\League;
 use App\Modules\Teams\Models\Team;
+use Carbon\Carbon;
 
 class CreateEditDraftOrderAction
 {
@@ -24,6 +25,9 @@ class CreateEditDraftOrderAction
             $draft = Draft::where('league_id', $data['league_id'])->first();
             $draft->status = 0;
             $draft->save();
+
+            $this->adjustSetStartDateIfNeeded((int) $data['league_id']);
+
             EndDraftEvent::dispatch([
                 'league_id' => $data['league_id'],
                 'end_draft' => 1,
@@ -49,6 +53,20 @@ class CreateEditDraftOrderAction
             $lastPick = DraftOrder::where('league_id', $data['league_id'])->where('status', 1)->orderBy('pick_number', 'desc')->first();
             $lastPick->is_last_pick = 1;
             $lastPick->save();
+        }
+    }
+
+    private function adjustSetStartDateIfNeeded(int $leagueId): void
+    {
+        $league = League::find($leagueId);
+        if ($league === null) {
+            return;
+        }
+
+        $today = Carbon::today()->toDateString();
+        if ($league->set_start_date === null || $league->set_start_date < $today) {
+            $league->set_start_date = $today;
+            $league->save();
         }
     }
 

@@ -25,6 +25,7 @@ class League extends Model
         'discord_replay_webhook_url',
         'set_start_date',
         'open',
+        'require_showdown_username',
         'maximum_teams',
         'league_owner',
         'pokemon_generation',
@@ -49,6 +50,7 @@ class League extends Model
         return [
             'pokemon_generation' => 'integer',
             'pokemon_game' => PokemonGame::class,
+            'require_showdown_username' => 'boolean',
         ];
     }
 
@@ -65,6 +67,11 @@ class League extends Model
     public function teams(): \Illuminate\Database\Eloquent\Relations\HasMany
     {
         return $this->hasMany(\App\Modules\Teams\Models\Team::class, 'league_id');
+    }
+
+    public function draft(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(\App\Modules\Draft\Models\Draft::class, 'league_id');
     }
 
     public function draftConfig(): \Illuminate\Database\Eloquent\Relations\HasOne

@@ -42,10 +42,12 @@ interface Props {
     pokemon_generation_options: number[];
     discord_webhook_url: string;
     discord_replay_webhook_url: string;
+    draft_start_at: string | null;
     playoff_format: string;
     playoff_bracket_size: number;
     playoff_format_options: PlayoffFormatOption[];
     playoff_bracket_size_options: number[];
+    require_showdown_username: boolean;
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -66,16 +68,26 @@ const props = withDefaults(defineProps<Props>(), {
     pokemon_generation_options: () => [9],
     discord_webhook_url: '',
     discord_replay_webhook_url: '',
+    draft_start_at: null,
     playoff_format: 'single_elimination',
     playoff_bracket_size: 4,
     playoff_format_options: () => [],
     playoff_bracket_size_options: () => [2, 4, 6, 8, 16, 32],
+    require_showdown_username: false,
 });
 
 function formatDateForInput(value: string | null): string {
     if (!value) return '';
     const date = new Date(value);
     return isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 10);
+}
+
+function toDatetimeLocalValue(utcStr: string | null | undefined): string {
+    if (!utcStr) return '';
+    const d = new Date(utcStr);
+    if (isNaN(d.getTime())) return '';
+    const offset = d.getTimezoneOffset() * 60000;
+    return new Date(d.getTime() - offset).toISOString().slice(0, 16);
 }
 
 const form = useForm({
@@ -96,8 +108,10 @@ const form = useForm({
     pokemon_game: props.pokemon_game,
     discord_webhook_url: props.discord_webhook_url ?? '',
     discord_replay_webhook_url: props.discord_replay_webhook_url ?? '',
+    draft_start_at: props.draft_start_at ? toDatetimeLocalValue(props.draft_start_at) : '',
     playoff_format: props.playoff_format,
     playoff_bracket_size: props.playoff_bracket_size,
+    require_showdown_username: props.require_showdown_username,
 });
 
 const gamesForSelectedGeneration = computed(() =>
@@ -262,6 +276,7 @@ const submit = () => {
     form.transform((data) => ({
         ...data,
         round_count: roundCount ?? 1,
+        draft_start_at: data.draft_start_at ? new Date(data.draft_start_at).toISOString() : null,
     })).post(route('leagues.create'), {
         forceFormData: true,
     });
@@ -357,6 +372,15 @@ const submit = () => {
                                 <InputError :message="form.errors.set_start_date" />
                             </div>
                             <div class="grid gap-2">
+                                <Label for="draft_start_at">Scheduled draft start (optional)</Label>
+                                <Input id="draft_start_at" v-model="form.draft_start_at" type="datetime-local" />
+                                <p class="text-muted-foreground text-xs dark:text-neutral-500">
+                                    The draft will start automatically at this time. Times are shown and entered in your local timezone.
+                                    Leave empty to start the draft manually from Admin.
+                                </p>
+                                <InputError :message="form.errors.draft_start_at" />
+                            </div>
+                            <div class="grid gap-2">
                                 <Label for="set_frequency">Set frequency</Label>
                                 <select
                                     id="set_frequency"
@@ -443,6 +467,21 @@ const submit = () => {
                                 <Label for="minimum_cost_to_ban">Minimum cost to ban</Label>
                                 <Input id="minimum_cost_to_ban" v-model.number="form.minimum_cost_to_ban" type="number" min="0" required />
                                 <InputError :message="form.errors.minimum_cost_to_ban" />
+                            </div>
+                            <div class="grid gap-2">
+                                <div class="flex items-center gap-2">
+                                    <input
+                                        id="require_showdown_username"
+                                        v-model="form.require_showdown_username"
+                                        type="checkbox"
+                                        class="border-input accent-primary size-4 rounded"
+                                    />
+                                    <Label for="require_showdown_username">Require teams to have a Pokémon Showdown account</Label>
+                                </div>
+                                <p class="text-muted-foreground text-xs dark:text-neutral-500">
+                                    When enabled, coaches must have a Showdown username on their profile or team before joining and participating in this league.
+                                </p>
+                                <InputError :message="form.errors.require_showdown_username" />
                             </div>
                         </div>
 
@@ -613,6 +652,15 @@ const submit = () => {
                                     </li>
                                     <li>
                                         Playoffs: {{ playoffFormatLabel }}, top {{ form.playoff_bracket_size }} teams (seeding in Admin).
+                                    </li>
+                                    <li>
+                                        <span v-if="form.draft_start_at">
+                                            Draft scheduled for {{ new Date(form.draft_start_at).toLocaleString() }} (your local time).
+                                        </span>
+                                        <span v-else>Draft start: manual (via Admin → Draft).</span>
+                                    </li>
+                                    <li>
+                                        Showdown account: {{ form.require_showdown_username ? 'required for all coaches' : 'optional' }}.
                                     </li>
                                     <li>
                                         <span class="text-foreground font-medium dark:text-neutral-200">Discord:</span>

@@ -18,3 +18,8 @@ Schedule::command('stats:sync-showdown-vgc-usage')
     ->name('sync-showdown-vgc-usage')
     ->dailyAt('06:15')
     ->withoutOverlapping(600);
+
+Schedule::command('draft:start-scheduled')
+    ->name('draft-start-scheduled')
+    ->everyMinute()
+    ->withoutOverlapping(5);

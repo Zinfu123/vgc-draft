@@ -40,7 +40,12 @@ class PlayoffController extends Controller
             ]
         );
 
-        if ($playoff->status === PlayoffStatus::Draft && $playoff->seed_order === null) {
+        $currentTeamIds = $data['teams']->pluck('id')->all();
+        $existingSeedOrder = $playoff->seed_order ?? [];
+        $needsReseed = $existingSeedOrder === []
+            || ! empty(array_diff($existingSeedOrder, $currentTeamIds));
+
+        if ($playoff->status === PlayoffStatus::Draft && $needsReseed) {
             $playoff->seed_order = $playoffBracketService->suggestedSeedTeams($league)->pluck('id')->all();
             $playoff->save();
         }

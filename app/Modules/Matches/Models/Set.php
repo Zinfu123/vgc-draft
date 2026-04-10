@@ -8,7 +8,6 @@ use App\Modules\Teams\Models\Team;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
@@ -80,10 +79,5 @@ class Set extends Model
     public function matchMessages(): HasMany
     {
         return $this->hasMany(MatchMessage::class, 'set_id');
-    }
-
-    public function pendingScheduleRequest(): HasOne
-    {
-        return $this->hasOne(MatchScheduleRequest::class, 'set_id')->where('status', 'pending')->latest();
     }
 }

@@ -20,6 +20,10 @@ class SetGameResult extends Model
         'p2_pokemon',
         'p1_knockouts',
         'p2_knockouts',
+        'p1_deaths',
+        'p2_deaths',
+        'p1_damage',
+        'p2_damage',
     ];
 
     protected function casts(): array
@@ -29,6 +33,10 @@ class SetGameResult extends Model
             'p2_pokemon' => 'array',
             'p1_knockouts' => 'array',
             'p2_knockouts' => 'array',
+            'p1_deaths' => 'array',
+            'p2_deaths' => 'array',
+            'p1_damage' => 'array',
+            'p2_damage' => 'array',
         ];
     }
 

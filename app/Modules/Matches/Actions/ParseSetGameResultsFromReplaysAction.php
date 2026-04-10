@@ -6,6 +6,7 @@ use App\Modules\League\Models\LeaguePokemon;
 use App\Modules\Matches\Models\Set;
 use App\Modules\Matches\Models\SetGameResult;
 use App\Modules\Pokepaste\Services\ShowdownFormatHelper;
+use App\Modules\Pokepaste\Services\ShowdownReplayDamageParser;
 use App\Modules\Pokepaste\Services\ShowdownReplayKoParser;
 use App\Modules\Pokepaste\Services\ShowdownReplayLogFetcher;
 use App\Modules\Pokepaste\Services\ShowdownReplayLogUrl;
@@ -25,6 +26,7 @@ class ParseSetGameResultsFromReplaysAction
         private ShowdownReplayWinnerParser $winnerParser,
         private ShowdownReplaySelectedPokemonParser $selectedParser,
         private ShowdownReplayKoParser $koParser,
+        private ShowdownReplayDamageParser $damageParser,
         private SuggestP1TeamFromShowdownReplay $suggestP1Team,
     ) {}
 
@@ -80,11 +82,16 @@ class ParseSetGameResultsFromReplaysAction
 
             $selected = $this->selectedParser->parse($logText);
             $knockouts = $this->koParser->parse($logText);
+            $damage = $this->damageParser->parse($logText);
 
             $p1Pokemon = $this->mapSpeciesToDexIds($selected['p1'], $p1TeamId, (int) $set->league_id);
             $p2Pokemon = $this->mapSpeciesToDexIds($selected['p2'], $p2TeamId, (int) $set->league_id);
             $p1Knockouts = $this->mapSpeciesToDexIds($knockouts['p1'], $p1TeamId, (int) $set->league_id);
             $p2Knockouts = $this->mapSpeciesToDexIds($knockouts['p2'], $p2TeamId, (int) $set->league_id);
+            $p1Deaths = $this->mapSpeciesToDexIds($knockouts['p1Deaths'], $p1TeamId, (int) $set->league_id);
+            $p2Deaths = $this->mapSpeciesToDexIds($knockouts['p2Deaths'], $p2TeamId, (int) $set->league_id);
+            $p1Damage = $this->mapSpeciesToDexIdsForDamage($damage['p1'], $p1TeamId, (int) $set->league_id);
+            $p2Damage = $this->mapSpeciesToDexIdsForDamage($damage['p2'], $p2TeamId, (int) $set->league_id);
 
             SetGameResult::updateOrCreate(
                 ['set_id' => $set->id, 'game_number' => $gameNumber],
@@ -96,6 +103,10 @@ class ParseSetGameResultsFromReplaysAction
                     'p2_pokemon' => $p2Pokemon,
                     'p1_knockouts' => $p1Knockouts,
                     'p2_knockouts' => $p2Knockouts,
+                    'p1_deaths' => $p1Deaths,
+                    'p2_deaths' => $p2Deaths,
+                    'p1_damage' => $p1Damage,
+                    'p2_damage' => $p2Damage,
                 ]
             );
         }
@@ -113,6 +124,41 @@ class ParseSetGameResultsFromReplaysAction
         }
 
         return $p2TeamId;
+    }
+
+    /**
+     * Map a species→damage map to pokedex_id→damage, resolving species against the team roster.
+     * Species not found on the roster are silently skipped.
+     *
+     * @param  array<string, int>  $speciesDamage
+     * @return array<int, int>
+     */
+    private function mapSpeciesToDexIdsForDamage(array $speciesDamage, int $teamId, int $leagueId): array
+    {
+        $roster = LeaguePokemon::query()
+            ->where('drafted_by', $teamId)
+            ->where('league_id', $leagueId)
+            ->with('pokemon:id,name,nationaldex_id')
+            ->get();
+
+        $result = [];
+        foreach ($speciesDamage as $raw => $damage) {
+            $key = ShowdownFormatHelper::speciesToMatchKey((string) $raw);
+            foreach ($roster as $lp) {
+                $candidates = array_filter([$lp->pokemon?->name, $lp->name]);
+                foreach ($candidates as $name) {
+                    if (ShowdownFormatHelper::speciesToMatchKey((string) $name) === $key) {
+                        if ($lp->pokedex_id !== null) {
+                            $dexId = (int) $lp->pokedex_id;
+                            $result[$dexId] = ($result[$dexId] ?? 0) + (int) $damage;
+                        }
+                        break 2;
+                    }
+                }
+            }
+        }
+
+        return $result;
     }
 
     /**

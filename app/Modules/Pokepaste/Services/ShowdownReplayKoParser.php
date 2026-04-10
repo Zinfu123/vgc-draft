@@ -9,7 +9,7 @@ class ShowdownReplayKoParser
     ) {}
 
     /**
-     * Parse which pokemon caused knockouts in a single game.
+     * Parse which pokemon caused knockouts and which pokemon fainted in a single game.
      *
      * Tracks the active attacker per slot and credits a direct KO when:
      * - A |faint| event occurs, AND
@@ -18,8 +18,10 @@ class ShowdownReplayKoParser
      * Residual damage (burn, poison, weather, recoil, etc.) is detected via
      * the [from] tag in |-damage| lines and does NOT credit a KO.
      *
-     * @return array{p1: list<string>, p2: list<string>}
-     *                                                   Species names of pokemon that scored KOs, indexed by their side.
+     * Deaths (p1Deaths/p2Deaths) track ALL fainted pokemon regardless of damage source.
+     *
+     * @return array{p1: list<string>, p2: list<string>, p1Deaths: list<string>, p2Deaths: list<string>}
+     *                                                                                                   Species names indexed by their side.
      */
     public function parse(string $log): array
     {
@@ -39,6 +41,8 @@ class ShowdownReplayKoParser
 
         $p1Knockouts = [];
         $p2Knockouts = [];
+        $p1Deaths = [];
+        $p2Deaths = [];
 
         foreach (explode("\n", $log) as $line) {
             $line = trim($line);
@@ -99,7 +103,17 @@ class ShowdownReplayKoParser
                     continue;
                 }
 
-                // Skip if last damage was residual/indirect
+                // Track the death regardless of damage source
+                $faintedSpecies = $slotPokemon[$faintedSlot] ?? null;
+                if ($faintedSpecies !== null) {
+                    if (str_starts_with($faintedSlot, 'p1')) {
+                        $p1Deaths[] = $faintedSpecies;
+                    } else {
+                        $p2Deaths[] = $faintedSpecies;
+                    }
+                }
+
+                // Skip crediting a kill if last damage was residual/indirect
                 if ($lastDamageIndirect[$faintedSlot] ?? false) {
                     continue;
                 }
@@ -122,7 +136,7 @@ class ShowdownReplayKoParser
             }
         }
 
-        return ['p1' => $p1Knockouts, 'p2' => $p2Knockouts];
+        return ['p1' => $p1Knockouts, 'p2' => $p2Knockouts, 'p1Deaths' => $p1Deaths, 'p2Deaths' => $p2Deaths];
     }
 
     private function extractSlot(string $str): ?string

@@ -11,6 +11,7 @@ class DraftConfig extends Model
     protected $fillable = [
         'league_id',
         'draft_date',
+        'draft_start_at',
         'draft_points',
         'minimum_drafts',
         'ban_enabled',
@@ -25,6 +26,7 @@ class DraftConfig extends Model
     {
         return [
             'draft_date' => 'date',
+            'draft_start_at' => 'datetime',
             'draft_points' => 'integer',
             'minimum_drafts' => 'integer',
             'ban_enabled' => 'boolean',

@@ -29,6 +29,7 @@ class UpdateDraftConfigRequest extends FormRequest
     {
         return [
             'draft_date' => ['nullable', 'date'],
+            'draft_start_at' => ['nullable', 'date'],
             'draft_points' => ['required', 'integer', 'min:1'],
             'minimum_drafts' => ['required', 'integer', 'min:0'],
             'ban_enabled' => ['boolean'],
