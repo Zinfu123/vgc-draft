@@ -30,6 +30,7 @@ interface DraftConfig {
     bans_per_user: number;
     minimum_cost_to_ban: number;
     draft_points: number;
+    minimum_drafts: number;
 }
 
 interface Pokemon {
@@ -192,6 +193,7 @@ const filters = ref<PokemonFilters>({ name: '', minCost: undefined, maxCost: und
 const selectedPokemon = ref<Pokemon | null>(null);
 const isDialogOpen = ref(false);
 const isSubmitting = ref(false);
+const pickError = ref<string | null>(null);
 
 const isBanPhase = computed(() => props.draft?.status === 2);
 const isDraftPhase = computed(() => props.draft?.status === 1);
@@ -205,6 +207,12 @@ const isMyTurn = computed(() => isMyTurnToBan.value || isMyTurnToPick.value);
 const minCostToBan = computed(() => props.draftConfig?.minimum_cost_to_ban ?? 0);
 
 const userTeamData = computed(() => props.teams.find((t) => t.id === props.userTeam?.id) ?? null);
+
+const minimumPicksRemaining = computed(() => {
+    const minimumDrafts = props.draftConfig?.minimum_drafts ?? 0;
+    const picksMade = userTeamData.value?.draft_picks.length ?? 0;
+    return Math.max(0, minimumDrafts - picksMade);
+});
 
 const applyFilters = (pokemon: Pokemon[]) =>
     pokemon.filter((p) => {
@@ -271,6 +279,7 @@ const abortDraft = () => router.post(route('draft.abort-draft'), { league_id: pr
 const openActionDialog = (pokemon: Pokemon) => {
     if (!isClickable(pokemon)) return;
     selectedPokemon.value = pokemon;
+    pickError.value = null;
     isDialogOpen.value = true;
 };
 
@@ -298,7 +307,8 @@ const submitAction = () => {
                 preserveScroll: true,
             });
         },
-        onError: () => {
+        onError: (errors) => {
+            pickError.value = (errors as Record<string, string>).error ?? 'Something went wrong. Please try again.';
             isDialogOpen.value = true;
             isSubmitting.value = false;
         },
@@ -337,6 +347,12 @@ const submitAction = () => {
                         class="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1 text-sm font-semibold text-gray-700 dark:border-white/10 dark:bg-gray-800 dark:text-gray-200"
                     >
                         {{ userTeamData.name }} &mdash; {{ userTeamData.draft_points }} pts
+                    </span>
+                    <span
+                        v-if="userTeamData && isDraftPhase && minimumPicksRemaining > 0"
+                        class="inline-flex items-center gap-1.5 rounded-full bg-amber-100 px-3 py-1 text-sm font-semibold text-amber-800 dark:bg-amber-900/30 dark:text-amber-400"
+                    >
+                        {{ minimumPicksRemaining }} min. pick{{ minimumPicksRemaining === 1 ? '' : 's' }} remaining
                     </span>
                 </div>
                 <div v-if="!isMobile" class="flex flex-wrap items-center gap-2">
@@ -944,10 +960,13 @@ const submitAction = () => {
         <!-- Sticky Points Card -->
         <div
             v-if="userTeamData"
-            class="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-lg dark:border-white/10 dark:bg-gray-800"
+            class="fixed bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-lg dark:border-white/10 dark:bg-gray-800"
         >
-            <div class="flex flex-col">
-                <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Your Points</span>
+            <div class="flex flex-col items-center">
+                <div class="flex items-center gap-2">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Your</span>
+                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Points</span>
+                </div>
                 <span class="text-lg font-bold text-gray-900 dark:text-white">{{ userTeamData.draft_points }}</span>
             </div>
             <button
@@ -972,6 +991,10 @@ const submitAction = () => {
                         }}
                     </DialogDescription>
                 </DialogHeader>
+                <div v-if="pickError" class="flex items-start gap-2 rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive dark:bg-destructive/20">
+                    <span class="mt-0.5 shrink-0">⚠</span>
+                    <span>{{ pickError }}</span>
+                </div>
                 <div v-if="selectedPokemon" class="flex flex-col items-center gap-4 py-4">
                     <PokemonCard :pokemon="selectedPokemon" />
                     <div class="text-center">
@@ -980,7 +1003,7 @@ const submitAction = () => {
                     </div>
                 </div>
                 <DialogFooter>
-                    <Button variant="outline" @click="() => { if (!isSubmitting) isDialogOpen = false; }" :disabled="isSubmitting">Cancel</Button>
+                    <Button variant="outline" @click="() => { if (!isSubmitting) { isDialogOpen = false; pickError = null; } }" :disabled="isSubmitting">Cancel</Button>
                     <Button @click="submitAction" :disabled="isSubmitting" :variant="isBanPhase ? 'destructive' : 'default'">
                         <LoaderCircle v-if="isSubmitting" class="mr-2 size-4 animate-spin" />
                         {{ isBanPhase ? 'Ban Pokémon' : 'Draft Pokémon' }}
