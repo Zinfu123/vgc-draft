@@ -35,7 +35,7 @@ defineProps<{
         <Link
             v-for="team in teams"
             :key="team.id"
-            :href="route('teams.detail', { team_id: team.id })"
+            :href="route('leagues.dashboard', { league: team.league_id, team: team.id })"
             class="group block min-w-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
             <TeamCard :team="team" />

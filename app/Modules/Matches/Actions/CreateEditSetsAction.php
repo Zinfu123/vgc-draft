@@ -3,6 +3,7 @@
 namespace App\Modules\Matches\Actions;
 
 use App\Events\SetUpdatedEvent;
+use App\Modules\League\Enums\LeagueStatus;
 use App\Modules\League\Models\League;
 use App\Modules\Matches\Models\Pool;
 use App\Modules\Matches\Models\Set;
@@ -60,6 +61,10 @@ class CreateEditSetsAction
             if ($set->team2_id === null) {
                 return false;
             } else {
+                $setLeague = League::query()->find($set->league_id);
+                if ($setLeague !== null && ! in_array($setLeague->status, [LeagueStatus::RegularSeason, LeagueStatus::Playoffs], true)) {
+                    return false;
+                }
                 $leagueForPaste = League::with('matchConfig')->find($set->league_id);
                 if ($leagueForPaste?->matchConfig?->require_team_match_pokepaste_before_results === true) {
                     if (! app(EnforceTeamMatchPokepasteChecker::class)->poolSetBothSidesHaveData($set)) {

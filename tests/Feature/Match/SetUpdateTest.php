@@ -18,7 +18,7 @@ test('updating a set updates team statistics correctly when team1 wins 2-0', fun
 
     $league = League::create([
         'name' => 'Test League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'draft_points' => 100,
         'league_owner' => $user1->id,
     ]);
@@ -121,7 +121,7 @@ test('updating a set updates team statistics correctly when team1 wins 2-1', fun
 
     $league = League::create([
         'name' => 'Test League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'draft_points' => 100,
         'league_owner' => $user1->id,
     ]);
@@ -220,7 +220,7 @@ test('updating a set updates team statistics correctly when team2 wins 2-1', fun
 
     $league = League::create([
         'name' => 'Test League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'draft_points' => 100,
         'league_owner' => $user1->id,
     ]);
@@ -319,7 +319,7 @@ test('updating a completed set does not update team statistics again', function 
 
     $league = League::create([
         'name' => 'Test League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'draft_points' => 100,
         'league_owner' => $user1->id,
     ]);
@@ -413,7 +413,7 @@ test('rejects set update when neither team has two wins', function (int $team1Sc
 
     $league = League::create([
         'name' => 'Test League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'draft_points' => 100,
         'league_owner' => $user1->id,
     ]);
@@ -499,7 +499,7 @@ test('league admin can reopen a completed set and reverse team statistics', func
 
     $league = League::create([
         'name' => 'Test League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'draft_points' => 100,
         'league_owner' => $adminUser->id,
     ]);
@@ -625,7 +625,7 @@ test('non-admin cannot reopen a completed set', function () {
 
     $league = League::create([
         'name' => 'Test League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'draft_points' => 100,
         'league_owner' => $owner->id,
     ]);
@@ -695,7 +695,7 @@ test('reopen validation fails when set is not completed', function () {
 
     $league = League::create([
         'name' => 'Test League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'draft_points' => 100,
         'league_owner' => $adminUser->id,
     ]);

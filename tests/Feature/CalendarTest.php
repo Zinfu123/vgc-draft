@@ -30,7 +30,7 @@ it('includes draft days for leagues the user is in', function () {
 
     $league = League::create([
         'name' => 'Draft League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'draft_points' => 100,
         'league_owner' => $otherUser->id,
         'set_start_date' => now()->addMonths(1)->toDateString(),
@@ -86,7 +86,7 @@ it('includes scheduled matches for the user', function () {
 
     $league = League::create([
         'name' => 'Match League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'draft_points' => 100,
         'league_owner' => $opponent->id,
         'set_start_date' => now()->addMonths(1)->toDateString(),
@@ -159,7 +159,7 @@ it('does not include events from leagues the user is not in', function () {
 
     $league = League::create([
         'name' => 'Other League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'draft_points' => 100,
         'league_owner' => $otherUser->id,
         'set_start_date' => now()->addMonths(1)->toDateString(),
@@ -189,7 +189,7 @@ it('shows per-round match week events when draft is complete', function () {
 
     $league = League::create([
         'name' => 'Round League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'draft_points' => 100,
         'league_owner' => $otherUser->id,
         'set_start_date' => $startDate,
@@ -289,7 +289,7 @@ it('does not show match round events when draft is not complete', function () {
 
     $league = League::create([
         'name' => 'Incomplete Draft League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'draft_points' => 100,
         'league_owner' => $otherUser->id,
         'set_start_date' => now()->addDays(5)->toDateString(),

@@ -45,7 +45,7 @@ function createLeagueTeamWithSixDraftedPokemonAndMatch(): array
 
     $league = League::create([
         'name' => 'Pokepaste League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'draft_points' => 100,
         'league_owner' => $owner->id,
     ]);
@@ -635,7 +635,7 @@ it('rejects parse when roster pokemon belongs to another league', function () {
     $otherOwner = User::factory()->create();
     $otherLeague = League::create([
         'name' => 'Other League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'draft_points' => 100,
         'league_owner' => $otherOwner->id,
     ]);

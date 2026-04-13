@@ -3,6 +3,8 @@
 namespace App\Modules\Trade\Models;
 
 use App\Enums\Trade\TradeCounterparty;
+use App\Events\LeagueTransactionEvent;
+use App\Events\TradePendingEvent;
 use App\Modules\League\Models\League;
 use App\Modules\Teams\Models\Team;
 use Illuminate\Database\Eloquent\Model;
@@ -24,6 +26,21 @@ class Trade extends Model
         'counterparty',
         'status',
     ];
+
+    protected static function booted(): void
+    {
+        static::created(function (Trade $trade): void {
+            if ($trade->target_team_id !== null) {
+                TradePendingEvent::dispatch($trade->target_team_id);
+            }
+        });
+
+        static::updated(function (Trade $trade): void {
+            if ($trade->wasChanged('status') && $trade->status === 'accepted') {
+                LeagueTransactionEvent::dispatch($trade->league_id);
+            }
+        });
+    }
 
     public function getActivitylogOptions(): LogOptions
     {

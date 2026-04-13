@@ -5,6 +5,7 @@ namespace App\Modules\League\Actions;
 use App\Enums\Playoffs\PlayoffFormat;
 use App\Enums\Playoffs\PlayoffStatus;
 use App\Enums\PokemonGame;
+use App\Jobs\EnforceTradeDeadlineJob;
 use App\Models\User;
 use App\Modules\Draft\Models\DraftConfig;
 use App\Modules\League\Models\League;
@@ -14,6 +15,7 @@ use App\Modules\Playoffs\Models\Playoff;
 use App\Modules\Playoffs\Services\PlayoffBracketService;
 use App\Modules\Teams\Models\Team;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -74,6 +76,9 @@ class CreateEditLeagueAction
             'discord_replay_webhook_url' => ['nullable', 'string', 'url', 'max:500'],
             'playoff_format' => ['required', Rule::enum(PlayoffFormat::class)],
             'playoff_bracket_size' => ['required', 'integer', Rule::in(PlayoffBracketService::allowedBracketSizes())],
+            'playoffs_enabled' => 'boolean',
+            'free_trade_window_hours' => ['required', 'integer', 'min:0'],
+            'trade_deadline_at' => ['nullable', 'date'],
             'require_showdown_username' => 'boolean',
         ]);
 
@@ -94,7 +99,12 @@ class CreateEditLeagueAction
             'pokemon_generation' => $request->integer('pokemon_generation'),
             'pokemon_game' => $request->string('pokemon_game')->toString(),
             'require_showdown_username' => $request->boolean('require_showdown_username'),
+            'playoffs_enabled' => $request->boolean('playoffs_enabled', true),
+            'free_trade_window_hours' => $request->integer('free_trade_window_hours', 24),
+            'trade_deadline_at' => $request->input('trade_deadline_at') ? Carbon::parse($request->input('trade_deadline_at')) : null,
         ]);
+
+        $this->scheduleTradeDeadlineJob($league);
 
         DraftConfig::create([
             'league_id' => $league->id,
@@ -171,6 +181,9 @@ class CreateEditLeagueAction
             'discord_replay_webhook_url' => ['nullable', 'string', 'url', 'max:500'],
             'playoff_format' => ['required', Rule::enum(PlayoffFormat::class)],
             'playoff_bracket_size' => ['required', 'integer', Rule::in(PlayoffBracketService::allowedBracketSizes())],
+            'playoffs_enabled' => 'boolean',
+            'free_trade_window_hours' => ['required', 'integer', 'min:0'],
+            'trade_deadline_at' => ['nullable', 'date'],
             'require_showdown_username' => 'boolean',
         ]);
 
@@ -192,7 +205,12 @@ class CreateEditLeagueAction
         $league->discord_webhook_url = $request->input('discord_webhook_url');
         $league->discord_replay_webhook_url = $request->input('discord_replay_webhook_url');
         $league->require_showdown_username = $request->boolean('require_showdown_username');
+        $league->playoffs_enabled = $request->boolean('playoffs_enabled', true);
+        $league->free_trade_window_hours = $request->integer('free_trade_window_hours', 24);
+        $league->trade_deadline_at = $request->input('trade_deadline_at') ? Carbon::parse($request->input('trade_deadline_at')) : null;
         $league->save();
+
+        $this->scheduleTradeDeadlineJob($league);
 
         $league->draftConfig()->updateOrCreate(
             ['league_id' => $league->id],
@@ -234,6 +252,21 @@ class CreateEditLeagueAction
         }
 
         return $league;
+    }
+
+    /**
+     * Dispatch a delayed job to cancel pending trades at the deadline. The job
+     * checks that the stored deadline still matches at runtime, so if the
+     * deadline is updated a new job is dispatched and the old one self-skips.
+     */
+    private function scheduleTradeDeadlineJob(League $league): void
+    {
+        if ($league->trade_deadline_at === null || $league->trade_deadline_at->isPast()) {
+            return;
+        }
+
+        EnforceTradeDeadlineJob::dispatch($league->id, $league->trade_deadline_at)
+            ->delay($league->trade_deadline_at);
     }
 
     private function defaultLeagueOwnerTeamName(User $user): string

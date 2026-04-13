@@ -3,6 +3,7 @@
 namespace App\Modules\Calendar\Actions;
 
 use App\Models\User;
+use App\Modules\League\Enums\LeagueStatus;
 use App\Modules\Matches\Models\Set;
 use App\Modules\Teams\Models\Team;
 use Carbon\Carbon;
@@ -18,9 +19,16 @@ class ReadCalendarEventsAction
      */
     public function __invoke(User $user): array
     {
+        $activeStatuses = [
+            LeagueStatus::Registration->value,
+            LeagueStatus::Staging->value,
+            LeagueStatus::RegularSeason->value,
+            LeagueStatus::Playoffs->value,
+        ];
+
         $teams = Team::query()
             ->where('user_id', $user->id)
-            ->whereHas('league', fn ($query) => $query->where('status', 1))
+            ->whereHas('league', fn ($query) => $query->whereIn('status', $activeStatuses))
             ->with(['league.draftConfig', 'league.matchConfig', 'league.draft'])
             ->get();
 

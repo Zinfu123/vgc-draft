@@ -3,12 +3,10 @@
 namespace App\Modules\Teams\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\League\Models\League;
 use App\Modules\Teams\Actions\CreateEditTeamAction;
 use App\Modules\Teams\Actions\ReadTeamAction;
 use App\Modules\Teams\Models\Team;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 
 class TeamController extends Controller
 {
@@ -27,24 +25,20 @@ class TeamController extends Controller
         $request->merge(['pick_position' => $pick_position]);
         $team = (new CreateEditTeamAction)->create($request);
 
-        return redirect()->route('teams.detail', ['team_id' => $team->id]);
+        return redirect()->route('leagues.dashboard', ['league' => $team->league_id]);
     }
 
-    public function show(Request $request, ReadTeamAction $readTeamAction)
+    public function show(Request $request, ReadTeamAction $readTeamAction): \Illuminate\Http\RedirectResponse
     {
         $team = $readTeamAction(['team_id' => $request->team_id, 'command' => 'team']);
-        $league = League::find($team->league_id);
 
-        return Inertia::render('teams/TeamDetail', [
-            'league' => $league,
-            'team' => $team,
-        ]);
+        return redirect()->route('leagues.dashboard', ['league' => $team->league_id, 'team' => $team->id]);
     }
 
     public function edit(Request $request, int $team_id)
     {
         $team = (new CreateEditTeamAction)->edit($request->merge(['team_id' => $team_id]));
 
-        return redirect()->route('teams.detail', ['team_id' => $team->id]);
+        return redirect()->route('leagues.dashboard', ['league' => $team->league_id]);
     }
 }

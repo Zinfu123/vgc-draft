@@ -22,7 +22,7 @@ function enforcePokepasteLeagueWithFourTeams(): array
 
     $league = League::create([
         'name' => 'Enforce Pokepaste League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'draft_points' => 80,
         'league_owner' => $owner->id,
         'maximum_teams' => 10,
@@ -73,7 +73,7 @@ it('rejects pool set completion when team pokepaste is required and pastes are m
 
     $league = League::create([
         'name' => 'Pool enforce league',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'draft_points' => 100,
         'league_owner' => $user1->id,
     ]);
@@ -148,6 +148,8 @@ it('rejects pool set completion when team pokepaste is required and pastes are m
 it('rejects playoff result recording when team pokepaste is required and playoff pastes are missing', function () {
     [$league, $teams] = enforcePokepasteLeagueWithFourTeams();
     $admin = $teams[0]->user;
+
+    $league->update(['status' => \App\Modules\League\Enums\LeagueStatus::Playoffs->value]);
 
     $this->actingAs($admin)->get(route('leagues.admin.playoffs', $league));
     $this->actingAs($admin)->post(route('leagues.admin.playoffs.generate', $league))->assertSessionHasNoErrors();

@@ -11,7 +11,7 @@ it('redirects draft detail to league draft recap when the draft is completed', f
     $user = User::factory()->create();
     $league = League::create([
         'name' => 'Recap League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::Staging->value,
         'league_owner' => $user->id,
         'maximum_teams' => 10,
     ]);

@@ -13,14 +13,25 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
+use Inertia\Response;
 use Laravel\Socialite\Facades\Socialite;
-use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class DiscordController extends Controller
 {
     private const string OAUTH_INTENT_KEY = 'discord_oauth_intent';
 
     private const string DISCORD_LINK_USER_ID_KEY = 'discord_link_user_id';
+
+    /**
+     * Show the "link Discord to existing account" page.
+     */
+    public function showLinkForm(Request $request): Response
+    {
+        return Inertia::render('auth/LinkDiscord', [
+            'status' => $request->session()->get('status'),
+        ]);
+    }
 
     /**
      * Redirect the user to Discord's OAuth page.
@@ -34,7 +45,7 @@ class DiscordController extends Controller
             $request->session()->forget(self::DISCORD_LINK_USER_ID_KEY);
         } elseif ($request->query('intent') === 'link') {
             if (! $request->session()->has(self::DISCORD_LINK_USER_ID_KEY)) {
-                return redirect()->route('login')->withErrors([
+                return redirect()->route('discord.link-form')->withErrors([
                     'link_email' => 'Your Discord link session expired. Enter your email and password below, then try again.',
                 ]);
             }
@@ -50,7 +61,7 @@ class DiscordController extends Controller
     /**
      * Verify email/password for an existing account, then continue to Discord OAuth to link.
      */
-    public function prepareLink(PrepareDiscordLinkRequest $request): RedirectResponse|Response
+    public function prepareLink(PrepareDiscordLinkRequest $request): RedirectResponse|SymfonyResponse
     {
         $email = $request->validated('link_email');
         $password = $request->validated('link_password');
@@ -116,22 +127,9 @@ class DiscordController extends Controller
             return $this->registerGuestFromDiscord($discordUser);
         }
 
-        return redirect()->route('login')->withErrors([
-            'email' => 'No account is linked to that Discord account. Register with Discord or log in with email, then connect Discord from profile settings.',
+        return redirect()->route('discord.link-form')->withErrors([
+            'link_email' => 'No account is linked to that Discord account. If you have an existing account, enter your credentials below to connect it.',
         ]);
-    }
-
-    /**
-     * Unlink Discord from the current user's account.
-     */
-    public function disconnect(): RedirectResponse
-    {
-        $user = Auth::user();
-        $user->discord_id = null;
-        $user->discord_username = null;
-        $user->save();
-
-        return redirect()->route('profile.edit')->with('status', 'discord-unlinked');
     }
 
     private function completeGuestDiscordLink(\Laravel\Socialite\Contracts\User $discordUser): RedirectResponse
@@ -139,7 +137,7 @@ class DiscordController extends Controller
         $userId = session()->pull(self::DISCORD_LINK_USER_ID_KEY);
 
         if ($userId === null) {
-            return redirect()->route('login')->withErrors([
+            return redirect()->route('discord.link-form')->withErrors([
                 'link_email' => 'Your Discord link session expired. Verify your email and password, then try again.',
             ]);
         }
@@ -148,7 +146,7 @@ class DiscordController extends Controller
         $accountUser = User::query()->find($userId);
 
         if ($accountUser === null) {
-            return redirect()->route('login')->withErrors([
+            return redirect()->route('discord.link-form')->withErrors([
                 'link_email' => 'Your Discord link session expired. Verify your email and password, then try again.',
             ]);
         }
@@ -161,7 +159,7 @@ class DiscordController extends Controller
             ->exists();
 
         if ($other) {
-            return redirect()->route('login')->withErrors([
+            return redirect()->route('discord.link-form')->withErrors([
                 'link_email' => 'This Discord account is already linked to a different user.',
             ]);
         }

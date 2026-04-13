@@ -25,14 +25,5 @@ export default defineConfig(({ mode }) => {
                 },
             }),
         ],
-        build: {
-            // Only when VITE_LOCAL=true (e.g. `npm run watch`): widen file watching for `vite build --watch`.
-            // Omit on production/CI so `vite build` never enables Rollup watch.
-            ...(isLocal && {
-                watch: {
-                    include: ['resources/**'],
-                },
-            }),
-        },
     };
 });

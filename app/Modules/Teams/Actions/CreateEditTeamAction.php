@@ -3,6 +3,7 @@
 namespace App\Modules\Teams\Actions;
 
 use App\Models\User;
+use App\Modules\League\Enums\LeagueStatus;
 use App\Modules\League\Models\League;
 use App\Modules\Pokepaste\Services\ShowdownUsernameNormalizer;
 use App\Modules\Teams\Models\Team;
@@ -112,13 +113,22 @@ class CreateEditTeamAction
         } else {
             $logo = null;
         }
+        $joiningLeague = League::query()->where('id', $request->league_id)->firstOrFail();
+
+        if ($joiningLeague->status !== LeagueStatus::Registration) {
+            throw ValidationException::withMessages([
+                'league_id' => 'This league is no longer accepting new teams.',
+            ]);
+        }
+
         if (Team::where('league_id', $request->league_id)->where('user_id', $request->user_id)->exists()) {
             throw new \Exception('Team already exists');
-        } elseif (Team::where('league_id', $request->league_id)->count() >= League::where('id', $request->league_id)->select('maximum_teams')->first()->maximum_teams) {
+        } elseif (Team::where('league_id', $request->league_id)->count() >= $joiningLeague->maximum_teams) {
             throw new \Exception('Maximum number of teams reached');
         }
 
-        $draftPoints = League::with('draftConfig')->find($request->league_id)->draftConfig->draft_points;
+        $joiningLeague->loadMissing('draftConfig');
+        $draftPoints = $joiningLeague->draftConfig->draft_points;
         $team = Team::create([
             'name' => $request->name,
             'showdown_username' => $showdownToStore,
@@ -134,10 +144,9 @@ class CreateEditTeamAction
         }
 
         $team->save();
-        if (Team::where('league_id', $request->league_id)->count() == League::where('id', $request->league_id)->select('maximum_teams')->first()->maximum_teams) {
-            $league = League::where('id', $request->league_id)->first();
-            $league->open = false;
-            $league->save();
+        if (Team::where('league_id', $request->league_id)->count() == $joiningLeague->maximum_teams) {
+            $joiningLeague->open = false;
+            $joiningLeague->save();
         }
 
         return $team;

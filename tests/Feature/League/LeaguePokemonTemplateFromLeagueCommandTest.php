@@ -14,7 +14,7 @@ it('creates a template from a league pokemon pool', function () {
     $owner = User::factory()->create();
     $league = League::query()->create([
         'name' => 'Source League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::Registration->value,
         'league_owner' => $owner->id,
         'maximum_teams' => 8,
     ]);

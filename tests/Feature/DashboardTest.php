@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use App\Modules\Draft\Models\DraftConfig;
+use App\Modules\League\Enums\LeagueStatus;
 use App\Modules\League\Models\League;
 use App\Modules\Teams\Models\Team;
 
@@ -25,7 +26,7 @@ test('dashboard includes user stats with correct totals', function () {
 
     $league = League::create([
         'name' => 'Past League',
-        'status' => 0,
+        'status' => LeagueStatus::Completed->value,
         'open' => false,
         'draft_points' => 100,
         'league_owner' => $user->id,
@@ -71,7 +72,7 @@ test('dashboard includes leagues marked as open that the user has not joined', f
 
     League::create([
         'name' => 'Open League',
-        'status' => 1,
+        'status' => LeagueStatus::Registration->value,
         'open' => true,
         'draft_points' => 100,
         'league_owner' => $user->id,
@@ -91,7 +92,7 @@ test('dashboard excludes open leagues the user has already joined', function () 
 
     $league = League::create([
         'name' => 'My Active League',
-        'status' => 1,
+        'status' => LeagueStatus::Registration->value,
         'open' => true,
         'draft_points' => 100,
         'league_owner' => $user->id,
@@ -124,7 +125,7 @@ test('dashboard active leagues expose draft_date as Y-m-d', function () {
 
     $league = League::create([
         'name' => 'Draft Format League',
-        'status' => 1,
+        'status' => LeagueStatus::RegularSeason->value,
         'open' => true,
         'draft_points' => 100,
         'league_owner' => $user->id,
@@ -169,7 +170,7 @@ test('dashboard open leagues expose draft_date as Y-m-d', function () {
 
     $league = League::create([
         'name' => 'Open Draft League',
-        'status' => 1,
+        'status' => LeagueStatus::Registration->value,
         'open' => true,
         'draft_points' => 100,
         'league_owner' => $owner->id,
@@ -203,7 +204,7 @@ test('dashboard past leagues include podium and winner from eager-loaded data', 
 
     $league = League::create([
         'name' => 'Finished League',
-        'status' => 0,
+        'status' => LeagueStatus::Completed->value,
         'open' => false,
         'draft_points' => 100,
         'league_owner' => $owner->id,
@@ -287,7 +288,7 @@ test('dashboard excludes leagues marked as not open', function () {
 
     League::create([
         'name' => 'Closed League',
-        'status' => 1,
+        'status' => LeagueStatus::RegularSeason->value,
         'open' => false,
         'draft_points' => 100,
         'league_owner' => $user->id,

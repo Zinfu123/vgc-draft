@@ -16,19 +16,21 @@ const breadcrumbs: BreadcrumbItem[] = [
 interface CurrentLeagues {
     id: number;
     name: string;
-    draft_date: string;
+    draft_config: { draft_date: string | null; draft_start_at: string | null } | null;
     set_start_date: string;
     logo: string | null;
     winner: string | null;
+    status: number;
 }
 
 interface PastLeagues {
     id: number;
     name: string;
-    draft_date: string;
+    draft_config: { draft_date: string | null; draft_start_at: string | null } | null;
     set_start_date: string;
     logo: string | null;
     winner: string | null;
+    status: number;
 }
 
 // interface ParticipatingLeague {

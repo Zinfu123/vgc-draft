@@ -2,40 +2,48 @@
 
 namespace App\Modules\League\Actions;
 
-/* Define Models */
+use App\Modules\League\Enums\LeagueStatus;
 use App\Modules\League\Models\League;
-/* End Define Models */
-
-/* Define Dependencies */
 use Illuminate\Support\Facades\Storage;
-
-/* End Define Dependencies */
 
 class ReadLeagueAction
 {
     public function __invoke($data)
     {
-        if ($data['command'] == 'active') {
-            $league = League::where('status', 1)->get();
-            $league = $league->map(function ($league) {
+        if ($data['command'] === 'active') {
+            $activeStatuses = [
+                LeagueStatus::Registration->value,
+                LeagueStatus::Staging->value,
+                LeagueStatus::RegularSeason->value,
+                LeagueStatus::Playoffs->value,
+            ];
+
+            $leagues = League::query()
+                ->whereIn('status', $activeStatuses)
+                ->with('draftConfig:league_id,draft_date,draft_start_at')
+                ->get();
+
+            return $leagues->map(function (League $league) {
                 if ($league->logo !== null) {
                     $league->logo = str_replace('\\', '/', Storage::disk('s3-league-logos')->url($league->logo));
                 }
 
                 return $league;
             });
-
-            return $league;
-        } elseif ($data['command'] == 'league') {
+        } elseif ($data['command'] === 'league') {
             $league = League::find($data['league_id']);
             if ($league && $league->logo !== null) {
                 $league->logo = str_replace('\\', '/', Storage::disk('s3-league-logos')->url($league->logo));
             }
 
             return $league;
-        } elseif ($data['command'] == 'past') {
-            $league = League::where('status', 0)->with('winnerUser')->get();
-            $league = $league->map(function ($league) {
+        } elseif ($data['command'] === 'past') {
+            $leagues = League::query()
+                ->where('status', LeagueStatus::Completed->value)
+                ->with('winnerUser')
+                ->get();
+
+            return $leagues->map(function (League $league) {
                 if ($league->logo !== null) {
                     $league->logo = str_replace('\\', '/', Storage::disk('s3-league-logos')->url($league->logo));
                 }
@@ -43,8 +51,6 @@ class ReadLeagueAction
 
                 return $league;
             });
-
-            return $league;
         }
     }
 }

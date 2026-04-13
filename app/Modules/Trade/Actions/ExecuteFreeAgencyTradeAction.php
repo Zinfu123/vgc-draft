@@ -4,6 +4,8 @@ namespace App\Modules\Trade\Actions;
 
 use App\Enums\Trade\TradeCounterparty;
 use App\Modules\Draft\Models\DraftConfig;
+use App\Modules\League\Enums\LeagueStatus;
+use App\Modules\League\Models\League;
 use App\Modules\League\Models\LeaguePokemon;
 use App\Modules\Teams\Models\Team;
 use App\Modules\Trade\Models\Trade;
@@ -32,6 +34,12 @@ class ExecuteFreeAgencyTradeAction
 
         $leagueId = $request->integer('league_id');
 
+        $league = League::query()->with('draftConfig')->findOrFail($leagueId);
+
+        $isFreeWindow = $league->isFreeTradeWindowActive();
+
+        $this->validateLeagueAllowsTrades($league, $isFreeWindow);
+
         $requestingTeam = Team::query()
             ->where('user_id', $request->user()->id)
             ->where('league_id', $leagueId)
@@ -43,13 +51,20 @@ class ExecuteFreeAgencyTradeAction
 
         $this->validatePokemonOwnership($offeredIds, $requestingTeam->id, $leagueId, 'offered');
         $this->validateFreeAgencyPoolPokemon($requestedIds, $leagueId);
-        $this->validateCostBalance($offeredIds, $requestedIds, $leagueId);
+
+        if (! $isFreeWindow) {
+            $this->validateCostBalance($offeredIds, $requestedIds, $leagueId);
+        }
 
         $tradeTokenCost = count($offeredIds) + count($requestedIds);
-        $this->validateTradeCount($requestingTeam, $tradeTokenCost);
+
+        if (! $isFreeWindow) {
+            $this->validateTradeCount($requestingTeam, $tradeTokenCost);
+        }
+
         $this->validateMinimumRoster($requestingTeam, $leagueId, count($offeredIds), count($requestedIds));
 
-        return DB::transaction(function () use ($requestingTeam, $leagueId, $offeredIds, $requestedIds, $tradeTokenCost): Trade {
+        return DB::transaction(function () use ($requestingTeam, $leagueId, $offeredIds, $requestedIds, $tradeTokenCost, $isFreeWindow): Trade {
             $trade = Trade::create([
                 'league_id' => $leagueId,
                 'requesting_team_id' => $requestingTeam->id,
@@ -84,10 +99,33 @@ class ExecuteFreeAgencyTradeAction
                 'is_drafted' => true,
             ]);
 
-            $requestingTeam->decrement('trades', $tradeTokenCost);
+            if (! $isFreeWindow) {
+                $requestingTeam->decrement('trades', $tradeTokenCost);
+            }
 
             return $trade->fresh();
         });
+    }
+
+    private function validateLeagueAllowsTrades(League $league, bool $isFreeWindow): void
+    {
+        $allowed = match ($league->status) {
+            LeagueStatus::RegularSeason, LeagueStatus::Playoffs => true,
+            LeagueStatus::Staging => $isFreeWindow,
+            default => false,
+        };
+
+        if (! $allowed) {
+            throw ValidationException::withMessages([
+                'league_id' => 'Trades are not allowed during the current league phase.',
+            ]);
+        }
+
+        if ($league->isTradeDeadlinePassed()) {
+            throw ValidationException::withMessages([
+                'league_id' => 'The trade deadline for this league has passed.',
+            ]);
+        }
     }
 
     /**

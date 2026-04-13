@@ -71,7 +71,7 @@ it('includes game entries where the pokemon was brought', function () {
 
     $league = League::create([
         'name' => 'Detail Test League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'draft_points' => 100,
         'league_owner' => $owner->id,
     ]);

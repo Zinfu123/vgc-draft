@@ -48,10 +48,10 @@ it('clears register intent when redirect has no intent', function () {
     expect(session()->get('discord_oauth_intent'))->toBeNull();
 });
 
-it('redirects to login when intent is link but prepare-link session is missing', function () {
+it('redirects to link form when intent is link but prepare-link session is missing', function () {
     $response = $this->get(route('discord.redirect', ['intent' => 'link']));
 
-    $response->assertRedirect(route('login'));
+    $response->assertRedirect(route('discord.link-form'));
     $response->assertSessionHasErrors('link_email');
 });
 
@@ -72,12 +72,12 @@ it('allows discord redirect with intent link when prepare-link session is presen
 it('prepare link rejects invalid credentials', function () {
     User::factory()->create(['email' => 'exists@example.com']);
 
-    $response = $this->from(route('login'))->post(route('discord.prepare-link'), [
+    $response = $this->from(route('discord.link-form'))->post(route('discord.prepare-link'), [
         'link_email' => 'exists@example.com',
         'link_password' => 'wrong-password',
     ]);
 
-    $response->assertRedirect(route('login'));
+    $response->assertRedirect(route('discord.link-form'));
     $response->assertSessionHasErrors('link_email');
     $this->assertGuest();
 });
@@ -157,13 +157,13 @@ it('logs in a guest user whose discord_id matches an existing account', function
     $this->assertAuthenticatedAs($user);
 });
 
-it('redirects to login with an error when no account matches the discord id', function () {
+it('redirects to link form with an error when no account matches the discord id', function () {
     mockDiscordUser('UNKNOWN000', 'Ghost#0000');
 
     $response = $this->get(route('discord.callback'));
 
-    $response->assertRedirect(route('login'));
-    $response->assertSessionHasErrors('email');
+    $response->assertRedirect(route('discord.link-form'));
+    $response->assertSessionHasErrors('link_email');
     $this->assertGuest();
 });
 
@@ -202,7 +202,7 @@ it('rejects guest link when discord is already linked to another user', function
 
     $response = $this->get(route('discord.callback'));
 
-    $response->assertRedirect(route('login'));
+    $response->assertRedirect(route('discord.link-form'));
     $response->assertSessionHasErrors('link_email');
     $this->assertGuest();
 
@@ -269,24 +269,11 @@ it('redirects to register with an error when intent is register but discord retu
     $this->assertGuest();
 });
 
-// ── Disconnect ────────────────────────────────────────────────────────────────
+// ── Link form ─────────────────────────────────────────────────────────────────
 
-it('disconnects discord from the current user account', function () {
-    $user = User::factory()->create([
-        'discord_id' => '123456789',
-        'discord_username' => 'Trainer#1234',
-    ]);
+it('shows the link discord form page to guests', function () {
+    $response = $this->get(route('discord.link-form'));
 
-    $response = $this->actingAs($user)->post(route('discord.disconnect'));
-
-    $response->assertRedirect(route('profile.edit'));
-
-    $user->refresh();
-    expect($user->discord_id)->toBeNull()
-        ->and($user->discord_username)->toBeNull();
-});
-
-it('requires authentication to disconnect discord', function () {
-    $response = $this->post(route('discord.disconnect'));
-    $response->assertRedirect('/login');
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page->component('auth/LinkDiscord'));
 });

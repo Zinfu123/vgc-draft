@@ -7,13 +7,19 @@ interface Podium {
     third: string | null;
 }
 
+interface DraftConfig {
+    draft_date: string | null;
+    draft_start_at: string | null;
+}
+
 interface Leagues {
     id: number;
     name: string;
-    draft_date: string | null;
+    draft_config: DraftConfig | null;
     set_start_date: string;
     logo: string | null;
     winner: string | null;
+    status: number;
     podium?: Podium;
 }
 
@@ -21,13 +27,58 @@ defineProps<{
     leagues: Leagues[];
 }>();
 
+const STATUS_LABELS: Record<number, string> = {
+    0: 'Cancelled',
+    1: 'Completed',
+    2: 'Registration',
+    3: 'Staging',
+    4: 'Regular Season',
+    5: 'Playoffs',
+};
+
+const STATUS_CLASSES: Record<number, string> = {
+    0: 'bg-red-500/15 text-red-700 dark:bg-red-500/20 dark:text-red-300',
+    1: 'bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300',
+    2: 'bg-sky-500/15 text-sky-800 dark:bg-sky-500/20 dark:text-sky-200',
+    3: 'bg-amber-500/15 text-amber-800 dark:bg-amber-500/20 dark:text-amber-200',
+    4: 'bg-indigo-500/15 text-indigo-800 dark:bg-indigo-500/20 dark:text-indigo-200',
+    5: 'bg-violet-500/15 text-violet-800 dark:bg-violet-500/20 dark:text-violet-200',
+};
+
+function statusLabel(league: Leagues): string {
+    return STATUS_LABELS[league.status] ?? 'Unknown';
+}
+
+function statusClass(league: Leagues): string {
+    return STATUS_CLASSES[league.status] ?? 'bg-muted text-muted-foreground';
+}
+
+function formatDraftDate(league: Leagues): string {
+    const startAt = league.draft_config?.draft_start_at;
+    if (startAt) {
+        return new Date(startAt).toLocaleString(undefined, {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+        });
+    }
+    const dateStr = league.draft_config?.draft_date;
+    if (dateStr) {
+        return new Date(dateStr).toLocaleDateString(undefined, {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            timeZone: 'UTC',
+        });
+    }
+    return 'TBD';
+}
+
 function hasPodium(league: Leagues): boolean {
     const p = league.podium;
     return Boolean(p && (p.first || p.second || p.third));
-}
-
-function isCompleted(league: Leagues): boolean {
-    return league.winner !== null || hasPodium(league);
 }
 
 function openLeague(id: number): void {
@@ -58,13 +109,9 @@ function openLeague(id: number): void {
                 </h3>
                 <span
                     class="shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider"
-                    :class="
-                        isCompleted(league)
-                            ? 'bg-emerald-500/15 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300'
-                            : 'bg-sky-500/15 text-sky-800 dark:bg-sky-500/20 dark:text-sky-200'
-                    "
+                    :class="statusClass(league)"
                 >
-                    {{ isCompleted(league) ? 'Completed' : 'Active' }}
+                    {{ statusLabel(league) }}
                 </span>
             </div>
 
@@ -121,7 +168,7 @@ function openLeague(id: number): void {
                     <template v-else>
                         <div class="rounded-lg border border-sky-500/20 bg-sky-500/5 px-2.5 py-1.5 dark:border-sky-400/20 dark:bg-sky-500/10">
                             <p class="text-[10px] font-bold uppercase tracking-wider text-sky-700 dark:text-sky-300">Draft</p>
-                            <p class="text-sm font-semibold text-foreground">{{ league.draft_date }}</p>
+                            <p class="text-sm font-semibold text-foreground">{{ formatDraftDate(league) }}</p>
                         </div>
                     </template>
                     <div class="rounded-lg border border-violet-500/20 bg-violet-500/5 px-2.5 py-1.5 dark:border-violet-400/20 dark:bg-violet-500/10">

@@ -43,14 +43,14 @@ class TradeRequestNotification extends Notification
             ? "<@{$this->targetUser->discord_id}>"
             : $this->targetUser->name;
 
-        $tradesUrl = route('leagues.trades', ['league' => $league->id]);
+        $dashboardUrl = route('leagues.dashboard', ['league' => $league->id]);
 
         return [
             'content' => $mention,
             'embeds' => [
                 [
                     'title' => '🔄 New Trade Request',
-                    'description' => "**{$requestingTeam->name}** has sent a trade request to **{$targetTeam->name}** in **{$league->name}**.\n\n[View & respond to the trade]({$tradesUrl})",
+                    'description' => "**{$requestingTeam->name}** has sent a trade request to **{$targetTeam->name}** in **{$league->name}**.\n\n[View & respond to the trade]({$dashboardUrl})",
                     'color' => 0xED4245,
                     'fields' => [
                         [

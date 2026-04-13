@@ -19,7 +19,7 @@ function makeScheduledLeague(?Carbon $draftStartAt): array
     $user = User::factory()->create(['showdown_username' => 'trainer1']);
     $league = League::create([
         'name' => 'Scheduled League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'league_owner' => $user->id,
         'maximum_teams' => 10,
         'pokemon_generation' => 9,

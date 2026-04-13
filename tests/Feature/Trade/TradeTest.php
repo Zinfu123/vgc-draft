@@ -19,7 +19,7 @@ function createLeagueForTradeTests(): array
 
     $league = League::create([
         'name' => 'Trade League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'league_owner' => $owner->id,
         'discord_webhook_url' => 'https://discord.com/api/webhooks/test/token',
     ]);

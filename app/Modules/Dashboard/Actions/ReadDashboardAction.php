@@ -2,6 +2,7 @@
 
 namespace App\Modules\Dashboard\Actions;
 
+use App\Modules\League\Enums\LeagueStatus;
 use App\Modules\League\Models\League;
 use App\Modules\Playoffs\Models\PlayoffMatch;
 use App\Modules\Teams\Models\Team;
@@ -12,8 +13,15 @@ class ReadDashboardAction
     public function __invoke($data)
     {
         if ($data['command'] == 'usersActiveLeagues') {
+            $activeStatuses = [
+                LeagueStatus::Registration->value,
+                LeagueStatus::Staging->value,
+                LeagueStatus::RegularSeason->value,
+                LeagueStatus::Playoffs->value,
+            ];
+
             return Team::where('user_id', $data['user_id'])
-                ->whereHas('league', fn ($query) => $query->where('status', 1))
+                ->whereHas('league', fn ($query) => $query->whereIn('status', $activeStatuses))
                 ->with([
                     'league.draftConfig',
                     'league.winnerUser',
@@ -25,7 +33,7 @@ class ReadDashboardAction
 
         if ($data['command'] == 'usersPastLeagues') {
             return Team::where('user_id', $data['user_id'])
-                ->whereHas('league', fn ($query) => $query->where('status', 0))
+                ->whereHas('league', fn ($query) => $query->where('status', LeagueStatus::Completed->value))
                 ->with([
                     'league.draftConfig',
                     'league.winnerUser',
@@ -66,7 +74,7 @@ class ReadDashboardAction
 
         if ($data['command'] == 'openLeagues') {
             return League::query()
-                ->where('status', 1)
+                ->where('status', LeagueStatus::Registration->value)
                 ->where('open', true)
                 ->whereDoesntHave('teams', fn ($query) => $query->where('user_id', $data['user_id']))
                 ->with('draftConfig')

@@ -11,6 +11,7 @@ use App\Http\Requests\Playoff\RecordPlayoffMatchResultRequest;
 use App\Http\Requests\Playoff\RollbackPlayoffMatchRequest;
 use App\Http\Requests\Playoff\UpdatePlayoffConfigRequest;
 use App\Modules\League\Actions\LeagueDetailLayoutDataAction;
+use App\Modules\League\Enums\LeagueStatus;
 use App\Modules\League\Models\League;
 use App\Modules\Playoffs\Models\Playoff;
 use App\Modules\Playoffs\Models\PlayoffMatch;
@@ -55,8 +56,7 @@ class PlayoffController extends Controller
         $league->loadMissing('matchConfig');
 
         return Inertia::render('league/admin/Playoffs', [
-            'league' => $data['league'],
-            'teams' => $data['teams'],
+            ...$data,
             'playoff' => $this->playoffPayloadWithPokepaste($playoff, $league, Auth::user()),
             'allowedBracketSizes' => PlayoffBracketService::allowedBracketSizes(),
             'doubleEliminationSupported' => false,
@@ -80,6 +80,10 @@ class PlayoffController extends Controller
 
     public function generate(GeneratePlayoffBracketRequest $request, League $league, PlayoffBracketService $playoffBracketService): RedirectResponse
     {
+        if ($league->status !== LeagueStatus::Playoffs) {
+            return back()->withErrors(['playoff' => 'The playoff bracket can only be generated when the league is in the Playoffs phase.']);
+        }
+
         $playoff = $league->playoff;
         if ($playoff === null || $playoff->status !== PlayoffStatus::Draft) {
             return back()->withErrors(['playoff' => 'The bracket can only be generated from draft.']);
@@ -104,6 +108,10 @@ class PlayoffController extends Controller
 
     public function recordResult(RecordPlayoffMatchResultRequest $request, League $league, PlayoffBracketService $playoffBracketService): RedirectResponse
     {
+        if ($league->status !== LeagueStatus::Playoffs) {
+            return back()->withErrors(['playoff' => 'Match results can only be recorded when the league is in the Playoffs phase.']);
+        }
+
         $playoff = $league->playoff;
         if ($playoff === null || $playoff->status !== PlayoffStatus::Active) {
             return back()->withErrors(['playoff' => 'Playoffs are not active.']);
@@ -129,6 +137,10 @@ class PlayoffController extends Controller
 
     public function rollback(RollbackPlayoffMatchRequest $request, League $league, PlayoffBracketService $playoffBracketService): RedirectResponse
     {
+        if ($league->status !== LeagueStatus::Playoffs) {
+            return back()->withErrors(['playoff' => 'Match results can only be rolled back when the league is in the Playoffs phase.']);
+        }
+
         $playoff = $league->playoff;
         if ($playoff === null || $playoff->status !== PlayoffStatus::Active) {
             return back()->withErrors(['playoff' => 'Playoffs are not active.']);

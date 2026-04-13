@@ -21,7 +21,7 @@ uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 function makeLeagueWithTeamAndPokemon(): array
 {
     $owner = User::factory()->create();
-    $league = League::create(['name' => 'Activity Log League', 'status' => 1, 'open' => true, 'league_owner' => $owner->id]);
+    $league = League::create(['name' => 'Activity Log League', 'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value, 'open' => true, 'league_owner' => $owner->id]);
     DraftConfig::create(['league_id' => $league->id, 'draft_points' => 80, 'minimum_drafts' => 0, 'enforce_round_count' => false, 'ban_enabled' => false]);
     $team = Team::create(['name' => 'Team A', 'league_id' => $league->id, 'user_id' => $owner->id, 'pick_position' => 1, 'draft_points' => 80, 'victory_points' => 0, 'set_wins' => 0, 'set_losses' => 0, 'game_wins' => 0, 'game_losses' => 0]);
     $pokedex = Pokedex::create(['nationaldex_id' => 25, 'name' => 'Pikachu', 'type1' => 'Electric', 'type2' => null, 'sprite_url' => null]);

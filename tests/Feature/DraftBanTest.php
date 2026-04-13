@@ -22,7 +22,7 @@ function createLeagueWithBans(int $bansPerUser = 2, int $minimumCostToBan = 3, i
 {
     $league = League::create([
         'name' => 'Test League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::Staging->value,
         'open' => true,
         'league_owner' => User::factory()->create()->id,
         'discord_webhook_url' => $discordWebhookUrl,
@@ -150,7 +150,7 @@ test('draft creation with ban_enabled creates both Bans and BanOrder records', f
 test('draft creation without ban_enabled creates no Bans or BanOrder records', function () {
     $league = League::create([
         'name' => 'No Ban League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::Staging->value,
         'open' => true,
         'league_owner' => User::factory()->create()->id,
     ]);
@@ -226,7 +226,7 @@ test('abort_draft resets banned flag on league pokemon', function () {
 test('LeaguePokemon banned field defaults to false', function () {
     $league = League::create([
         'name' => 'Ban Field Test',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::Staging->value,
         'open' => true,
         'league_owner' => User::factory()->create()->id,
     ]);
@@ -323,7 +323,7 @@ test('BanPokemonAction throws when pokemon is below minimum cost to ban', functi
 test('DraftConfig bans_per_user and minimum_cost_to_ban are stored correctly', function () {
     $league = League::create([
         'name' => 'Config Test',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::Staging->value,
         'open' => true,
         'league_owner' => User::factory()->create()->id,
     ]);

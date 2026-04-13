@@ -5,6 +5,8 @@ namespace App\Modules\Trade\Actions;
 use App\Enums\Trade\TradeCounterparty;
 use App\Models\User;
 use App\Modules\Draft\Models\DraftConfig;
+use App\Modules\League\Enums\LeagueStatus;
+use App\Modules\League\Models\League;
 use App\Modules\League\Models\LeaguePokemon;
 use App\Modules\Teams\Models\Team;
 use App\Modules\Trade\Models\Trade;
@@ -25,6 +27,10 @@ class CreateTradeAction
             'requested_pokemon_ids' => ['required', 'array', 'min:1'],
             'requested_pokemon_ids.*' => ['integer', 'exists:league_pokemon,id'],
         ]);
+
+        $league = League::query()->with('draftConfig')->findOrFail($request->integer('league_id'));
+
+        $this->validateLeagueAllowsTrades($league);
 
         if (! $request->user()->discord_id) {
             throw ValidationException::withMessages([
@@ -49,8 +55,12 @@ class CreateTradeAction
 
         $this->validatePokemonOwnership($offeredIds, $requestingTeam->id, $request->league_id, 'offered');
         $this->validatePokemonOwnership($requestedIds, $targetTeam->id, $request->league_id, 'requested');
-        $this->validateTradeCount($requestingTeam, count($requestedIds));
-        $this->validateTargetTradeCount($targetTeam, count($offeredIds));
+
+        if (! $league->isFreeTradeWindowActive()) {
+            $this->validateTradeCount($requestingTeam, count($requestedIds));
+            $this->validateTargetTradeCount($targetTeam, count($offeredIds));
+        }
+
         $this->validateMinimumRoster($requestingTeam, $request->league_id, count($offeredIds), count($requestedIds));
         $this->validateMinimumRoster($targetTeam, $request->league_id, count($requestedIds), count($offeredIds));
 
@@ -86,6 +96,27 @@ class CreateTradeAction
         }
 
         return $trade;
+    }
+
+    private function validateLeagueAllowsTrades(League $league): void
+    {
+        $allowed = match ($league->status) {
+            LeagueStatus::RegularSeason, LeagueStatus::Playoffs => true,
+            LeagueStatus::Staging => $league->isFreeTradeWindowActive(),
+            default => false,
+        };
+
+        if (! $allowed) {
+            throw ValidationException::withMessages([
+                'league_id' => 'Trades are not allowed during the current league phase.',
+            ]);
+        }
+
+        if ($league->isTradeDeadlinePassed()) {
+            throw ValidationException::withMessages([
+                'league_id' => 'The trade deadline for this league has passed.',
+            ]);
+        }
     }
 
     /**

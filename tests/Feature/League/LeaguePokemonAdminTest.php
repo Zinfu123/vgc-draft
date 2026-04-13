@@ -16,7 +16,7 @@ function createLeagueWithAdmin(): array
     $owner = User::factory()->create();
     $league = League::query()->create([
         'name' => 'LP Test',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::Registration->value,
         'league_owner' => $owner->id,
         'maximum_teams' => 8,
     ]);

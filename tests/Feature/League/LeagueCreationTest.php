@@ -28,6 +28,8 @@ function baseLeagueCreatePayload(array $overrides = []): array
         'ban_enabled' => false,
         'playoff_format' => PlayoffFormat::SingleElimination->value,
         'playoff_bracket_size' => 4,
+        'playoffs_enabled' => true,
+        'free_trade_window_hours' => 24,
     ], $overrides);
 }
 
@@ -192,4 +194,50 @@ it('stores require_showdown_username as false by default when creating a league'
     $league = \App\Modules\League\Models\League::where('name', 'Showdown Optional League')->first();
     expect($league)->not->toBeNull();
     expect($league->require_showdown_username)->toBeFalse();
+});
+
+it('includes the league status in the leagues index page data', function () {
+    $user = User::factory()->create();
+
+    $activeLeague = \App\Modules\League\Models\League::create([
+        'name' => 'Active League',
+        'league_owner' => $user->id,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
+        'set_frequency' => 7,
+    ]);
+
+    $pastLeague = \App\Modules\League\Models\League::create([
+        'name' => 'Past League',
+        'league_owner' => $user->id,
+        'status' => \App\Modules\League\Enums\LeagueStatus::Completed->value,
+        'set_frequency' => 7,
+    ]);
+
+    \App\Modules\Draft\Models\DraftConfig::create([
+        'league_id' => $activeLeague->id,
+        'draft_date' => '2026-05-01',
+        'draft_start_at' => '2026-05-01 18:00:00',
+        'draft_points' => 80,
+        'ban_enabled' => false,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('leagues.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('league/LeagueIndex')
+            ->has('currentLeagues', 1, fn ($league) => $league
+                ->where('id', $activeLeague->id)
+                ->where('status', \App\Modules\League\Enums\LeagueStatus::RegularSeason->value)
+                ->has('draft_config')
+                ->where('draft_config.draft_date', '2026-05-01T00:00:00.000000Z')
+                ->whereNot('draft_config.draft_start_at', null)
+                ->etc()
+            )
+            ->has('pastLeagues', 1, fn ($league) => $league
+                ->where('id', $pastLeague->id)
+                ->where('status', \App\Modules\League\Enums\LeagueStatus::Completed->value)
+                ->etc()
+            )
+        );
 });

@@ -7,7 +7,10 @@ use App\Http\Requests\League\ApplyLeaguePokemonTemplateRequest;
 use App\Http\Requests\League\ImportLeaguePokemonCsvRequest;
 use App\Http\Requests\League\StoreLeaguePokemonRequest;
 use App\Http\Requests\League\UpdateLeaguePokemonCostRequest;
+use App\Modules\League\Actions\LeagueDetailLayoutDataAction;
 use App\Modules\League\Actions\ReadLeaguePokemonAction;
+use App\Modules\League\Enums\LeagueStagingStatus;
+use App\Modules\League\Enums\LeagueStatus;
 use App\Modules\League\Models\League;
 use App\Modules\League\Models\LeaguePokemon;
 use App\Modules\League\Models\LeaguePokemonTemplate;
@@ -32,9 +35,11 @@ class LeaguePokemonAdminController extends Controller
         League $league,
         ReadLeaguePokemonAction $readLeaguePokemonAction,
         LeaguePokemonPoolReplaceEvaluator $replaceEvaluator,
+        LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction,
     ): Response {
         $this->authorize('admin', $league);
 
+        $layoutData = $leagueDetailLayoutDataAction($league);
         $verdict = $replaceEvaluator->evaluate($league);
         $hasPool = LeaguePokemon::query()->where('league_id', $league->id)->exists();
 
@@ -58,7 +63,7 @@ class LeaguePokemonAdminController extends Controller
             ]);
 
         return Inertia::render('league/admin/LeaguePokemonPool', [
-            'league' => ['id' => $league->id, 'name' => $league->name],
+            ...$layoutData,
             'templates' => $templates,
             'pool' => $readLeaguePokemonAction(['league_id' => $league->id, 'command' => 'all_with_status']),
             'poolReplace' => [
@@ -126,12 +131,23 @@ class LeaguePokemonAdminController extends Controller
         return response()->json($rows);
     }
 
+    private function abortIfPoolNotEditable(League $league): void
+    {
+        $allowed = $league->status === LeagueStatus::Registration
+            || ($league->status === LeagueStatus::Staging && $league->staging_sub_status === LeagueStagingStatus::PreDraft);
+
+        if (! $allowed) {
+            abort(403, 'The Pokémon pool cannot be edited during the current league phase.');
+        }
+    }
+
     public function applyTemplate(
         ApplyLeaguePokemonTemplateRequest $request,
         League $league,
         LeaguePokemonTemplate $template,
         ApplyLeaguePokemonTemplateService $applyService,
     ): RedirectResponse {
+        $this->abortIfPoolNotEditable($league);
         try {
             $applyService->apply($league, $template, $request->boolean('confirm_replace'));
         } catch (InvalidArgumentException $e) {
@@ -150,6 +166,8 @@ class LeaguePokemonAdminController extends Controller
         League $league,
         LeaguePokemon $leaguePokemon,
     ): RedirectResponse {
+        $this->abortIfPoolNotEditable($league);
+
         $leaguePokemon->cost = $request->integer('cost');
         $leaguePokemon->save();
 
@@ -162,6 +180,7 @@ class LeaguePokemonAdminController extends Controller
         LeaguePokemonDeletionEvaluator $deletionEvaluator,
     ): RedirectResponse {
         $this->authorize('admin', $league);
+        $this->abortIfPoolNotEditable($league);
 
         if ((int) $leaguePokemon->league_id !== (int) $league->id) {
             abort(404);
@@ -183,6 +202,8 @@ class LeaguePokemonAdminController extends Controller
         StoreLeaguePokemonRequest $request,
         League $league,
     ): RedirectResponse {
+        $this->abortIfPoolNotEditable($league);
+
         $pokedex = Pokedex::query()->findOrFail($request->integer('pokedex_id'));
 
         LeaguePokemon::query()->updateOrCreate(
@@ -204,6 +225,8 @@ class LeaguePokemonAdminController extends Controller
         League $league,
         ImportLeaguePokemonToLeagueFromCsvService $importCsv,
     ): RedirectResponse {
+        $this->abortIfPoolNotEditable($league);
+
         $result = $importCsv->import($league->id, $request->file('csv_file'));
 
         $message = "Imported {$result['upserted']} Pokémon (CSV).";

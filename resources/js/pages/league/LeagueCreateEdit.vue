@@ -47,6 +47,8 @@ interface Props {
     playoff_bracket_size: number;
     playoff_format_options: PlayoffFormatOption[];
     playoff_bracket_size_options: number[];
+    playoffs_enabled: boolean;
+    free_trade_window_hours: number;
     require_showdown_username: boolean;
 }
 
@@ -73,6 +75,8 @@ const props = withDefaults(defineProps<Props>(), {
     playoff_bracket_size: 4,
     playoff_format_options: () => [],
     playoff_bracket_size_options: () => [2, 4, 6, 8, 16, 32],
+    playoffs_enabled: true,
+    free_trade_window_hours: 24,
     require_showdown_username: false,
 });
 
@@ -111,6 +115,8 @@ const form = useForm({
     draft_start_at: props.draft_start_at ? toDatetimeLocalValue(props.draft_start_at) : '',
     playoff_format: props.playoff_format,
     playoff_bracket_size: props.playoff_bracket_size,
+    playoffs_enabled: props.playoffs_enabled,
+    free_trade_window_hours: props.free_trade_window_hours,
     require_showdown_username: props.require_showdown_username,
 });
 
@@ -531,41 +537,72 @@ const submit = () => {
                                 <strong class="text-foreground dark:text-neutral-200">Admin → Playoffs</strong> after the regular season. Choosing
                                 the format and size here sets the default for that screen.
                             </p>
-                            <div class="grid gap-2">
-                                <Label for="playoff_format">Playoff format</Label>
-                                <select
-                                    id="playoff_format"
-                                    v-model="form.playoff_format"
-                                    class="border-input bg-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none"
-                                >
-                                    <option v-for="opt in playoff_format_options" :key="opt.value" :value="opt.value">
-                                        {{ opt.label }}
-                                    </option>
-                                </select>
-                                <p
-                                    v-if="!playoff_format_options.find((o) => o.value === form.playoff_format)?.bracket_generation_supported"
-                                    class="text-muted-foreground text-xs dark:text-neutral-500"
-                                >
-                                    Auto-generating the bracket in the app currently supports single elimination only; double elimination can be
-                                    chosen to match how you run the league manually.
-                                </p>
-                                <InputError :message="form.errors.playoff_format" />
+                            <div class="flex items-start gap-3">
+                                <input
+                                    id="playoffs_enabled"
+                                    v-model="form.playoffs_enabled"
+                                    type="checkbox"
+                                    class="mt-0.5 size-4 rounded border-input"
+                                />
+                                <div class="grid gap-0.5">
+                                    <Label for="playoffs_enabled" class="cursor-pointer">Enable playoffs</Label>
+                                    <p class="text-muted-foreground text-xs dark:text-neutral-500">
+                                        If disabled, the commissioner can finalize the league directly from the regular season standings.
+                                    </p>
+                                </div>
                             </div>
+                            <template v-if="form.playoffs_enabled">
+                                <div class="grid gap-2">
+                                    <Label for="playoff_format">Playoff format</Label>
+                                    <select
+                                        id="playoff_format"
+                                        v-model="form.playoff_format"
+                                        class="border-input bg-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none"
+                                    >
+                                        <option v-for="opt in playoff_format_options" :key="opt.value" :value="opt.value">
+                                            {{ opt.label }}
+                                        </option>
+                                    </select>
+                                    <p
+                                        v-if="!playoff_format_options.find((o) => o.value === form.playoff_format)?.bracket_generation_supported"
+                                        class="text-muted-foreground text-xs dark:text-neutral-500"
+                                    >
+                                        Auto-generating the bracket in the app currently supports single elimination only; double elimination can be
+                                        chosen to match how you run the league manually.
+                                    </p>
+                                    <InputError :message="form.errors.playoff_format" />
+                                </div>
+                                <div class="grid gap-2">
+                                    <Label for="playoff_bracket_size">Teams in the playoff bracket</Label>
+                                    <select
+                                        id="playoff_bracket_size"
+                                        v-model.number="form.playoff_bracket_size"
+                                        class="border-input bg-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none"
+                                    >
+                                        <option v-for="n in playoff_bracket_size_options" :key="n" :value="n">
+                                            Top {{ n }}
+                                        </option>
+                                    </select>
+                                    <p class="text-muted-foreground text-xs dark:text-neutral-500">
+                                        Standard sizes: 4, 8, or 16. "6" is supported as a special bracket shape in this app.
+                                    </p>
+                                    <InputError :message="form.errors.playoff_bracket_size" />
+                                </div>
+                            </template>
+
                             <div class="grid gap-2">
-                                <Label for="playoff_bracket_size">Teams in the playoff bracket</Label>
-                                <select
-                                    id="playoff_bracket_size"
-                                    v-model.number="form.playoff_bracket_size"
-                                    class="border-input bg-background focus-visible:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-sm transition-colors focus-visible:ring-1 focus-visible:outline-none"
-                                >
-                                    <option v-for="n in playoff_bracket_size_options" :key="n" :value="n">
-                                        Top {{ n }}
-                                    </option>
-                                </select>
+                                <Label for="free_trade_window_hours">Free trade window after draft (hours)</Label>
+                                <Input
+                                    id="free_trade_window_hours"
+                                    v-model.number="form.free_trade_window_hours"
+                                    type="number"
+                                    min="0"
+                                    step="1"
+                                />
                                 <p class="text-muted-foreground text-xs dark:text-neutral-500">
-                                    Standard sizes: 4, 8, or 16. “6” is supported as a special bracket shape in this app.
+                                    After the draft ends, trades are free for this many hours before normal trade rules apply. Set to 0 to disable.
                                 </p>
-                                <InputError :message="form.errors.playoff_bracket_size" />
+                                <InputError :message="form.errors.free_trade_window_hours" />
                             </div>
                         </div>
 
@@ -651,7 +688,13 @@ const submit = () => {
                                         <span v-else>Regular season: no fixed round cap in settings (you control when playoffs start).</span>
                                     </li>
                                     <li>
-                                        Playoffs: {{ playoffFormatLabel }}, top {{ form.playoff_bracket_size }} teams (seeding in Admin).
+                                        <span v-if="form.playoffs_enabled">
+                                            Playoffs: {{ playoffFormatLabel }}, top {{ form.playoff_bracket_size }} teams (seeding in Admin).
+                                        </span>
+                                        <span v-else>No playoffs — commissioner finalizes league from standings.</span>
+                                    </li>
+                                    <li>
+                                        Free trade window: {{ form.free_trade_window_hours > 0 ? `${form.free_trade_window_hours} hours after draft` : 'disabled' }}.
                                     </li>
                                     <li>
                                         <span v-if="form.draft_start_at">

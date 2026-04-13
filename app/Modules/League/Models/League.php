@@ -3,7 +3,10 @@
 namespace App\Modules\League\Models;
 
 use App\Enums\PokemonGame;
+use App\Modules\League\Enums\LeagueStagingStatus;
+use App\Modules\League\Enums\LeagueStatus;
 use App\Modules\Pokedex\Models\VersionGroup;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
@@ -18,6 +21,10 @@ class League extends Model
     protected $fillable = [
         'name',
         'status',
+        'staging_sub_status',
+        'free_trade_window_hours',
+        'playoffs_enabled',
+        'trade_deadline_at',
         'winner',
         'set_frequency',
         'logo',
@@ -51,6 +58,11 @@ class League extends Model
             'pokemon_generation' => 'integer',
             'pokemon_game' => PokemonGame::class,
             'require_showdown_username' => 'boolean',
+            'playoffs_enabled' => 'boolean',
+            'free_trade_window_hours' => 'integer',
+            'trade_deadline_at' => 'datetime',
+            'status' => LeagueStatus::class,
+            'staging_sub_status' => LeagueStagingStatus::class,
         ];
     }
 
@@ -62,6 +74,46 @@ class League extends Model
     public function routeNotificationForDiscordReplay(): ?string
     {
         return $this->discord_replay_webhook_url ?: $this->discord_webhook_url ?: null;
+    }
+
+    /**
+     * Whether the trade deadline has passed and trades are locked.
+     */
+    public function isTradeDeadlinePassed(): bool
+    {
+        return $this->trade_deadline_at !== null && Carbon::now()->gte($this->trade_deadline_at);
+    }
+
+    /**
+     * Whether the league is in a running state (Registration through Playoffs).
+     */
+    public function isActive(): bool
+    {
+        return $this->status->isActive();
+    }
+
+    /**
+     * Whether the free trade window is currently open.
+     * Requires the league to be in Staging with FreeTradeWindow sub-status,
+     * and the window to not have expired yet.
+     */
+    public function isFreeTradeWindowActive(): bool
+    {
+        if ($this->status !== LeagueStatus::Staging) {
+            return false;
+        }
+
+        if ($this->staging_sub_status !== LeagueStagingStatus::FreeTradeWindow) {
+            return false;
+        }
+
+        $draftEndedAt = $this->draftConfig?->draft_ended_at;
+
+        if ($draftEndedAt === null) {
+            return false;
+        }
+
+        return Carbon::now()->lt($draftEndedAt->addHours($this->free_trade_window_hours));
     }
 
     public function teams(): \Illuminate\Database\Eloquent\Relations\HasMany

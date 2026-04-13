@@ -4,6 +4,7 @@ namespace App\Modules\Playoffs\Services;
 
 use App\Enums\Playoffs\PlayoffFormat;
 use App\Enums\Playoffs\PlayoffStatus;
+use App\Modules\League\Enums\LeagueStatus;
 use App\Modules\League\Models\League;
 use App\Modules\Playoffs\Models\Playoff;
 use App\Modules\Playoffs\Models\PlayoffMatch;
@@ -316,7 +317,7 @@ class PlayoffBracketService
             $league = League::query()->find($playoff->league_id);
             if ($league !== null) {
                 $league->winner = $firstTeam->user_id;
-                $league->status = 0;
+                $league->status = LeagueStatus::Completed;
                 $league->save();
             }
 
@@ -338,7 +339,7 @@ class PlayoffBracketService
             $league = League::query()->find($playoff->league_id);
             if ($league !== null) {
                 $league->winner = null;
-                $league->status = 1;
+                $league->status = LeagueStatus::Playoffs;
                 $league->save();
             }
         });

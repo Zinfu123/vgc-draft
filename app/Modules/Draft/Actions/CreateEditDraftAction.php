@@ -7,6 +7,8 @@ use App\Modules\Draft\Models\Bans;
 use App\Modules\Draft\Models\Draft;
 use App\Modules\Draft\Models\DraftOrder;
 use App\Modules\Draft\Models\DraftPick;
+use App\Modules\League\Enums\LeagueStagingStatus;
+use App\Modules\League\Enums\LeagueStatus;
 use App\Modules\League\Models\League;
 use App\Modules\League\Models\LeaguePokemon;
 use App\Modules\Teams\Models\Team;
@@ -33,6 +35,8 @@ class CreateEditDraftAction
             $draft->save();
             $league = League::where('id', $data['league_id'])->first();
             $league->open = false;
+            $league->status = LeagueStatus::Staging;
+            $league->staging_sub_status = LeagueStagingStatus::DraftInProgress;
             $league->save();
 
             activity()
@@ -76,13 +80,27 @@ class CreateEditDraftAction
 
             $this->adjustSetStartDateIfNeeded((int) $data['league_id']);
 
+            $league = League::with('draftConfig')->find($data['league_id']);
+
+            if ($league !== null) {
+                $draftConfig = $league->draftConfig;
+
+                if ($draftConfig !== null) {
+                    $draftConfig->draft_ended_at = Carbon::now();
+                    $draftConfig->save();
+                }
+
+                $league->status = LeagueStatus::Staging;
+                $league->staging_sub_status = LeagueStagingStatus::FreeTradeWindow;
+                $league->save();
+
+                $league->notify(new DraftEndedNotification($league));
+            }
+
             activity()
                 ->performedOn($draft)
                 ->withProperties(['league_id' => $data['league_id']])
                 ->log('Draft finalized');
-
-            $league = League::find($data['league_id']);
-            $league->notify(new DraftEndedNotification($league));
         } elseif ($data['command'] == 'revert_last_pick') {
             /* Revert the last picked pokemon */
             $lastPickedPokemonID = DraftPick::where('league_id', $data['league_id'])->orderBy('round_number', 'desc')->orderBy('pick_number', 'desc')->first()->league_pokemon_id;
@@ -169,8 +187,15 @@ class CreateEditDraftAction
                 $team->save();
             }
 
-            $league = League::where('id', $data['league_id'])->first();
+            $league = League::with('draftConfig')->where('id', $data['league_id'])->first();
             $league->open = true;
+            $league->status = LeagueStatus::Registration;
+            $league->staging_sub_status = null;
+            $draftConfig = $league->draftConfig;
+            if ($draftConfig !== null) {
+                $draftConfig->draft_ended_at = null;
+                $draftConfig->save();
+            }
             $league->save();
         }
     }

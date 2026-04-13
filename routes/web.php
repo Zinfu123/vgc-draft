@@ -67,25 +67,34 @@ Route::get('pool-templates/{slug}/preview', [PoolTemplateCatalogController::clas
     ->name('pool-templates.preview');
 
 Route::get('usage-stats', [PokemonUsageStatsController::class, 'index'])->middleware(['auth', 'verified'])->name('usage-stats.index');
+Route::get('usage-stats/{pokedex_id}', [PokemonUsageStatsController::class, 'show'])->middleware(['auth', 'verified'])->name('usage-stats.show');
 
 // League Routes
 Route::prefix('leagues')->group(function () {
     Route::get('/', [LeagueController::class, 'index'])->middleware(['auth', 'verified'])->name('leagues.index');
     Route::get('/create-edit', [LeagueController::class, 'createEditShow'])->middleware(['auth', 'verified'])->name('leagues.create-edit');
     Route::get('/{league}', [LeagueController::class, 'show'])->middleware(['auth', 'verified'])->name('leagues.detail');
-    Route::get('/{league}/teams', [LeagueController::class, 'showTeams'])->middleware(['auth', 'verified'])->name('leagues.teams');
-    Route::get('/{league}/matches', [LeagueController::class, 'showMatches'])->middleware(['auth', 'verified'])->name('leagues.matches');
-    Route::get('/{league}/standings', [LeagueController::class, 'showStandings'])->middleware(['auth', 'verified'])->name('leagues.standings');
-    Route::get('/{league}/playoffs', [LeagueController::class, 'showPlayoffs'])->middleware(['auth', 'verified'])->name('leagues.playoffs');
+    Route::get('/{league}/dashboard', [LeagueController::class, 'showDashboard'])->middleware(['auth', 'verified'])->name('leagues.dashboard');
+    Route::get('/{league}/rosters', [LeagueController::class, 'showTeams'])->middleware(['auth', 'verified'])->name('leagues.rosters');
+    Route::get('/{league}/schedule', [LeagueController::class, 'showSchedule'])->middleware(['auth', 'verified'])->name('leagues.schedule');
+    // Legacy redirects — keep named routes working for any existing links
+    Route::get('/{league}/teams', fn ($league) => redirect()->route('leagues.rosters', ['league' => $league]))->middleware(['auth', 'verified'])->name('leagues.teams');
+    Route::get('/{league}/matches', fn ($league) => redirect()->route('leagues.schedule', ['league' => $league]))->middleware(['auth', 'verified'])->name('leagues.matches');
+    Route::get('/{league}/standings', fn ($league) => redirect()->route('leagues.schedule', ['league' => $league, 'view' => 'standings']))->middleware(['auth', 'verified'])->name('leagues.standings');
+    Route::get('/{league}/playoffs', fn ($league) => redirect()->route('leagues.schedule', ['league' => $league, 'view' => 'playoffs']))->middleware(['auth', 'verified'])->name('leagues.playoffs');
     Route::get('/{league}/stats', [LeagueController::class, 'showStats'])->middleware(['auth', 'verified'])->name('leagues.stats');
-    Route::get('/{league}/trades', [TradeController::class, 'index'])->middleware(['auth', 'verified'])->name('leagues.trades');
+    Route::get('/{league}/trades', fn ($league) => redirect()->route('leagues.dashboard', ['league' => $league]))->middleware(['auth', 'verified'])->name('leagues.trades');
     Route::post('/{league}/trades', [TradeController::class, 'create'])->middleware(['auth', 'verified'])->name('leagues.trades.create');
     Route::post('/{league}/trades/free-agency', [TradeController::class, 'freeAgency'])->middleware(['auth', 'verified'])->name('leagues.trades.free-agency');
     Route::put('/{league}/trades/{trade}', [TradeController::class, 'respond'])->middleware(['auth', 'verified'])->name('leagues.trades.respond');
     Route::post('/{league}/trades/set-team-trades', [TradeController::class, 'setTeamTrades'])->middleware(['auth', 'verified'])->name('leagues.trades.set-team-trades');
     Route::get('/{league}/draft', [LeagueController::class, 'showDraft'])->middleware(['auth', 'verified'])->name('leagues.draft');
     Route::post('/', [LeagueController::class, 'create'])->middleware(['auth', 'verified'])->name('leagues.create');
-    Route::post('/{league}/set-winner', [LeagueController::class, 'setWinner'])->middleware(['auth', 'verified'])->name('leagues.set-winner');
+    Route::post('/{league}/cancel', [LeagueController::class, 'cancelLeague'])->middleware(['auth', 'verified'])->name('leagues.cancel');
+    Route::post('/{league}/start-regular-season', [LeagueController::class, 'startRegularSeason'])->middleware(['auth', 'verified'])->name('leagues.start-regular-season');
+    Route::post('/{league}/start-playoffs', [LeagueController::class, 'startPlayoffs'])->middleware(['auth', 'verified'])->name('leagues.start-playoffs');
+    Route::post('/{league}/finalize', [LeagueController::class, 'finalizeRegularSeason'])->middleware(['auth', 'verified'])->name('leagues.finalize');
+    Route::patch('/{league}/trade-deadline', [LeagueController::class, 'updateTradeDeadline'])->middleware(['auth', 'verified'])->name('leagues.trade-deadline.update');
     Route::post('/{league}/discord-webhook', [LeagueController::class, 'updateDiscordWebhook'])->middleware(['auth', 'verified'])->name('leagues.discord-webhook');
     Route::get('/{league}/admin', [LeagueController::class, 'showAdmin'])->middleware(['auth', 'verified'])->name('leagues.admin');
     Route::get('/{league}/admin/match-config', [LeagueController::class, 'showAdminMatchConfig'])->middleware(['auth', 'verified'])->name('leagues.admin.match-config');

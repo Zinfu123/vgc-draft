@@ -18,6 +18,8 @@ interface League {
     draft_date: string;
     set_start_date: string;
     league_owner: number;
+    status: number;
+    playoffs_enabled: boolean;
 }
 
 interface Team {

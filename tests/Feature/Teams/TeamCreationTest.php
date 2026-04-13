@@ -13,7 +13,7 @@ function createLeagueWithPool(): array
 {
     $league = League::create([
         'name' => 'Test League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::Registration->value,
         'draft_points' => 80,
         'league_owner' => 1,
         'maximum_teams' => 10,
@@ -61,7 +61,7 @@ it('does not fail team creation when no pool exists for the league', function ()
 
     $league = League::create([
         'name' => 'No Pool League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::Registration->value,
         'draft_points' => 80,
         'league_owner' => $user->id,
         'maximum_teams' => 10,

@@ -111,7 +111,7 @@ function createLeagueDraftCsvFixtureContext(): array
     $owner = User::factory()->create();
     $league = League::create([
         'name' => 'CSV Import League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'league_owner' => $owner->id,
     ]);
 

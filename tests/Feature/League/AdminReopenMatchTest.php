@@ -13,7 +13,7 @@ function createLeagueWithAdminTeamAndPool(User $admin): array
 {
     $league = League::create([
         'name' => 'Test League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'draft_points' => 100,
         'league_owner' => $admin->id,
     ]);

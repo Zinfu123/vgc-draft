@@ -1,17 +1,45 @@
 <script setup lang="ts">
-import HeadingSmall from '@/components/HeadingSmall.vue';
+import type { LeagueDetailSection } from '@/components/league/LeagueDetailLayout.vue';
+import CommissionerSubNav from '@/components/league/CommissionerSubNav.vue';
+import LeagueDetailLayout from '@/components/league/LeagueDetailLayout.vue';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import AppLayout from '@/layouts/AppLayout.vue';
-import AdminLayout from '@/layouts/league/AdminLayout.vue';
-import { type BreadcrumbItem } from '@/types';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
 import { computed, nextTick, ref, watch } from 'vue';
 
 interface League {
     id: number;
     name: string;
+    logo?: string;
+    draft_date: string;
+    set_start_date: string;
+    league_owner: number;
+    status: number;
+    playoffs_enabled: boolean;
+}
+
+interface Team {
+    id: number;
+    name: string;
+    coach: string;
+    user_id: number;
+}
+
+interface Draft {
+    id: number | null;
+    round_number: number;
+    pick_number: number;
+    status: number;
+}
+
+interface MatchConfig {
+    id: number;
+    league_id: number;
+    number_of_pools: number;
+    frequency_type: number;
+    frequency_value: number;
+    status: number;
 }
 
 interface TemplateVersionGroup {
@@ -87,6 +115,11 @@ interface PaginatedPokedex {
 
 const props = defineProps<{
     league: League;
+    section: LeagueDetailSection;
+    teams: Team[];
+    draft: Draft | null;
+    adminFlag: boolean | number;
+    matchConfig: MatchConfig | null;
     templates: TemplateSummary[];
     pool: PoolRow[];
     poolReplace: PoolReplaceInfo;
@@ -96,12 +129,6 @@ const props = defineProps<{
 
 const page = usePage();
 const flashSuccess = computed(() => (page.props.flash as { success?: string } | undefined)?.success);
-
-const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Leagues', href: '/leagues' },
-    { title: props.league.name, href: `/leagues/${props.league.id}` },
-    { title: 'Admin', href: '#' },
-];
 
 function xsrfToken(): string {
     const m = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);
@@ -330,15 +357,24 @@ const templateApplyError = computed(() => {
 </script>
 
 <template>
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <Head :title="`${props.league.name} — Pokémon pool`" />
+    <LeagueDetailLayout
+        :league="league"
+        section="commissioner"
+        :teams="teams"
+        :draft="draft"
+        :adminFlag="adminFlag"
+        :matchConfig="matchConfig"
+    >
+        <Head :title="`Pokémon Pool · ${league.name}`" />
 
-        <AdminLayout :league-id="props.league.id" :league-name="props.league.name">
-            <div class="flex max-w-4xl flex-col space-y-8">
-                <HeadingSmall
-                    title="League Pokémon pool"
-                    description="Apply a template, import CSV, search the Pokédex, and edit costs. Replacing the whole pool requires confirmation and is blocked once picks or trades reference pool rows."
-                />
+        <div class="flex flex-col gap-8">
+            <CommissionerSubNav :league="league" />
+
+        <div class="flex max-w-4xl flex-col space-y-8">
+            <div class="border-b border-border pb-3">
+                <h2 class="text-xl font-semibold">League Pokémon Pool</h2>
+                <p class="mt-0.5 text-sm text-muted-foreground">Apply a template, import CSV, search the Pokédex, and edit costs. Replacing the whole pool requires confirmation and is blocked once picks or trades reference pool rows.</p>
+            </div>
 
                 <div
                     v-if="flashSuccess"
@@ -476,7 +512,7 @@ const templateApplyError = computed(() => {
                     <p v-if="props.pool.length === 0" class="text-muted-foreground text-sm">No Pokémon in this pool yet.</p>
                 </section>
             </div>
-        </AdminLayout>
+        </div>
 
         <Dialog v-model:open="previewOpen">
             <DialogContent class="max-h-[90vh] max-w-3xl overflow-y-auto">
@@ -625,5 +661,5 @@ const templateApplyError = computed(() => {
                 </p>
             </DialogContent>
         </Dialog>
-    </AppLayout>
+    </LeagueDetailLayout>
 </template>

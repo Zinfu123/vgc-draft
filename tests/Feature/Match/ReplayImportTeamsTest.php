@@ -37,7 +37,7 @@ function createSetWithTwoSixPokemonRosters(): array
 
     $league = League::create([
         'name' => 'Replay Import League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'draft_points' => 100,
         'league_owner' => $owner->id,
     ]);
@@ -451,7 +451,7 @@ it('rejects p1 team id that is not part of the set', function () {
     $data = createSetWithTwoSixPokemonRosters();
     $otherLeague = League::create([
         'name' => 'Other',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'draft_points' => 100,
         'league_owner' => User::factory()->create()->id,
     ]);

@@ -14,6 +14,8 @@ interface League {
     draft_date: string;
     set_start_date: string;
     league_owner: number;
+    status: number;
+    playoffs_enabled: boolean;
 }
 
 interface Team {
@@ -57,8 +59,8 @@ const teamCountLabel = teamCount === 1 ? '1 team' : `${teamCount} teams`;
 </script>
 
 <template>
-    <LeagueDetailLayout :league="league" section="teams" :teams="teams" :draft="draft" :adminFlag="adminFlag" :matchConfig="matchConfig">
-        <Head :title="`Teams · ${league.name}`" />
+    <LeagueDetailLayout :league="league" section="rosters" :teams="teams" :draft="draft" :adminFlag="adminFlag" :matchConfig="matchConfig">
+        <Head :title="`Rosters · ${league.name}`" />
 
         <div class="relative">
             <BlobBackground>

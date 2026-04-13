@@ -21,7 +21,7 @@ function setWithTwoTeams(): array
 
     $league = League::create([
         'name' => 'Guard Test League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'draft_points' => 100,
         'league_owner' => $user1->id,
     ]);

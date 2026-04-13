@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import HeadingSmall from '@/components/HeadingSmall.vue';
+import type { LeagueDetailSection } from '@/components/league/LeagueDetailLayout.vue';
+import CommissionerSubNav from '@/components/league/CommissionerSubNav.vue';
+import LeagueDetailLayout from '@/components/league/LeagueDetailLayout.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import AppLayout from '@/layouts/AppLayout.vue';
-import AdminLayout from '@/layouts/league/AdminLayout.vue';
-import { type BreadcrumbItem } from '@/types';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref, watch } from 'vue';
 
@@ -19,6 +18,27 @@ interface League {
     id: number;
     name: string;
     logo?: string;
+    draft_date: string;
+    set_start_date: string;
+    league_owner: number;
+    status: number;
+    playoffs_enabled: boolean;
+}
+
+interface Draft {
+    id: number | null;
+    round_number: number;
+    pick_number: number;
+    status: number;
+}
+
+interface MatchConfig {
+    id: number;
+    league_id: number;
+    number_of_pools: number;
+    frequency_type: number;
+    frequency_value: number;
+    status: number;
 }
 
 interface Team {
@@ -62,19 +82,17 @@ interface PlayoffPayload {
 
 const props = defineProps<{
     league: League;
+    section: LeagueDetailSection;
     teams: Team[];
+    draft: Draft | null;
+    adminFlag: boolean | number;
+    matchConfig: MatchConfig | null;
     playoff: PlayoffPayload;
     allowedBracketSizes: number[];
     doubleEliminationSupported: boolean;
 }>();
 
 const page = usePage();
-
-const breadcrumbs: BreadcrumbItem[] = [
-    { title: 'Leagues', href: '/leagues' },
-    { title: props.league.name, href: `/leagues/${props.league.id}` },
-    { title: 'Admin', href: '#' },
-];
 
 function teamsByOrderedIds(seedIds: number[], teams: Team[]): Team[] {
     const map = new Map(teams.map((t) => [t.id, t]));
@@ -252,15 +270,24 @@ function canRecord(match: PlayoffMatchRow): boolean {
 </script>
 
 <template>
-    <AppLayout :breadcrumbs="breadcrumbs">
-        <Head :title="`${league.name} — Playoffs`" />
+    <LeagueDetailLayout
+        :league="league"
+        section="commissioner"
+        :teams="teams"
+        :draft="draft"
+        :adminFlag="adminFlag"
+        :matchConfig="matchConfig"
+    >
+        <Head :title="`Playoffs · ${league.name}`" />
 
-        <AdminLayout :league-id="league.id" :league-name="league.name">
+        <div class="flex flex-col gap-8">
+            <CommissionerSubNav :league="league" />
+
             <div class="flex max-w-3xl flex-col space-y-8">
-                <HeadingSmall
-                    title="Playoffs"
-                    description="Configure seeds from standings, generate a single-elimination bracket with a bronze match, then record results. Only league admins can change the bracket."
-                />
+                <div class="border-b border-border pb-3">
+                    <h2 class="text-xl font-semibold">Playoffs</h2>
+                    <p class="mt-0.5 text-sm text-muted-foreground">Configure seeds from standings, generate a single-elimination bracket with a bronze match, then record results. Only league admins can change the bracket.</p>
+                </div>
 
                 <div
                     v-if="(page.props as FlashProps).flash?.success"
@@ -435,6 +462,6 @@ function canRecord(match: PlayoffMatchRow): boolean {
                     </div>
                 </section>
             </div>
-        </AdminLayout>
-    </AppLayout>
+        </div>
+    </LeagueDetailLayout>
 </template>

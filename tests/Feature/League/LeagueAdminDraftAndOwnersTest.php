@@ -21,7 +21,7 @@ function createLeagueWithOwnerAndTwoTeams(): array
 
     $league = League::create([
         'name' => 'Admin Draft League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'league_owner' => $owner->id,
         'maximum_teams' => 10,
     ]);

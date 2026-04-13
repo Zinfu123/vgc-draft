@@ -33,7 +33,7 @@ class ListUserLeaguesForPrepAction
                 return [
                     'id' => $leagueId,
                     'name' => (string) $team->league->name,
-                    'status' => (int) $team->league->status,
+                    'status' => $team->league->status->value,
                     'team_id' => (int) $team->id,
                 ];
             })

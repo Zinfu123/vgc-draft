@@ -16,7 +16,7 @@ it('DraftNextTurnNotification toDiscord mentions discord id and includes draft u
     $owner = User::factory()->create();
     $league = League::create([
         'name' => 'Test League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::Staging->value,
         'open' => true,
         'league_owner' => $owner->id,
     ]);
@@ -38,7 +38,7 @@ it('DraftNextTurnNotification toDiscord uses ban copy for ban phase', function (
     $owner = User::factory()->create();
     $league = League::create([
         'name' => 'Ban League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::Staging->value,
         'open' => true,
         'league_owner' => $owner->id,
     ]);
@@ -58,7 +58,7 @@ it('NotifyDraftNextTurnAction does nothing when league has no discord webhook', 
 
     $league = League::create([
         'name' => 'No Webhook',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::Staging->value,
         'open' => true,
         'league_owner' => User::factory()->create()->id,
         'discord_webhook_url' => null,
@@ -81,7 +81,7 @@ it('NotifyDraftNextTurnAction does nothing when draft is finished', function () 
 
     $league = League::create([
         'name' => 'Ended',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::Staging->value,
         'open' => false,
         'league_owner' => User::factory()->create()->id,
         'discord_webhook_url' => 'https://discord.com/api/webhooks/test/token',

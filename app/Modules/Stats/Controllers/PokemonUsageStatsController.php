@@ -3,6 +3,8 @@
 namespace App\Modules\Stats\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Modules\Matches\Models\SetGameResult;
+use App\Modules\Pokedex\Models\Pokedex;
 use App\Modules\Stats\Models\PokemonUsageStat;
 use App\Modules\Stats\Models\PokemonUsageStatsMeta;
 use Illuminate\Http\Request;
@@ -80,6 +82,69 @@ class PokemonUsageStatsController extends Controller
                 'top_ko_labels' => collect($topKo)->pluck('name')->all(),
                 'top_ko_values' => collect($topKo)->pluck('ko_count')->map(fn ($v) => (int) $v)->all(),
             ],
+        ]);
+    }
+
+    public function show(int $pokedex_id): Response|\Illuminate\Http\Response
+    {
+        $pokedex = Pokedex::query()->find($pokedex_id);
+
+        if ($pokedex === null) {
+            abort(404);
+        }
+
+        $stat = PokemonUsageStat::query()
+            ->where('pokedex_id', $pokedex_id)
+            ->first();
+
+        $gameResults = SetGameResult::query()
+            ->where(function ($query) use ($pokedex_id) {
+                $query->whereJsonContains('p1_pokemon', $pokedex_id)
+                    ->orWhereJsonContains('p2_pokemon', $pokedex_id);
+            })
+            ->with(['set.team1', 'set.team2'])
+            ->get();
+
+        $games = $gameResults->map(function (SetGameResult $result) use ($pokedex_id): array {
+            $set = $result->set;
+            $isP1 = in_array($pokedex_id, (array) $result->p1_pokemon, true);
+            $myTeamId = $isP1 ? $result->p1_team_id : $result->p2_team_id;
+            $wonGame = $result->winner_team_id === $myTeamId;
+            $knockouts = $isP1 ? (array) $result->p1_knockouts : (array) $result->p2_knockouts;
+            $koCount = count(array_filter($knockouts, fn ($id) => $id == $pokedex_id));
+            $replayUrl = $set ? ($set->{'replay'.$result->game_number} ?? null) : null;
+
+            return [
+                'set_id' => $result->set_id,
+                'round' => $set?->round,
+                'game_number' => $result->game_number,
+                'team1_name' => $set?->team1?->name,
+                'team2_name' => $set?->team2?->name,
+                'team1_score' => $set?->team1_score,
+                'team2_score' => $set?->team2_score,
+                'won_game' => $wonGame,
+                'ko_count' => $koCount,
+                'replay_url' => $replayUrl,
+            ];
+        })->values()->all();
+
+        return Inertia::render('usage-stats/Show', [
+            'pokemon' => [
+                'pokedex_id' => $pokedex->id,
+                'name' => $pokedex->name,
+                'sprite_url' => $pokedex->sprite_url,
+                'type1' => $pokedex->type1,
+                'type2' => $pokedex->type2,
+            ],
+            'stat' => $stat ? [
+                'draft_pick_count' => $stat->draft_pick_count,
+                'draft_ban_count' => $stat->draft_ban_count,
+                'match_bring_count' => $stat->match_bring_count,
+                'game_wins' => $stat->game_wins,
+                'game_losses' => $stat->game_losses,
+                'ko_count' => (int) $stat->ko_count,
+            ] : null,
+            'games' => $games,
         ]);
     }
 }

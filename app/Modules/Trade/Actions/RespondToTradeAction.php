@@ -4,6 +4,7 @@ namespace App\Modules\Trade\Actions;
 
 use App\Enums\Trade\TradeCounterparty;
 use App\Modules\Draft\Models\DraftConfig;
+use App\Modules\League\Enums\LeagueStatus;
 use App\Modules\League\Models\LeaguePokemon;
 use App\Modules\Trade\Models\Trade;
 use Illuminate\Http\Request;
@@ -22,6 +23,9 @@ class RespondToTradeAction
                 'trade' => 'This trade is no longer pending.',
             ]);
         }
+
+        $trade->loadMissing(['league.draftConfig']);
+        $this->validateLeagueAllowsTrades($trade->league);
 
         if ($trade->counterparty === TradeCounterparty::FreeAgency) {
             throw ValidationException::withMessages([
@@ -71,6 +75,31 @@ class RespondToTradeAction
         }
     }
 
+    private function validateLeagueAllowsTrades(?\App\Modules\League\Models\League $league): void
+    {
+        if ($league === null) {
+            return;
+        }
+
+        $allowed = match ($league->status) {
+            LeagueStatus::RegularSeason, LeagueStatus::Playoffs => true,
+            LeagueStatus::Staging => $league->isFreeTradeWindowActive(),
+            default => false,
+        };
+
+        if (! $allowed) {
+            throw ValidationException::withMessages([
+                'trade' => 'Trades are not allowed during the current league phase.',
+            ]);
+        }
+
+        if ($league->isTradeDeadlinePassed()) {
+            throw ValidationException::withMessages([
+                'trade' => 'The trade deadline for this league has passed.',
+            ]);
+        }
+    }
+
     private function executeAcceptedTrade(Trade $trade): void
     {
         $trade->load([
@@ -78,24 +107,30 @@ class RespondToTradeAction
             'targetTeam',
             'offeredPokemon',
             'requestedPokemon',
+            'league.draftConfig',
         ]);
 
         $requestingTeam = $trade->requestingTeam;
         $targetTeam = $trade->targetTeam;
+        $isFreeWindow = $trade->league?->isFreeTradeWindowActive() ?? false;
 
         $offeredIds = $trade->offeredPokemon->pluck('league_pokemon_id')->toArray();
         $requestedIds = $trade->requestedPokemon->pluck('league_pokemon_id')->toArray();
 
-        $this->validateTradeCount($requestingTeam, count($requestedIds));
-        $this->validateTradeCount($targetTeam, count($offeredIds));
+        if (! $isFreeWindow) {
+            $this->validateTradeCount($requestingTeam, count($requestedIds));
+            $this->validateTradeCount($targetTeam, count($offeredIds));
+        }
         $this->validateMinimumRoster($requestingTeam, $trade->league_id, count($offeredIds), count($requestedIds));
         $this->validateMinimumRoster($targetTeam, $trade->league_id, count($requestedIds), count($offeredIds));
 
         LeaguePokemon::whereIn('id', $offeredIds)->update(['drafted_by' => $targetTeam->id]);
         LeaguePokemon::whereIn('id', $requestedIds)->update(['drafted_by' => $requestingTeam->id]);
 
-        $requestingTeam->decrement('trades', count($requestedIds));
-        $targetTeam->decrement('trades', count($offeredIds));
+        if (! $isFreeWindow) {
+            $requestingTeam->decrement('trades', count($requestedIds));
+            $targetTeam->decrement('trades', count($offeredIds));
+        }
 
         $trade->update(['status' => 'accepted']);
     }

@@ -20,7 +20,7 @@ it('saves a discord webhook url on the league', function () {
     $owner = User::factory()->create();
     $league = League::create([
         'name' => 'Test League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'league_owner' => $owner->id,
     ]);
 
@@ -36,7 +36,7 @@ it('clears the discord webhook url when an empty value is submitted', function (
     $owner = User::factory()->create();
     $league = League::create([
         'name' => 'Test League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'league_owner' => $owner->id,
         'discord_webhook_url' => 'https://discord.com/api/webhooks/123/abc',
     ]);
@@ -53,7 +53,7 @@ it('rejects an invalid url for the discord webhook', function () {
     $owner = User::factory()->create();
     $league = League::create([
         'name' => 'Test League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'league_owner' => $owner->id,
     ]);
 
@@ -68,7 +68,7 @@ it('requires authentication to update the discord webhook', function () {
     $owner = User::factory()->create();
     $league = League::create([
         'name' => 'Test League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'league_owner' => $owner->id,
     ]);
 

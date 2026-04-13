@@ -16,7 +16,7 @@ function createLeagueWithZeroPointTeams(): array
     $owner = User::factory()->create();
     $league = League::create([
         'name' => 'End Draft League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::Staging->value,
         'open' => true,
         'league_owner' => $owner->id,
     ]);

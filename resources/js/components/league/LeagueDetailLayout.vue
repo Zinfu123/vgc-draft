@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import AdminPanel from '@/components/league/AdminPanel.vue';
 import TeamForm from '@/components/team/TeamForm.vue';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
@@ -12,7 +11,10 @@ import { computed } from 'vue';
 
 const { isMobile } = useMobileLayout();
 
-export type LeagueDetailSection = 'teams' | 'matches' | 'standings' | 'trades' | 'draft' | 'pokemon' | 'playoffs' | 'stats';
+export type LeagueDetailSection = 'dashboard' | 'draft' | 'rosters' | 'schedule' | 'pokemon' | 'stats' | 'commissioner';
+
+// League status constants
+const LEAGUE_STATUS_REGISTRATION = 2;
 
 interface League {
     id: number;
@@ -22,6 +24,8 @@ interface League {
     set_start_date: string;
     league_owner: number;
     require_showdown_username?: boolean;
+    status: number;
+    playoffs_enabled: boolean;
 }
 
 interface Team {
@@ -84,16 +88,27 @@ const breadcrumbs: BreadcrumbItem[] = [
     { title: props.league.name, href: `/leagues/${props.league.id}` },
 ];
 
-const sections: { value: LeagueDetailSection; label: string; route: string }[] = [
-    { value: 'teams', label: 'Teams', route: 'leagues.teams' },
-    { value: 'matches', label: 'Matches', route: 'leagues.matches' },
-    { value: 'standings', label: 'Standings', route: 'leagues.standings' },
-    { value: 'playoffs', label: 'Playoffs', route: 'leagues.playoffs' },
-    { value: 'trades', label: 'Trades', route: 'leagues.trades' },
+const isAdmin = computed(() => props.adminFlag === true || props.adminFlag === 1);
+
+const baseSections: { value: LeagueDetailSection; label: string; route: string }[] = [
+    { value: 'dashboard', label: 'Dashboard', route: 'leagues.dashboard' },
     { value: 'draft', label: 'Draft', route: 'leagues.draft' },
-    { value: 'pokemon', label: 'Pokemon', route: 'leagues.pokemon' },
+    { value: 'rosters', label: 'Rosters', route: 'leagues.rosters' },
+    { value: 'schedule', label: 'Schedule', route: 'leagues.schedule' },
+    { value: 'pokemon', label: 'Pokémon', route: 'leagues.pokemon' },
     { value: 'stats', label: 'Stats', route: 'leagues.stats' },
 ];
+
+const sections = computed(() => {
+    if (isAdmin.value) {
+        return [
+            ...baseSections,
+            { value: 'commissioner' as LeagueDetailSection, label: 'Commissioner', route: 'leagues.admin' },
+        ];
+    }
+
+    return baseSections;
+});
 
 const draftHref = computed(() => {
     if (props.draft === null || props.draft.status === 0) {
@@ -102,12 +117,20 @@ const draftHref = computed(() => {
 
     return route('draft.detail', { league_id: props.league.id });
 });
+
+function sectionHref(s: { value: LeagueDetailSection; route: string }): string {
+    if (s.value === 'draft') {
+        return draftHref.value;
+    }
+
+    return route(s.route, { league: props.league.id });
+}
 </script>
 
 <template>
     <AppLayout :breadcrumbs="breadcrumbs">
         <Head :title="props.league.name" />
-        <div class="mx-auto w-full max-w-7xl px-4 pt-4 pb-10 sm:px-6 lg:px-8">
+        <div class="mx-auto w-full max-w-screen-2xl px-4 pt-4 pb-10 sm:px-6 lg:px-8">
             <!-- Showdown username required notice -->
             <div
                 v-if="needsShowdownWarning"
@@ -123,26 +146,11 @@ const draftHref = computed(() => {
                 </div>
             </div>
 
-            <div class="flex w-full justify-end">
-                <template v-if="!(props.adminFlag === true || props.adminFlag === 1)">
+            <div class="mt-2 flex items-center justify-between gap-4">
+                <h1 class="text-3xl font-bold">{{ props.league.name }}</h1>
+                <div class="shrink-0">
                     <TeamForm
-                        v-if="!coachexists && (!props.draft || props.draft?.status === 1)"
-                        :league_id="props.league.id"
-                        command="create"
-                        :user_team="null"
-                    />
-                    <TeamForm
-                        v-if="coachexists"
-                        :league_id="props.league.id"
-                        command="edit"
-                        :user_team="userTeam"
-                        :initial-open="needsShowdownWarning"
-                    />
-                </template>
-                <div v-if="props.adminFlag === true || props.adminFlag === 1" class="flex flex-col items-end gap-2">
-                    <AdminPanel :league="props.league" :draft="props.draft" />
-                    <TeamForm
-                        v-if="!coachexists && (!props.draft || props.draft?.status === 1)"
+                        v-if="!coachexists && props.league.status === LEAGUE_STATUS_REGISTRATION"
                         :league_id="props.league.id"
                         command="create"
                         :user_team="null"
@@ -155,9 +163,6 @@ const draftHref = computed(() => {
                         :initial-open="needsShowdownWarning"
                     />
                 </div>
-            </div>
-            <div class="mt-6 flex flex-col items-center">
-                <h1 class="text-3xl font-bold">{{ props.league.name }}</h1>
             </div>
             <div class="mt-4 w-full md:flex md:justify-center max-md:-mx-4 max-md:px-4">
                 <div
@@ -172,13 +177,13 @@ const draftHref = computed(() => {
                         :variant="props.section === s.value ? 'default' : 'outline'"
                         as-child
                     >
-                        <Link :href="s.value === 'draft' ? draftHref : route(s.route, { league: props.league.id })">{{ s.label }}</Link>
+                        <Link :href="sectionHref(s)">{{ s.label }}</Link>
                     </Button>
                 </div>
                 <ButtonGroup v-else class="flex-wrap justify-center">
                     <template v-for="s in sections" :key="s.value">
                         <Button size="sm" :variant="props.section === s.value ? 'default' : 'outline'" as-child>
-                            <Link :href="s.value === 'draft' ? draftHref : route(s.route, { league: props.league.id })">{{ s.label }}</Link>
+                            <Link :href="sectionHref(s)">{{ s.label }}</Link>
                         </Button>
                     </template>
                 </ButtonGroup>

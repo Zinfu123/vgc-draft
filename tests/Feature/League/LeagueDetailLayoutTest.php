@@ -13,7 +13,7 @@ function createLeagueAndTeamForUser(User $user, int $adminFlag = 0): League
 {
     $league = League::create([
         'name' => 'Test League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'draft_points' => 100,
         'league_owner' => $user->id,
     ]);
@@ -35,11 +35,11 @@ function createLeagueAndTeamForUser(User $user, int $adminFlag = 0): League
     return $league;
 }
 
-it('renders the teams tab', function () {
+it('renders the rosters tab', function () {
     $user = User::factory()->create();
     $league = createLeagueAndTeamForUser($user);
 
-    $response = $this->actingAs($user)->get("/leagues/{$league->id}/teams");
+    $response = $this->actingAs($user)->get("/leagues/{$league->id}/rosters");
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -48,11 +48,11 @@ it('renders the teams tab', function () {
         ->has('teams')
         ->has('adminFlag')
         ->has('matchConfig')
-        ->where('section', 'teams')
+        ->where('section', 'rosters')
     );
 });
 
-it('sorts league teams by name on the teams tab', function () {
+it('sorts league teams by name on the rosters tab', function () {
     $user = User::factory()->create();
     $league = createLeagueAndTeamForUser($user);
 
@@ -71,7 +71,7 @@ it('sorts league teams by name on the teams tab', function () {
         'game_losses' => 0,
     ]);
 
-    $response = $this->actingAs($user)->get("/leagues/{$league->id}/teams");
+    $response = $this->actingAs($user)->get("/leagues/{$league->id}/rosters");
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -81,39 +81,39 @@ it('sorts league teams by name on the teams tab', function () {
     );
 });
 
-it('renders the teams tab when the league has no teams', function () {
+it('renders the rosters tab when the league has no teams', function () {
     $user = User::factory()->create();
     $league = League::create([
         'name' => 'Empty League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'league_owner' => $user->id,
         'maximum_teams' => 10,
     ]);
 
-    $response = $this->actingAs($user)->get("/leagues/{$league->id}/teams");
+    $response = $this->actingAs($user)->get("/leagues/{$league->id}/rosters");
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->component('league/LeagueDetailTeams')
         ->where('teams', [])
-        ->where('section', 'teams')
+        ->where('section', 'rosters')
     );
 });
 
-it('renders the matches tab', function () {
+it('renders the schedule tab', function () {
     $user = User::factory()->create();
     $league = createLeagueAndTeamForUser($user);
 
-    $response = $this->actingAs($user)->get("/leagues/{$league->id}/matches");
+    $response = $this->actingAs($user)->get("/leagues/{$league->id}/schedule");
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
-        ->component('league/LeagueDetailMatches')
+        ->component('league/LeagueDetailSchedule')
         ->has('league')
         ->has('teams')
         ->has('adminFlag')
         ->has('matchConfig')
-        ->where('section', 'matches')
+        ->where('section', 'schedule')
         ->where('matches_filter_team_id', null)
     );
 });
@@ -123,7 +123,7 @@ it('passes matches_filter_team_id when the team query belongs to the league', fu
     $league = createLeagueAndTeamForUser($user);
     $team = Team::query()->where('league_id', $league->id)->firstOrFail();
 
-    $response = $this->actingAs($user)->get("/leagues/{$league->id}/matches?team={$team->id}");
+    $response = $this->actingAs($user)->get("/leagues/{$league->id}/schedule?team={$team->id}");
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -137,7 +137,7 @@ it('ignores the team query when the team is not in the league', function () {
     $otherUser = User::factory()->create();
     $otherLeague = League::create([
         'name' => 'Other League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'league_owner' => $otherUser->id,
         'maximum_teams' => 10,
     ]);
@@ -148,7 +148,7 @@ it('ignores the team query when the team is not in the league', function () {
         'pick_position' => 1,
     ]);
 
-    $response = $this->actingAs($user)->get("/leagues/{$league->id}/matches?team={$otherTeam->id}");
+    $response = $this->actingAs($user)->get("/leagues/{$league->id}/schedule?team={$otherTeam->id}");
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
@@ -156,39 +156,31 @@ it('ignores the team query when the team is not in the league', function () {
     );
 });
 
-it('renders the standings tab', function () {
+it('renders the standings view within the schedule tab', function () {
     $user = User::factory()->create();
     $league = createLeagueAndTeamForUser($user);
 
-    $response = $this->actingAs($user)->get("/leagues/{$league->id}/standings");
+    $response = $this->actingAs($user)->get("/leagues/{$league->id}/schedule?view=standings");
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
-        ->component('league/LeagueDetailStandings')
+        ->component('league/LeagueDetailSchedule')
         ->has('league')
         ->has('teams')
         ->has('adminFlag')
         ->has('matchConfig')
-        ->where('section', 'standings')
+        ->where('section', 'schedule')
+        ->where('scheduleView', 'standings')
     );
 });
 
-it('renders the trades tab', function () {
+it('redirects the old trades route to dashboard', function () {
     $user = User::factory()->create();
     $league = createLeagueAndTeamForUser($user);
 
-    $response = $this->actingAs($user)->get("/leagues/{$league->id}/trades");
-
-    $response->assertOk();
-    $response->assertInertia(fn ($page) => $page
-        ->component('league/LeagueDetailTrades')
-        ->has('league')
-        ->has('teams')
-        ->has('adminFlag')
-        ->has('matchConfig')
-        ->has('freeAgencyPool')
-        ->where('section', 'trades')
-    );
+    $this->actingAs($user)
+        ->get("/leagues/{$league->id}/trades")
+        ->assertRedirect(route('leagues.dashboard', ['league' => $league->id]));
 });
 
 it('renders the draft tab', function () {
@@ -265,15 +257,15 @@ it('requires authentication on all detail tabs', function (string $tab) {
     $league = createLeagueAndTeamForUser($owner);
 
     $this->get("/leagues/{$league->id}/{$tab}")->assertRedirect('/login');
-})->with(['teams', 'matches', 'standings', 'trades', 'draft', 'pokemon']);
+})->with(['rosters', 'schedule', 'draft', 'pokemon']);
 
-it('redirects the admin page to match-config', function () {
+it('redirects the admin page to league-admins', function () {
     $user = User::factory()->create();
     $league = createLeagueAndTeamForUser($user, adminFlag: 1);
 
     $response = $this->actingAs($user)->get("/leagues/{$league->id}/admin");
 
-    $response->assertRedirect("/leagues/{$league->id}/admin/match-config");
+    $response->assertRedirect("/leagues/{$league->id}/admin/league-admins");
 });
 
 it('renders the admin match-config page', function () {

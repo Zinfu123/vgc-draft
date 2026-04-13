@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use App\Modules\Draft\Models\DraftConfig;
+use App\Modules\League\Enums\LeagueStatus;
 use App\Modules\League\Models\League;
 use App\Modules\League\Models\LeaguePokemon;
 use App\Modules\Matches\Models\MatchConfig;
@@ -34,7 +35,7 @@ function createMatchPrepScenario(): array
 
     $league = League::create([
         'name' => 'Prep League',
-        'status' => 1,
+        'status' => LeagueStatus::RegularSeason->value,
         'draft_points' => 100,
         'league_owner' => $owner->id,
     ]);

@@ -3,6 +3,7 @@
 use App\Enums\Playoffs\PlayoffStatus;
 use App\Models\User;
 use App\Modules\Draft\Models\DraftConfig;
+use App\Modules\League\Enums\LeagueStatus;
 use App\Modules\League\Models\League;
 use App\Modules\Matches\Models\MatchConfig;
 use App\Modules\Matches\Models\Pool;
@@ -21,7 +22,7 @@ function createLeagueWithFourTeams(): array
 
     $league = League::create([
         'name' => 'Playoff Test League',
-        'status' => 1,
+        'status' => LeagueStatus::Playoffs->value,
         'draft_points' => 80,
         'league_owner' => $owner->id,
         'maximum_teams' => 10,
@@ -72,7 +73,7 @@ function createLeagueWithSixTeams(): array
 
     $league = League::create([
         'name' => 'Six Team Playoff League',
-        'status' => 1,
+        'status' => LeagueStatus::Playoffs->value,
         'draft_points' => 80,
         'league_owner' => $owner->id,
         'maximum_teams' => 10,
@@ -260,7 +261,7 @@ it('closes playoffs and sets league winner and medal placements', function () {
     $winnerTeamId = (int) $finals->fresh()->winner_team_id;
     $winnerUserId = Team::query()->find($winnerTeamId)?->user_id;
 
-    expect($league->status)->toBe(0)
+    expect($league->status)->toBe(LeagueStatus::Completed)
         ->and((int) $league->winner)->toBe((int) $winnerUserId);
 
     expect(Team::query()->where('league_id', $league->id)->where('medal_placement', 1)->count())->toBe(1)
@@ -304,7 +305,7 @@ it('resets completed playoffs and clears league winner medals and matches', func
 
     $league->refresh();
     expect($league->winner)->not->toBeNull()
-        ->and((int) $league->status)->toBe(0);
+        ->and($league->status)->toBe(LeagueStatus::Completed);
 
     $reset = $this->actingAs($admin)->post(route('leagues.admin.playoffs.reset', $league));
     $reset->assertRedirect();
@@ -314,7 +315,7 @@ it('resets completed playoffs and clears league winner medals and matches', func
     $playoff->refresh();
 
     expect($league->winner)->toBeNull()
-        ->and((int) $league->status)->toBe(1)
+        ->and($league->status)->toBe(LeagueStatus::Playoffs)
         ->and($playoff->status)->toBe(PlayoffStatus::Draft)
         ->and(PlayoffMatch::query()->where('playoff_id', $playoff->id)->count())->toBe(0)
         ->and(Team::query()->where('league_id', $league->id)->where('medal_placement', '>', 0)->count())->toBe(0);
@@ -397,10 +398,10 @@ it('renders the league playoffs page for authenticated users', function () {
     [$league, $teams] = createLeagueWithFourTeams();
 
     $this->actingAs($teams[1]->user)
-        ->get(route('leagues.playoffs', $league))
+        ->get(route('leagues.schedule', ['league' => $league, 'view' => 'playoffs']))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
-            ->component('league/LeagueDetailPlayoffs')
+            ->component('league/LeagueDetailSchedule')
             ->has('playoff')
             ->has('bracketLayout')
             ->where('canAdjustPlayoff', false)
@@ -411,7 +412,7 @@ it('allows league admins to adjust seeds on the league playoffs page while the p
     [$league, $teams] = createLeagueWithFourTeams();
 
     $this->actingAs($teams[0]->user)
-        ->get(route('leagues.playoffs', $league))
+        ->get(route('leagues.schedule', ['league' => $league, 'view' => 'playoffs']))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->where('canAdjustPlayoff', true)
@@ -426,7 +427,7 @@ it('does not allow seed adjustments on the league playoffs page after the bracke
     $this->actingAs($admin)->post(route('leagues.admin.playoffs.generate', $league));
 
     $this->actingAs($admin)
-        ->get(route('leagues.playoffs', $league))
+        ->get(route('leagues.schedule', ['league' => $league, 'view' => 'playoffs']))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->where('canAdjustPlayoff', false)
@@ -442,7 +443,7 @@ it('does not allow recording playoff results on the league page for non-admins w
     $this->actingAs($admin)->post(route('leagues.admin.playoffs.generate', $league));
 
     $this->actingAs($teams[1]->user)
-        ->get(route('leagues.playoffs', $league))
+        ->get(route('leagues.schedule', ['league' => $league, 'view' => 'playoffs']))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->where('canRecordPlayoffResults', false)
@@ -457,7 +458,7 @@ it('includes original bracket seeds on live layout cells', function () {
     $this->actingAs($admin)->post(route('leagues.admin.playoffs.generate', $league));
 
     $this->actingAs($admin)
-        ->get(route('leagues.playoffs', $league))
+        ->get(route('leagues.schedule', ['league' => $league, 'view' => 'playoffs']))
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->where('bracketLayout.rounds.0.matches.0.top.seed_number', 1)

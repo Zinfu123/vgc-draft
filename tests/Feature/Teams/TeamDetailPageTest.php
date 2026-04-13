@@ -6,12 +6,12 @@ use App\Modules\Teams\Models\Team;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-it('renders the team detail inertia page with team and league props', function () {
+it('redirects to the league dashboard when visiting a team detail page', function () {
     $user = User::factory()->create();
 
     $league = League::create([
         'name' => 'Test League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'league_owner' => $user->id,
         'maximum_teams' => 10,
     ]);
@@ -28,20 +28,5 @@ it('renders the team detail inertia page with team and league props', function (
 
     $response = $this->actingAs($user)->get(route('teams.detail', ['team_id' => $team->id]));
 
-    $response->assertSuccessful();
-    $response->assertInertia(fn ($page) => $page
-        ->component('teams/TeamDetail')
-        ->has('team', fn ($t) => $t
-            ->where('name', 'Alpha Squad')
-            ->where('set_wins', 3)
-            ->where('set_losses', 1)
-            ->where('victory_points', 9)
-            ->etc()
-        )
-        ->has('league', fn ($l) => $l
-            ->where('name', 'Test League')
-            ->where('id', $league->id)
-            ->etc()
-        )
-    );
+    $response->assertRedirect(route('leagues.dashboard', ['league' => $league->id, 'team' => $team->id]));
 });

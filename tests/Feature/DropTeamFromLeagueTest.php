@@ -16,7 +16,7 @@ it('admin can drop a team and converts sets to byes with standings adjusted', fu
     $owner = User::factory()->create();
     $league = League::create([
         'name' => 'Drop Test',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'league_owner' => $owner->id,
     ]);
 

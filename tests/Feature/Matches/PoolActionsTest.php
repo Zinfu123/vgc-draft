@@ -17,7 +17,7 @@ function createLeagueWithMatchConfig(int $numberOfPools = 1): array
 
     $league = League::create([
         'name' => 'Test League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'draft_points' => 80,
         'league_owner' => $owner->id,
         'maximum_teams' => 10,
@@ -75,7 +75,7 @@ it('throws when match config does not exist', function () {
 
     $league = League::create([
         'name' => 'No Config League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
         'draft_points' => 80,
         'league_owner' => $owner->id,
         'maximum_teams' => 10,

@@ -6,6 +6,8 @@ use App\Events\EndDraftEvent;
 use App\Modules\Draft\Models\BanOrder;
 use App\Modules\Draft\Models\Draft;
 use App\Modules\Draft\Models\DraftOrder;
+use App\Modules\League\Enums\LeagueStagingStatus;
+use App\Modules\League\Enums\LeagueStatus;
 use App\Modules\League\Models\League;
 use App\Modules\Teams\Models\Team;
 use Carbon\Carbon;
@@ -27,6 +29,18 @@ class CreateEditDraftOrderAction
             $draft->save();
 
             $this->adjustSetStartDateIfNeeded((int) $data['league_id']);
+
+            $league = League::with('draftConfig')->find($data['league_id']);
+            if ($league !== null) {
+                $draftConfig = $league->draftConfig;
+                if ($draftConfig !== null) {
+                    $draftConfig->draft_ended_at = Carbon::now();
+                    $draftConfig->save();
+                }
+                $league->status = LeagueStatus::Staging;
+                $league->staging_sub_status = LeagueStagingStatus::FreeTradeWindow;
+                $league->save();
+            }
 
             EndDraftEvent::dispatch([
                 'league_id' => $data['league_id'],
