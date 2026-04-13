@@ -27,7 +27,7 @@ it('imports a template from csv with display name', function () {
     $template = LeaguePokemonTemplate::query()->where('slug', 'vgc-sample')->first();
     expect($template)->not->toBeNull()
         ->and($template->name)->toBe('VGC Sample')
-        ->and($template->version_group_id)->toBe(VersionGroup::query()->firstOrFail()->id);
+        ->and($template->version_group_id)->toBe(VersionGroup::query()->orderByDesc('sort_order')->firstOrFail()->id);
 
     expect(LeaguePokemonTemplateRow::query()->where('league_pokemon_template_id', $template->id)->count())->toBe(1);
     $row = LeaguePokemonTemplateRow::query()->where('league_pokemon_template_id', $template->id)->first();

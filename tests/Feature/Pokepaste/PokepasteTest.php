@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\PokemonGame;
 use App\Enums\PokemonNature;
 use App\Models\User;
 use App\Modules\Draft\Models\DraftConfig;
@@ -682,4 +683,231 @@ it('parser reports error for invalid paste structure', function () {
     $result = $parser->parse("only one block\nAbility: X\n- A\n- B\n- C\n- D");
 
     expect($result['errors'])->not->toBeEmpty();
+});
+
+// ─── Champions (Mega mechanic) ───────────────────────────────────────────────
+
+/**
+ * @return array{
+ *     league: League,
+ *     coach: User,
+ *     team: Team,
+ *     set: Set,
+ *     leaguePokemon: array<int, LeaguePokemon>,
+ *     versionGroup: VersionGroup,
+ * }
+ */
+function createChampionsLeagueTeamWithMatch(): array
+{
+    $owner = User::factory()->create();
+    $coach = User::factory()->create();
+    $opponent = User::factory()->create();
+
+    $league = League::create([
+        'name' => 'Champions League',
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
+        'draft_points' => 100,
+        'league_owner' => $owner->id,
+        'pokemon_generation' => 9,
+        'pokemon_game' => PokemonGame::Champions->value,
+    ]);
+
+    DraftConfig::create([
+        'league_id' => $league->id,
+        'draft_date' => now()->addDay(),
+        'draft_points' => 80,
+        'ban_enabled' => false,
+        'minimum_drafts' => 2,
+    ]);
+
+    $matchConfig = MatchConfig::create([
+        'league_id' => $league->id,
+        'number_of_pools' => 1,
+        'status' => 1,
+    ]);
+
+    $pool = Pool::create([
+        'league_id' => $league->id,
+        'match_config_id' => $matchConfig->id,
+        'status' => 1,
+    ]);
+
+    $team = Team::create([
+        'name' => 'Mega Squad',
+        'league_id' => $league->id,
+        'user_id' => $coach->id,
+        'admin_flag' => 0,
+        'pick_position' => 1,
+        'seed' => 1,
+        'pool_id' => $pool->id,
+        'draft_points' => 80,
+        'victory_points' => 0,
+        'set_wins' => 0,
+        'set_losses' => 0,
+        'game_wins' => 0,
+        'game_losses' => 0,
+        'trades' => 3,
+    ]);
+
+    $opponentTeam = Team::create([
+        'name' => 'Opponent',
+        'league_id' => $league->id,
+        'user_id' => $opponent->id,
+        'admin_flag' => 0,
+        'pick_position' => 2,
+        'seed' => 2,
+        'pool_id' => $pool->id,
+        'draft_points' => 80,
+        'victory_points' => 0,
+        'set_wins' => 0,
+        'set_losses' => 0,
+        'game_wins' => 0,
+        'game_losses' => 0,
+        'trades' => 3,
+    ]);
+
+    $set = Set::create([
+        'league_id' => $league->id,
+        'pool_id' => $pool->id,
+        'round' => 1,
+        'team1_id' => $team->id,
+        'team2_id' => $opponentTeam->id,
+        'status' => 1,
+    ]);
+
+    $versionGroup = VersionGroup::query()->where('slug', 'champions')->firstOrFail();
+
+    $learnset = [
+        ['move_id' => 33, 'move_name' => 'tackle', 'method' => 'level-up', 'level' => 1],
+        ['move_id' => 45, 'move_name' => 'growl', 'method' => 'level-up', 'level' => 1],
+        ['move_id' => 10, 'move_name' => 'scratch', 'method' => 'level-up', 'level' => 1],
+        ['move_id' => 52, 'move_name' => 'ember', 'method' => 'level-up', 'level' => 1],
+    ];
+
+    $leaguePokemon = [];
+    for ($i = 1; $i <= 6; $i++) {
+        $pd = Pokedex::create([
+            'nationaldex_id' => 800 + $i,
+            'name' => "ChampsMon{$i}",
+            'type1' => 'Normal',
+        ]);
+
+        PokemonGenerationData::factory()->create([
+            'pokedex_id' => $pd->id,
+            'version_group_id' => $versionGroup->id,
+            'learnset' => $learnset,
+            'mechanics' => [
+                'tera_capable' => false,
+                'mega' => true,
+                'z_move' => false,
+                'dynamax' => false,
+                'gmax' => false,
+            ],
+        ]);
+
+        AbilityGenerationData::query()->create([
+            'pokedex_id' => $pd->id,
+            'version_group_id' => $versionGroup->id,
+            'pokeapi_ability_id' => 51,
+            'ability_name' => 'keen-eye',
+            'slot' => 1,
+            'is_hidden' => false,
+        ]);
+
+        $leaguePokemon[] = LeaguePokemon::create([
+            'league_id' => $league->id,
+            'pokedex_id' => $pd->id,
+            'name' => "ChampsMon{$i}",
+            'cost' => 10,
+            'drafted_by' => $team->id,
+        ]);
+    }
+
+    return [
+        'league' => $league,
+        'coach' => $coach,
+        'team' => $team,
+        'set' => $set,
+        'leaguePokemon' => $leaguePokemon,
+        'versionGroup' => $versionGroup,
+    ];
+}
+
+it('returns empty all_tera_types for a champions league pokepaste', function () {
+    $data = createChampionsLeagueTeamWithMatch();
+    $paste = SetTeamPokepaste::query()->firstOrCreate([
+        'matchable_type' => Set::class,
+        'matchable_id' => $data['set']->id,
+        'team_id' => $data['team']->id,
+    ]);
+    app(EnsureSetTeamPokepasteSlotRows::class)($paste);
+
+    $this->actingAs($data['coach'])
+        ->get(route('pokepaste.show', ['pokepaste' => $paste->public_id]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('pokepaste/PokepasteShow')
+            ->where('all_tera_types', [])
+        );
+});
+
+it('rejects tera_type submissions for a champions league slot', function () {
+    $data = createChampionsLeagueTeamWithMatch();
+    $paste = SetTeamPokepaste::query()->firstOrCreate([
+        'matchable_type' => Set::class,
+        'matchable_id' => $data['set']->id,
+        'team_id' => $data['team']->id,
+    ]);
+    app(EnsureSetTeamPokepasteSlotRows::class)($paste);
+
+    $slots = [];
+    foreach ($data['leaguePokemon'] as $idx => $lp) {
+        $slots[] = [
+            'league_pokemon_id' => $lp->id,
+            'ability' => 'Keen Eye',
+            'moves' => ['tackle', 'growl', 'scratch', 'ember'],
+            'version_group_held_item_id' => null,
+            'nature' => PokemonNature::Timid->value,
+            'tera_type' => 'Fire',
+            'evs' => null,
+        ];
+    }
+
+    $this->actingAs($data['coach'])
+        ->put(route('pokepaste.update', ['pokepaste' => $paste->public_id]), ['slots' => $slots])
+        ->assertSessionHasErrors();
+});
+
+it('accepts champions league slots without a tera_type', function () {
+    $data = createChampionsLeagueTeamWithMatch();
+    $paste = SetTeamPokepaste::query()->firstOrCreate([
+        'matchable_type' => Set::class,
+        'matchable_id' => $data['set']->id,
+        'team_id' => $data['team']->id,
+    ]);
+    app(EnsureSetTeamPokepasteSlotRows::class)($paste);
+
+    $slots = [];
+    foreach ($data['leaguePokemon'] as $lp) {
+        $slots[] = [
+            'league_pokemon_id' => $lp->id,
+            'ability' => 'Keen Eye',
+            'moves' => ['tackle', 'growl', 'scratch', 'ember'],
+            'version_group_held_item_id' => null,
+            'nature' => PokemonNature::Timid->value,
+            'tera_type' => null,
+            'evs' => null,
+        ];
+    }
+
+    $this->actingAs($data['coach'])
+        ->put(route('pokepaste.update', ['pokepaste' => $paste->public_id]), ['slots' => $slots])
+        ->assertRedirect(route('pokepaste.show', ['pokepaste' => $paste->public_id]));
+
+    $saved = SetTeamPokepasteSlot::query()
+        ->where('set_team_pokepaste_id', $paste->id)
+        ->where('slot_index', 0)
+        ->first();
+    expect($saved)->not->toBeNull();
+    expect($saved->tera_type)->toBeNull();
 });

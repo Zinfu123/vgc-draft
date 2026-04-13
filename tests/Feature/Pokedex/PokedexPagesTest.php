@@ -51,7 +51,7 @@ it('renders pokemon detail with scarlet-violet game data', function () {
         'is_hidden' => false,
     ]);
 
-    $response = $this->actingAs($user)->get(route('pokedex.show', $pokedexId));
+    $response = $this->actingAs($user)->get(route('pokedex.show', $pokedexId).'?'.http_build_query(['game' => 'scarlet-violet']));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page

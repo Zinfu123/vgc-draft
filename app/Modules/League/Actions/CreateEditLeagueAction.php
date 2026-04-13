@@ -291,5 +291,11 @@ class CreateEditLeagueAction
                 'pokemon_game' => ['The selected game must match the generation.'],
             ]);
         }
+
+        if (! $game->isAvailable()) {
+            throw ValidationException::withMessages([
+                'pokemon_game' => ['This game is not yet available for league creation.'],
+            ]);
+        }
     }
 }

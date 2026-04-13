@@ -587,11 +587,13 @@ class LeagueController extends Controller
             'pokemon_game' => $league?->pokemon_game instanceof PokemonGame
                 ? $league->pokemon_game->value
                 : (string) config('pokemon.default_league_game'),
-            'pokemon_game_options' => collect(PokemonGame::cases())->map(fn (PokemonGame $game) => [
-                'value' => $game->value,
-                'label' => $game->label(),
-                'generation' => $game->generation(),
-            ])->values()->all(),
+            'pokemon_game_options' => collect(PokemonGame::cases())
+                ->filter(fn (PokemonGame $game) => $game->isAvailable())
+                ->map(fn (PokemonGame $game) => [
+                    'value' => $game->value,
+                    'label' => $game->label(),
+                    'generation' => $game->generation(),
+                ])->values()->all(),
             'pokemon_generation_options' => collect(range(1, 9))
                 ->filter(fn (int $generation) => count(PokemonGame::forGeneration($generation)) > 0)
                 ->values()

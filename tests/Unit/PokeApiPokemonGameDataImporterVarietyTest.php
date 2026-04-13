@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Pokedex\Models\Pokedex;
+use App\Modules\Pokedex\Models\VersionGroup;
 use App\Modules\Pokedex\Services\PokeApiPokemonGameDataImporter;
 
 uses(Tests\TestCase::class);
@@ -215,4 +216,43 @@ it('falls back to the default variety when the name matches the default form', f
     $url = $method->invoke($importer, $species, $pokedex);
 
     expect($url)->toEndWith('/80/');
+});
+
+it('sets tera_capable true and mega false for tera mechanic version groups', function () {
+    $versionGroup = new VersionGroup(['battle_mechanic' => 'tera']);
+    $importer = new PokeApiPokemonGameDataImporter;
+    $method = new ReflectionMethod(PokeApiPokemonGameDataImporter::class, 'defaultMechanicsForVersionGroup');
+    $method->setAccessible(true);
+
+    $mechanics = $method->invoke($importer, $versionGroup);
+
+    expect($mechanics['tera_capable'])->toBeTrue();
+    expect($mechanics['mega'])->toBeFalse();
+});
+
+it('sets mega true and tera_capable false for mega mechanic version groups like champions', function () {
+    $versionGroup = new VersionGroup(['battle_mechanic' => 'mega']);
+    $importer = new PokeApiPokemonGameDataImporter;
+    $method = new ReflectionMethod(PokeApiPokemonGameDataImporter::class, 'defaultMechanicsForVersionGroup');
+    $method->setAccessible(true);
+
+    $mechanics = $method->invoke($importer, $versionGroup);
+
+    expect($mechanics['tera_capable'])->toBeFalse();
+    expect($mechanics['mega'])->toBeTrue();
+    expect($mechanics['z_move'])->toBeFalse();
+    expect($mechanics['dynamax'])->toBeFalse();
+    expect($mechanics['gmax'])->toBeFalse();
+});
+
+it('sets all mechanics to false for version groups with no battle mechanic', function () {
+    $versionGroup = new VersionGroup(['battle_mechanic' => null]);
+    $importer = new PokeApiPokemonGameDataImporter;
+    $method = new ReflectionMethod(PokeApiPokemonGameDataImporter::class, 'defaultMechanicsForVersionGroup');
+    $method->setAccessible(true);
+
+    $mechanics = $method->invoke($importer, $versionGroup);
+
+    expect($mechanics['tera_capable'])->toBeFalse();
+    expect($mechanics['mega'])->toBeFalse();
 });

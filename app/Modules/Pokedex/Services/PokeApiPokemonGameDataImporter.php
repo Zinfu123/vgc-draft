@@ -598,19 +598,9 @@ class PokeApiPokemonGameDataImporter
      */
     private function defaultMechanicsForVersionGroup(VersionGroup $versionGroup): array
     {
-        if ($versionGroup->generation >= 9) {
-            return [
-                'tera_capable' => true,
-                'mega' => false,
-                'z_move' => false,
-                'dynamax' => false,
-                'gmax' => false,
-            ];
-        }
-
         return [
-            'tera_capable' => false,
-            'mega' => false,
+            'tera_capable' => $versionGroup->isTeraMechanic(),
+            'mega' => $versionGroup->isMegaMechanic(),
             'z_move' => false,
             'dynamax' => false,
             'gmax' => false,

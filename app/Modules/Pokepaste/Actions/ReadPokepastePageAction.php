@@ -71,8 +71,9 @@ class ReadPokepastePageAction
                 ->all();
         }
 
-        $generation = $versionGroup?->generation ?? $league->pokemon_game->generation();
-        $allTeraTypes = PokemonTeraType::allValuesForGeneration($generation);
+        $allTeraTypes = $versionGroup?->isTeraMechanic()
+            ? PokemonTeraType::allValuesForGeneration($versionGroup->generation)
+            : [];
 
         $setPayload = null;
         if ($set !== null) {

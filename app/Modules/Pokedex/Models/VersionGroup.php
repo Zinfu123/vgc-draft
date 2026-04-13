@@ -16,6 +16,7 @@ class VersionGroup extends Model
         'name',
         'showdown_format_key',
         'showdown_ladder_rating',
+        'battle_mechanic',
     ];
 
     /**
@@ -28,6 +29,16 @@ class VersionGroup extends Model
             'sort_order' => 'integer',
             'showdown_ladder_rating' => 'integer',
         ];
+    }
+
+    public function isTeraMechanic(): bool
+    {
+        return $this->battle_mechanic === 'tera';
+    }
+
+    public function isMegaMechanic(): bool
+    {
+        return $this->battle_mechanic === 'mega';
     }
 
     public function pokemonGenerationData(): HasMany

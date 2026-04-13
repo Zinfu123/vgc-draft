@@ -23,6 +23,13 @@ return [
             'the-indigo-disk',
             'sword-shield',
         ],
+        'champions' => [
+            'champions',
+            'scarlet-violet',
+            'the-teal-mask',
+            'the-indigo-disk',
+            'sword-shield',
+        ],
     ],
 
     /**
