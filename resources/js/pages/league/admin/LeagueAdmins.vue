@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Head, router, useForm, usePage } from '@inertiajs/vue3';
+import { Ban } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 interface FlashProps {
@@ -67,6 +68,23 @@ const processingTeamId = ref<number | null>(null);
 const dropDialogOpen = ref(false);
 const teamToDrop = ref<Team | null>(null);
 const dropForm = useForm({ team_id: 0 });
+
+const cancelDialogOpen = ref(false);
+const cancelProcessing = ref(false);
+
+function confirmCancelLeague(): void {
+    cancelProcessing.value = true;
+    router.post(
+        route('leagues.cancel', { league: props.league.id }),
+        {},
+        {
+            onFinish: () => {
+                cancelProcessing.value = false;
+                cancelDialogOpen.value = false;
+            },
+        },
+    );
+}
 
 function openDropDialog(team: Team): void {
     if (!props.isLeagueAdmin) return;
@@ -251,7 +269,59 @@ const roleBadgeClass = (team: Team): string => {
                         </table>
                     </div>
             </section>
+
+            <!-- ─── Danger Zone ─── -->
+            <section v-if="isLeagueOwner" class="flex flex-col gap-4">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-destructive/30 pb-3">
+                    <div>
+                        <h2 class="text-xl font-semibold text-destructive">Danger Zone</h2>
+                        <p class="mt-0.5 text-sm text-muted-foreground">
+                            Irreversible actions that affect the entire league.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between gap-4 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 dark:bg-destructive/10">
+                    <div>
+                        <p class="text-sm font-medium text-foreground">Cancel this league</p>
+                        <p class="mt-0.5 text-xs text-muted-foreground">
+                            Permanently marks the league as cancelled and removes it from all listings.
+                        </p>
+                    </div>
+                    <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        class="shrink-0"
+                        @click="cancelDialogOpen = true"
+                    >
+                        <Ban class="size-3.5" />
+                        Cancel League
+                    </Button>
+                </div>
+            </section>
         </div>
+
+        <!-- Cancel league dialog -->
+        <Dialog v-model:open="cancelDialogOpen">
+            <DialogContent class="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Cancel this league?</DialogTitle>
+                    <DialogDescription>
+                        <strong class="text-foreground">{{ league.name }}</strong> will be permanently marked as cancelled
+                        and hidden from all league listings. This action cannot be undone.
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter class="gap-2">
+                    <Button type="button" variant="outline" :disabled="cancelProcessing" @click="cancelDialogOpen = false">
+                        Keep league
+                    </Button>
+                    <Button type="button" variant="destructive" :disabled="cancelProcessing" @click="confirmCancelLeague">
+                        Yes, cancel league
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
 
         <!-- Drop team dialog -->
         <Dialog v-model:open="dropDialogOpen">

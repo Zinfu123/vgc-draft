@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogDescription, DialogHeader, DialogScrollContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useForm, usePage } from '@inertiajs/vue3';
-import { Plus } from 'lucide-vue-next';
+import { router, useForm, usePage } from '@inertiajs/vue3';
+import { Loader2, Plus } from 'lucide-vue-next';
 import { ref, watch } from 'vue';
 
 interface UserTeam {
@@ -77,10 +77,18 @@ const submit = () => {
     if (props.command === 'create') {
         form.post(route('teams.create'), {
             forceFormData: true,
+            onSuccess: () => {
+                dialogOpen.value = false;
+                router.reload();
+            },
         });
     } else {
         form.post(route('teams.edit', { team_id: props.user_team?.id }), {
             forceFormData: true,
+            onSuccess: () => {
+                dialogOpen.value = false;
+                router.reload();
+            },
         });
     }
 };
@@ -93,7 +101,21 @@ const submit = () => {
                 <DialogTrigger>
                     <Button variant="outline">{{ command === 'create' ? 'Create Team' : 'Edit Team' }} <Plus /></Button>
                 </DialogTrigger>
-                <DialogContent>
+                <DialogScrollContent class="overflow-hidden">
+                    <Transition
+                        enter-active-class="transition-opacity duration-150"
+                        enter-from-class="opacity-0"
+                        leave-active-class="transition-opacity duration-150"
+                        leave-to-class="opacity-0"
+                    >
+                        <div
+                            v-if="form.processing && command === 'create'"
+                            class="absolute inset-0 z-10 flex cursor-wait flex-col items-center justify-center gap-3 rounded-lg bg-background/90 backdrop-blur-sm"
+                        >
+                            <Loader2 class="h-8 w-8 animate-spin text-muted-foreground" />
+                            <p class="text-sm font-medium text-foreground">Your team is being created&hellip;</p>
+                        </div>
+                    </Transition>
                     <DialogHeader>
                         <DialogTitle>{{ command === 'create' ? 'Create Team' : 'Edit Team' }}</DialogTitle>
                     </DialogHeader>
@@ -108,7 +130,7 @@ const submit = () => {
                         <div class="grid w-full max-w-sm items-center justify-center gap-4">
                             <div class="grid gap-2">
                                 <Label for="team-name-input">Team name</Label>
-                                <Input id="team-name-input" v-model="form.name" type="text" name="name" placeholder="Team name" />
+                                <Input id="team-name-input" v-model="form.name" type="text" name="name" placeholder="Team name" maxlength="30" />
                                 <InputError :message="form.errors.name" />
                             </div>
                             <div class="grid gap-2">
@@ -120,6 +142,7 @@ const submit = () => {
                                     name="showdown_username"
                                     autocomplete="off"
                                     placeholder="Matches Showdown battles / replays"
+                                    maxlength="18"
                                 />
                                 <InputError :message="form.errors.showdown_username" />
                                 <p class="text-muted-foreground text-xs">
@@ -144,7 +167,7 @@ const submit = () => {
                         </div>
                         <Button type="submit" class="w-1/3" variant="outline">{{ command === 'create' ? 'Create' : 'Save' }}</Button>
                     </form>
-                </DialogContent>
+                </DialogScrollContent>
             </Dialog>
         </div>
     </div>

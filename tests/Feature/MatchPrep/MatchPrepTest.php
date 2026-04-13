@@ -310,6 +310,49 @@ it('returns 404 for share when disabled', function () {
     $this->get(route('match-prep.share.show', ['share_uuid' => $note->share_uuid]))->assertNotFound();
 });
 
+it('excludes cancelled leagues from the prep league listing', function () {
+    $coach = User::factory()->create();
+    $owner = User::factory()->create();
+
+    $activeLeague = League::create([
+        'name' => 'Active League',
+        'status' => LeagueStatus::RegularSeason->value,
+        'league_owner' => $owner->id,
+    ]);
+
+    $cancelledLeague = League::create([
+        'name' => 'Cancelled League',
+        'status' => LeagueStatus::Cancelled->value,
+        'league_owner' => $owner->id,
+    ]);
+
+    Team::create([
+        'name' => 'Coach Team A',
+        'league_id' => $activeLeague->id,
+        'user_id' => $coach->id,
+        'admin_flag' => 0,
+        'pick_position' => 1,
+        'draft_points' => 80,
+    ]);
+
+    Team::create([
+        'name' => 'Coach Team B',
+        'league_id' => $cancelledLeague->id,
+        'user_id' => $coach->id,
+        'admin_flag' => 0,
+        'pick_position' => 1,
+        'draft_points' => 80,
+    ]);
+
+    $action = new \App\Modules\MatchPrep\Actions\ListUserLeaguesForPrepAction;
+    $leagues = $action($coach->id);
+
+    $leagueIds = array_column($leagues, 'id');
+
+    expect($leagueIds)->toContain($activeLeague->id)
+        ->and($leagueIds)->not->toContain($cancelledLeague->id);
+});
+
 it('shows shared prep when enabled', function () {
     $s = createMatchPrepScenario();
     $this->actingAs($s['coach']);

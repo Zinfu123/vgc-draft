@@ -81,6 +81,7 @@ const submit = () => {
                             v-model="form.showdown_username"
                             autocomplete="off"
                             placeholder="Same name as in Showdown battles"
+                            maxlength="18"
                         />
                         <InputError class="mt-2" :message="form.errors.showdown_username" />
                         <p class="text-sm text-muted-foreground">

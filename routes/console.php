@@ -21,5 +21,5 @@ Schedule::command('stats:sync-showdown-vgc-usage')
 
 Schedule::command('draft:start-scheduled')
     ->name('draft-start-scheduled')
-    ->everyMinute()
+    ->everyFiveMinutes()
     ->withoutOverlapping(5);

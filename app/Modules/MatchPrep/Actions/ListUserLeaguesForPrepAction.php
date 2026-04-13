@@ -2,6 +2,7 @@
 
 namespace App\Modules\MatchPrep\Actions;
 
+use App\Modules\League\Enums\LeagueStatus;
 use App\Modules\Teams\Models\Team;
 use Illuminate\Support\Collection as SupportCollection;
 
@@ -15,7 +16,7 @@ class ListUserLeaguesForPrepAction
         /** @var SupportCollection<int, Team> $teams */
         $teams = Team::query()
             ->where('user_id', $userId)
-            ->whereHas('league')
+            ->whereHas('league', fn ($q) => $q->where('status', '!=', LeagueStatus::Cancelled->value))
             ->with('league')
             ->get();
 

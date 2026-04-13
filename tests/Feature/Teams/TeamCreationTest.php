@@ -48,7 +48,7 @@ it('assigns a new team to the default pool', function () {
         'league_id' => $league->id,
         'user_id' => $user->id,
         'pick_position' => 1,
-    ])->assertRedirect();
+    ])->assertRedirect(route('leagues.dashboard', ['league' => $league->id]));
 
     $team = Team::where('league_id', $league->id)->where('user_id', $user->id)->first();
     expect($team)->not->toBeNull();
@@ -79,7 +79,7 @@ it('does not fail team creation when no pool exists for the league', function ()
         'league_id' => $league->id,
         'user_id' => $user->id,
         'pick_position' => 1,
-    ])->assertRedirect();
+    ])->assertRedirect(route('leagues.dashboard', ['league' => $league->id]));
 
     $team = Team::where('league_id', $league->id)->where('user_id', $user->id)->first();
     expect($team)->not->toBeNull();
@@ -109,7 +109,7 @@ it('allows team creation with only a team-level showdown username', function () 
         'user_id' => $user->id,
         'pick_position' => 1,
         'showdown_username' => 'TeamOnlySD',
-    ])->assertRedirect();
+    ])->assertRedirect(route('leagues.dashboard', ['league' => $league->id]));
 
     $team = Team::where('league_id', $league->id)->where('user_id', $user->id)->first();
     expect($team)->not->toBeNull();
@@ -202,7 +202,7 @@ it('allows the same showdown username in different leagues', function () {
         'league_id' => $leagueB->id,
         'user_id' => $userB->id,
         'pick_position' => 1,
-    ])->assertRedirect();
+    ])->assertRedirect(route('leagues.dashboard', ['league' => $leagueB->id]));
 
     expect(Team::where('league_id', $leagueB->id)->exists())->toBeTrue();
 });

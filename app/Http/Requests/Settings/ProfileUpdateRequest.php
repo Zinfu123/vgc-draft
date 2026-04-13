@@ -25,7 +25,7 @@ class ProfileUpdateRequest extends FormRequest
                 'max:255',
                 Rule::unique(User::class)->ignore($this->user()->id),
             ],
-            'showdown_username' => ['nullable', 'string', 'max:64', 'regex:/^[a-zA-Z0-9_\-\[\] ]*$/'],
+            'showdown_username' => ['nullable', 'string', 'max:18', 'regex:/^[a-zA-Z0-9_\-\[\] ]*$/'],
         ];
     }
 }

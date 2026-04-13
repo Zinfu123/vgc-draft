@@ -18,7 +18,7 @@ class CreateEditTeamAction
      */
     private function showdownUsernameRules(): array
     {
-        return ['nullable', 'string', 'max:64', 'regex:/^[a-zA-Z0-9_\-\[\] ]*$/'];
+        return ['nullable', 'string', 'max:18', 'regex:/^[a-zA-Z0-9_\-\[\] ]*$/'];
     }
 
     /**
@@ -91,7 +91,7 @@ class CreateEditTeamAction
     public function create(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|max:30',
             'league_id' => 'required|exists:leagues,id',
             'user_id' => 'required|exists:users,id',
             'logo' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
@@ -122,9 +122,15 @@ class CreateEditTeamAction
         }
 
         if (Team::where('league_id', $request->league_id)->where('user_id', $request->user_id)->exists()) {
-            throw new \Exception('Team already exists');
-        } elseif (Team::where('league_id', $request->league_id)->count() >= $joiningLeague->maximum_teams) {
-            throw new \Exception('Maximum number of teams reached');
+            throw ValidationException::withMessages([
+                'league_id' => 'You already have a team in this league.',
+            ]);
+        }
+
+        if (Team::where('league_id', $request->league_id)->count() >= $joiningLeague->maximum_teams) {
+            throw ValidationException::withMessages([
+                'league_id' => 'This league has reached its maximum number of teams.',
+            ]);
         }
 
         $joiningLeague->loadMissing('draftConfig');
@@ -155,7 +161,7 @@ class CreateEditTeamAction
     public function edit(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'required|string|max:30',
             'showdown_username' => $this->showdownUsernameRules(),
         ]);
 
