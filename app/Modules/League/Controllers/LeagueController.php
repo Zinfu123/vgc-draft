@@ -25,6 +25,9 @@ use App\Modules\League\Models\League;
 use App\Modules\League\Services\DropTeamFromLeagueService;
 use App\Modules\Matches\Actions\CreateEditSetsAction;
 use App\Modules\Matches\Actions\ShowSetsAction;
+use App\Modules\Matches\Enums\ScheduleRequestStatus;
+use App\Modules\Matches\Models\MatchMessage;
+use App\Modules\Matches\Models\MatchScheduleRequest;
 use App\Modules\Matches\Models\Set;
 use App\Modules\Playoffs\Controllers\PlayoffController;
 use App\Modules\Playoffs\Services\PlayoffBracketLayoutService;
@@ -112,12 +115,12 @@ class LeagueController extends Controller
 
         $freeAgencyPool = $readLeaguePokemonAction(['league_id' => $league->id, 'command' => 'available']);
 
-        $nextSet = $userTradesTeam
+        $nextSet = $selectedTeamId !== null
             ? Set::query()
                 ->where('league_id', $league->id)
-                ->where(function ($q) use ($userTradesTeam): void {
-                    $q->where('team1_id', $userTradesTeam->id)
-                        ->orWhere('team2_id', $userTradesTeam->id);
+                ->where(function ($q) use ($selectedTeamId): void {
+                    $q->where('team1_id', $selectedTeamId)
+                        ->orWhere('team2_id', $selectedTeamId);
                 })
                 ->whereNull('winner_id')
                 ->where('is_bye', false)
@@ -128,13 +131,37 @@ class LeagueController extends Controller
                 ->first()
             : null;
 
+        $isUserInNextSet = $nextSet !== null
+            && $userTradesTeam !== null
+            && ($nextSet->team1_id === $userTradesTeam->id || $nextSet->team2_id === $userTradesTeam->id);
+
+        $nextSetPendingScheduleRequest = ($nextSet && $isUserInNextSet)
+            ? MatchScheduleRequest::query()
+                ->where('set_id', $nextSet->id)
+                ->where('status', ScheduleRequestStatus::Pending->value)
+                ->latest()
+                ->first()
+            : null;
+
         $nextSetData = $nextSet ? [
             'id' => $nextSet->id,
             'round' => $nextSet->round,
             'scheduled_at' => $nextSet->scheduled_at?->toIso8601String(),
-            'opponent_name' => $nextSet->team1_id === $userTradesTeam->id
+            'opponent_name' => $nextSet->team1_id === $selectedTeamId
                 ? ($nextSet->team2?->name ?? '—')
                 : ($nextSet->team1?->name ?? '—'),
+            'unread_message_count' => $isUserInNextSet
+                ? MatchMessage::query()
+                    ->where('set_id', $nextSet->id)
+                    ->where('user_id', '!=', $userId)
+                    ->where('is_read', false)
+                    ->count()
+                : 0,
+            'pending_schedule_request' => $nextSetPendingScheduleRequest ? [
+                'id' => $nextSetPendingScheduleRequest->id,
+                'proposed_at' => $nextSetPendingScheduleRequest->proposed_at?->toISOString(),
+                'is_mine' => $nextSetPendingScheduleRequest->proposed_by_user_id === $userId,
+            ] : null,
         ] : null;
 
         $leagueTransactions = Trade::query()

@@ -15,7 +15,7 @@ import {
 import { isReverbBroadcastClientConfigured } from '@/lib/broadcasting';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { useEchoPublic } from '@laravel/echo-vue';
-import { ArrowRight, Bell, Clock, RadioTower, Swords } from 'lucide-vue-next';
+import { ArrowRight, Bell, CalendarClock, Clock, MessageSquare, RadioTower, Swords } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 interface League {
@@ -129,11 +129,19 @@ interface PoolMon {
     type2?: string;
 }
 
+interface PendingScheduleRequest {
+    id: number;
+    proposed_at: string;
+    is_mine: boolean;
+}
+
 interface NextSet {
     id: number;
     round: number;
     scheduled_at: string | null;
     opponent_name: string;
+    unread_message_count: number;
+    pending_schedule_request: PendingScheduleRequest | null;
 }
 
 const props = defineProps<{
@@ -916,6 +924,29 @@ if (isReverbBroadcastClientConfigured) {
                                     : 'Not yet scheduled'
                             }}
                         </p>
+                        <div v-if="nextSet.unread_message_count > 0 || nextSet.pending_schedule_request" class="mt-2.5 flex flex-wrap gap-2">
+                            <span
+                                v-if="nextSet.unread_message_count > 0"
+                                class="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary dark:bg-primary/20"
+                            >
+                                <MessageSquare class="size-3" />
+                                {{ nextSet.unread_message_count }} unread
+                            </span>
+                            <span
+                                v-if="nextSet.pending_schedule_request && !nextSet.pending_schedule_request.is_mine"
+                                class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/40 dark:text-amber-300"
+                            >
+                                <CalendarClock class="size-3" />
+                                Time request — respond
+                            </span>
+                            <span
+                                v-else-if="nextSet.pending_schedule_request && nextSet.pending_schedule_request.is_mine"
+                                class="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
+                            >
+                                <CalendarClock class="size-3" />
+                                Time request pending
+                            </span>
+                        </div>
                     </Link>
 
                     <!-- Trade Deadline badge -->
