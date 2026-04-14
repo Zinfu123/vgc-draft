@@ -31,6 +31,7 @@ class League extends Model
         'discord_webhook_url',
         'discord_replay_webhook_url',
         'set_start_date',
+        'set_end_date',
         'open',
         'require_showdown_username',
         'maximum_teams',
@@ -40,6 +41,15 @@ class League extends Model
         'created_at',
         'updated_at',
     ];
+
+    protected static function booted(): void
+    {
+        static::updating(function (League $league): void {
+            if ($league->isDirty('status') && $league->status === LeagueStatus::Completed) {
+                $league->set_end_date = now()->toDateString();
+            }
+        });
+    }
 
     public function getActivitylogOptions(): LogOptions
     {

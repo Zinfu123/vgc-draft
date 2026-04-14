@@ -15,7 +15,7 @@ import {
 import { isReverbBroadcastClientConfigured } from '@/lib/broadcasting';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { useEchoPublic } from '@laravel/echo-vue';
-import { ArrowRight, Bell, Clock, RadioTower } from 'lucide-vue-next';
+import { ArrowRight, Bell, Clock, RadioTower, Swords } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 interface League {
@@ -129,6 +129,13 @@ interface PoolMon {
     type2?: string;
 }
 
+interface NextSet {
+    id: number;
+    round: number;
+    scheduled_at: string | null;
+    opponent_name: string;
+}
+
 const props = defineProps<{
     league: League;
     section: LeagueDetailSection;
@@ -142,8 +149,9 @@ const props = defineProps<{
     leagueTeamsForTrades: TradesTeam[];
     trades: Trade[];
     freeAgencyPool: PoolMon[];
+    nextSet: NextSet | null;
     leagueTransactions: Trade[];
-}>();
+}>(); 
 
 const currentUser = usePage().props.auth.user as { id?: number; discord_id?: string | null } | null;
 
@@ -351,6 +359,27 @@ function relativeTime(dateStr: string): string {
 
     return new Date(dateStr).toLocaleDateString();
 }
+
+// --- Free agency pool filters ---
+const faPoolSearch = ref('');
+const faPoolMinCost = ref<number | null>(null);
+const faPoolMaxCost = ref<number | null>(null);
+
+const filteredFreeAgencyPool = computed(() => {
+    const search = faPoolSearch.value.trim().toLowerCase();
+    return props.freeAgencyPool.filter((p) => {
+        if (search && !p.name.toLowerCase().includes(search)) {
+            return false;
+        }
+        if (faPoolMinCost.value !== null && p.cost < faPoolMinCost.value) {
+            return false;
+        }
+        if (faPoolMaxCost.value !== null && p.cost > faPoolMaxCost.value) {
+            return false;
+        }
+        return true;
+    });
+});
 
 // --- Real-time updates ---
 if (isReverbBroadcastClientConfigured) {
@@ -576,9 +605,37 @@ if (isReverbBroadcastClientConfigured) {
                                         <div>
                                             <p class="mb-2 text-sm font-medium">Take from pool</p>
                                             <p v-if="faForm.errors.requested_pokemon_ids" class="mb-2 text-sm text-destructive">{{ faForm.errors.requested_pokemon_ids }}</p>
+
+                                            <!-- Pool filters -->
+                                            <div class="mb-3 flex flex-col gap-2">
+                                                <input
+                                                    v-model="faPoolSearch"
+                                                    type="text"
+                                                    placeholder="Search by name…"
+                                                    class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-ring dark:bg-background"
+                                                />
+                                                <div class="flex items-center gap-2">
+                                                    <input
+                                                        v-model.number="faPoolMinCost"
+                                                        type="number"
+                                                        min="0"
+                                                        placeholder="Min pts"
+                                                        class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-ring dark:bg-background"
+                                                    />
+                                                    <span class="shrink-0 text-xs text-muted-foreground">–</span>
+                                                    <input
+                                                        v-model.number="faPoolMaxCost"
+                                                        type="number"
+                                                        min="0"
+                                                        placeholder="Max pts"
+                                                        class="w-full rounded-md border border-input bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-ring dark:bg-background"
+                                                    />
+                                                </div>
+                                            </div>
+
                                             <div class="flex max-h-52 flex-wrap gap-2 overflow-y-auto">
                                                 <button
-                                                    v-for="poke in freeAgencyPool"
+                                                    v-for="poke in filteredFreeAgencyPool"
                                                     :key="poke.id"
                                                     type="button"
                                                     :class="[
@@ -594,6 +651,7 @@ if (isReverbBroadcastClientConfigured) {
                                                 </button>
                                             </div>
                                             <p v-if="freeAgencyPool.length === 0" class="text-sm text-muted-foreground">No Pokémon available in the pool.</p>
+                                            <p v-else-if="filteredFreeAgencyPool.length === 0" class="text-sm text-muted-foreground">No Pokémon match your filters.</p>
                                         </div>
 
                                         <div class="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-4">
@@ -832,6 +890,33 @@ if (isReverbBroadcastClientConfigured) {
             <!-- ─── Right column: League Transactions (1/3) ─── -->
             <div class="lg:col-span-1">
                 <div class="sticky top-6 flex flex-col gap-3">
+
+                    <!-- Next Match card -->
+                    <Link
+                        v-if="nextSet"
+                        :href="route('sets.show', { set_id: nextSet.id })"
+                        class="group block rounded-xl border border-border bg-card/80 px-4 py-3 shadow-sm transition-colors hover:bg-accent"
+                    >
+                        <div class="mb-2 flex items-center gap-2">
+                            <Swords class="size-4 shrink-0 text-primary" />
+                            <span class="text-sm font-semibold">Next Match</span>
+                            <span class="ml-auto text-xs text-muted-foreground">Round {{ nextSet.round }}</span>
+                        </div>
+                        <p class="text-base font-semibold text-foreground">vs {{ nextSet.opponent_name }}</p>
+                        <p class="mt-0.5 text-xs text-muted-foreground">
+                            {{
+                                nextSet.scheduled_at
+                                    ? new Date(nextSet.scheduled_at).toLocaleString(undefined, {
+                                          weekday: 'short',
+                                          month: 'short',
+                                          day: 'numeric',
+                                          hour: 'numeric',
+                                          minute: '2-digit',
+                                      })
+                                    : 'Not yet scheduled'
+                            }}
+                        </p>
+                    </Link>
 
                     <!-- Trade Deadline badge -->
                     <div v-if="league.trade_deadline_at">

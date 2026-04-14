@@ -14,7 +14,15 @@ class MatchMessage extends Model
         'set_id',
         'user_id',
         'body',
+        'is_read',
     ];
+
+    public function casts(): array
+    {
+        return [
+            'is_read' => 'boolean',
+        ];
+    }
 
     public function set(): BelongsTo
     {

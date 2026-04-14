@@ -16,6 +16,7 @@ interface MatchWeekStart {
     league_name: string;
     date: string;
     round_label: string;
+    event_type?: 'round_start' | 'round_end';
 }
 
 interface ScheduledMatch {
@@ -154,7 +155,7 @@ const upcomingEvents = computed(() => {
     const cutoff = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
 
     const events: Array<{
-        type: 'draft' | 'match_week' | 'scheduled_match';
+        type: 'draft' | 'match_week' | 'round_end' | 'scheduled_match';
         label: string;
         date: Date;
         href: string;
@@ -176,7 +177,7 @@ const upcomingEvents = computed(() => {
         const date = new Date(m.date + 'T00:00:00');
         if (date >= now && date <= cutoff) {
             events.push({
-                type: 'match_week',
+                type: m.event_type === 'round_end' ? 'round_end' : 'match_week',
                 label: `${m.league_name} — ${m.round_label}`,
                 date,
                 href: route('leagues.matches', { league: m.league_id }),
@@ -265,7 +266,12 @@ const weekDayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                                             v-for="(mw, mi) in eventsForDate(cell.date).matchWeekStarts"
                                             :key="`mw-${mi}`"
                                             :href="route('leagues.matches', { league: mw.league_id })"
-                                            class="truncate rounded bg-blue-100 px-1 py-0.5 text-xs font-medium text-blue-800 hover:bg-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-900/50"
+                                            class="truncate rounded px-1 py-0.5 text-xs font-medium"
+                                            :class="
+                                                mw.event_type === 'round_end'
+                                                    ? 'bg-orange-100 text-orange-800 hover:bg-orange-200 dark:bg-orange-950/50 dark:text-orange-300 dark:hover:bg-orange-900/50'
+                                                    : 'bg-blue-100 text-blue-800 hover:bg-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:hover:bg-blue-900/50'
+                                            "
                                             :title="`${mw.league_name} — ${mw.round_label}`"
                                         >
                                             {{ mw.round_label }}
@@ -292,7 +298,11 @@ const weekDayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                                 </div>
                                 <div class="flex items-center gap-1.5">
                                     <span class="h-3 w-3 rounded bg-blue-100 dark:bg-blue-950/50"></span>
-                                    <span class="text-muted-foreground">Match round</span>
+                                    <span class="text-muted-foreground">Round start</span>
+                                </div>
+                                <div class="flex items-center gap-1.5">
+                                    <span class="h-3 w-3 rounded bg-orange-100 dark:bg-orange-950/50"></span>
+                                    <span class="text-muted-foreground">Round end</span>
                                 </div>
                                 <div class="flex items-center gap-1.5">
                                     <span class="h-3 w-3 rounded bg-green-100 dark:bg-green-950/50"></span>
@@ -319,6 +329,7 @@ const weekDayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                                         :class="{
                                             'bg-purple-500': event.type === 'draft',
                                             'bg-blue-500': event.type === 'match_week',
+                                            'bg-orange-500': event.type === 'round_end',
                                             'bg-green-500': event.type === 'scheduled_match',
                                         }"
                                     ></span>

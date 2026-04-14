@@ -19,6 +19,12 @@ Schedule::command('stats:sync-showdown-vgc-usage')
     ->dailyAt('06:15')
     ->withoutOverlapping(600);
 
+Schedule::command('matches:notify-unplayed')
+    ->name('matches-notify-unplayed')
+    ->dailyAt('23:59')
+    ->timezone('America/New_York')
+    ->withoutOverlapping(5);
+
 Schedule::command('draft:start-scheduled')
     ->name('draft-start-scheduled')
     ->everyFiveMinutes()

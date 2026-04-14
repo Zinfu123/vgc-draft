@@ -10,7 +10,9 @@ use App\Http\Requests\Match\UpdateSetRequest;
 use App\Modules\League\Models\League;
 use App\Modules\Matches\Actions\CreateEditSetsAction;
 use App\Modules\Matches\Actions\ShowSetsAction;
+use App\Modules\Matches\Enums\ScheduleRequestStatus;
 use App\Modules\Matches\Models\MatchMessage;
+use App\Modules\Matches\Models\MatchScheduleRequest;
 use App\Modules\Matches\Models\Set;
 use App\Modules\Pokepaste\Actions\ImportSetTeamsFromShowdownReplayAction;
 use App\Modules\Pokepaste\Actions\ReadMatchPokepastePayloadAction;
@@ -99,11 +101,31 @@ class SetController extends Controller
                         'user_id' => $msg->user_id,
                         'user_name' => $msg->user->name,
                         'body' => $msg->body,
+                        'is_read' => $msg->is_read,
                         'created_at' => $msg->created_at?->toISOString(),
                     ])
                     ->all();
             }),
             'isParticipant' => fn () => $isParticipant,
+            'pendingScheduleRequest' => Inertia::defer(function () use ($set, $user): ?array {
+                $request = MatchScheduleRequest::query()
+                    ->where('set_id', $set->id)
+                    ->where('status', ScheduleRequestStatus::Pending->value)
+                    ->latest()
+                    ->first();
+
+                if ($request === null) {
+                    return null;
+                }
+
+                return [
+                    'id' => $request->id,
+                    'proposed_at' => $request->proposed_at?->toISOString(),
+                    'proposed_by_user_id' => $request->proposed_by_user_id,
+                    'status' => $request->status->value,
+                    'is_mine' => $user !== null && $request->proposed_by_user_id === $user->id,
+                ];
+            }),
         ]);
     }
 

@@ -25,6 +25,7 @@ use App\Modules\League\Models\League;
 use App\Modules\League\Services\DropTeamFromLeagueService;
 use App\Modules\Matches\Actions\CreateEditSetsAction;
 use App\Modules\Matches\Actions\ShowSetsAction;
+use App\Modules\Matches\Models\Set;
 use App\Modules\Playoffs\Controllers\PlayoffController;
 use App\Modules\Playoffs\Services\PlayoffBracketLayoutService;
 use App\Modules\Playoffs\Services\PlayoffBracketService;
@@ -111,6 +112,31 @@ class LeagueController extends Controller
 
         $freeAgencyPool = $readLeaguePokemonAction(['league_id' => $league->id, 'command' => 'available']);
 
+        $nextSet = $userTradesTeam
+            ? Set::query()
+                ->where('league_id', $league->id)
+                ->where(function ($q) use ($userTradesTeam): void {
+                    $q->where('team1_id', $userTradesTeam->id)
+                        ->orWhere('team2_id', $userTradesTeam->id);
+                })
+                ->whereNull('winner_id')
+                ->where('is_bye', false)
+                ->with(['team1', 'team2'])
+                ->orderByRaw('CASE WHEN scheduled_at IS NULL THEN 1 ELSE 0 END')
+                ->orderBy('scheduled_at')
+                ->orderBy('round')
+                ->first()
+            : null;
+
+        $nextSetData = $nextSet ? [
+            'id' => $nextSet->id,
+            'round' => $nextSet->round,
+            'scheduled_at' => $nextSet->scheduled_at?->toIso8601String(),
+            'opponent_name' => $nextSet->team1_id === $userTradesTeam->id
+                ? ($nextSet->team2?->name ?? '—')
+                : ($nextSet->team1?->name ?? '—'),
+        ] : null;
+
         $leagueTransactions = Trade::query()
             ->where('league_id', $league->id)
             ->where('status', 'accepted')
@@ -133,6 +159,7 @@ class LeagueController extends Controller
             'leagueTeamsForTrades' => $leagueTeamsForTrades,
             'trades' => $userTrades,
             'freeAgencyPool' => $freeAgencyPool,
+            'nextSet' => $nextSetData,
             'leagueTransactions' => $leagueTransactions,
         ]);
     }

@@ -22,6 +22,7 @@ class MatchMessageSentEvent implements ShouldBroadcastNow
             'user_id' => $this->data['user_id'],
             'user_name' => $this->data['user_name'],
             'body' => $this->data['body'],
+            'is_read' => $this->data['is_read'] ?? false,
             'created_at' => $this->data['created_at'],
         ];
     }

@@ -209,6 +209,27 @@ it('cannot start playoffs when not in regular season', function () {
         ->assertSessionHasErrors(['league']);
 });
 
+it('sets set_end_date when league is marked as completed', function () {
+    [$owner, $league] = makeAdminLeague(LeagueStatus::RegularSeason->value);
+
+    expect($league->set_end_date)->toBeNull();
+
+    $league->update(['status' => LeagueStatus::Completed]);
+
+    expect($league->fresh()->set_end_date)->toBe(now()->toDateString());
+});
+
+it('does not overwrite set_end_date on subsequent saves once completed', function () {
+    [$owner, $league] = makeAdminLeague(LeagueStatus::RegularSeason->value);
+
+    $league->update(['status' => LeagueStatus::Completed]);
+    $firstDate = $league->fresh()->set_end_date;
+
+    $league->update(['name' => 'Updated Name']);
+
+    expect($league->fresh()->set_end_date)->toBe($firstDate);
+});
+
 it('requires authentication for all status transitions', function (string $route) {
     [$owner, $league] = makeAdminLeague(LeagueStatus::RegularSeason->value);
 

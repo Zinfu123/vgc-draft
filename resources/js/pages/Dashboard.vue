@@ -7,7 +7,8 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { useEchoNotification } from '@laravel/echo-vue';
-import { computed } from 'vue';
+import { ChevronDown, ChevronUp } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -141,6 +142,28 @@ const upcomingEvents = computed(() => {
     return events.sort((a, b) => a.date.getTime() - b.date.getTime());
 });
 
+const LEAGUES_PER_PAGE = 3;
+
+function sortBySeasonStart<T extends { set_start_date: string }>(leagues: T[]): T[] {
+    return [...leagues].sort((a, b) => new Date(a.set_start_date).getTime() - new Date(b.set_start_date).getTime());
+}
+
+const sortedActiveLeagues = computed(() => sortBySeasonStart(props.usersActiveLeagues));
+const sortedPastLeagues = computed(() => sortBySeasonStart(props.usersPastLeagues));
+
+const activeLeaguesPage = ref(0);
+const pastLeaguesPage = ref(0);
+
+const activeLeaguesPageCount = computed(() => Math.ceil(sortedActiveLeagues.value.length / LEAGUES_PER_PAGE));
+const pastLeaguesPageCount = computed(() => Math.ceil(sortedPastLeagues.value.length / LEAGUES_PER_PAGE));
+
+const visibleActiveLeagues = computed(() =>
+    sortedActiveLeagues.value.slice(activeLeaguesPage.value * LEAGUES_PER_PAGE, (activeLeaguesPage.value + 1) * LEAGUES_PER_PAGE),
+);
+const visiblePastLeagues = computed(() =>
+    sortedPastLeagues.value.slice(pastLeaguesPage.value * LEAGUES_PER_PAGE, (pastLeaguesPage.value + 1) * LEAGUES_PER_PAGE),
+);
+
 if (isReverbBroadcastClientConfigured && userId) {
     useEchoNotification(
         `App.Models.User.${userId}`,
@@ -221,17 +244,63 @@ if (isReverbBroadcastClientConfigured && userId) {
             <div class="grid grid-cols-1 gap-8 md:grid-cols-2">
                 <section>
                     <h2 class="mb-4 text-2xl font-bold">My Active Leagues</h2>
-                    <div v-if="props.usersActiveLeagues.length > 0" class="grid grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-4">
-                        <LeagueCarousel :leagues="props.usersActiveLeagues" />
-                    </div>
+                    <template v-if="sortedActiveLeagues.length > 0">
+                        <div class="grid grid-cols-3 gap-4 *:w-full">
+                            <LeagueCarousel :leagues="visibleActiveLeagues" />
+                        </div>
+                        <div v-if="activeLeaguesPageCount > 1" class="mt-3 flex items-center justify-between">
+                            <span class="text-xs text-muted-foreground">{{ activeLeaguesPage + 1 }} / {{ activeLeaguesPageCount }}</span>
+                            <div class="flex gap-1">
+                                <button
+                                    :disabled="activeLeaguesPage === 0"
+                                    class="rounded-md border border-border p-1 transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40"
+                                    aria-label="Previous leagues"
+                                    @click="activeLeaguesPage--"
+                                >
+                                    <ChevronUp class="h-4 w-4" />
+                                </button>
+                                <button
+                                    :disabled="activeLeaguesPage >= activeLeaguesPageCount - 1"
+                                    class="rounded-md border border-border p-1 transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40"
+                                    aria-label="Next leagues"
+                                    @click="activeLeaguesPage++"
+                                >
+                                    <ChevronDown class="h-4 w-4" />
+                                </button>
+                            </div>
+                        </div>
+                    </template>
                     <EmptyState v-else message="You are not currently in any active leagues." />
                 </section>
 
                 <section>
                     <h2 class="mb-4 text-2xl font-bold">My Past Leagues</h2>
-                    <div v-if="props.usersPastLeagues.length > 0" class="grid grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-4">
-                        <LeagueCarousel :leagues="props.usersPastLeagues" />
-                    </div>
+                    <template v-if="sortedPastLeagues.length > 0">
+                        <div class="grid grid-cols-3 gap-4 *:w-full">
+                            <LeagueCarousel :leagues="visiblePastLeagues" />
+                        </div>
+                        <div v-if="pastLeaguesPageCount > 1" class="mt-3 flex items-center justify-between">
+                            <span class="text-xs text-muted-foreground">{{ pastLeaguesPage + 1 }} / {{ pastLeaguesPageCount }}</span>
+                            <div class="flex gap-1">
+                                <button
+                                    :disabled="pastLeaguesPage === 0"
+                                    class="rounded-md border border-border p-1 transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40"
+                                    aria-label="Previous leagues"
+                                    @click="pastLeaguesPage--"
+                                >
+                                    <ChevronUp class="h-4 w-4" />
+                                </button>
+                                <button
+                                    :disabled="pastLeaguesPage >= pastLeaguesPageCount - 1"
+                                    class="rounded-md border border-border p-1 transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-40"
+                                    aria-label="Next leagues"
+                                    @click="pastLeaguesPage++"
+                                >
+                                    <ChevronDown class="h-4 w-4" />
+                                </button>
+                            </div>
+                        </div>
+                    </template>
                     <EmptyState v-else message="You have no past leagues." />
                 </section>
             </div>

@@ -10,6 +10,7 @@ use App\Modules\League\Controllers\LeaguePokemonController;
 use App\Modules\League\Controllers\PoolTemplateCatalogController;
 use App\Modules\Matches\Controllers\MatchConfigController;
 use App\Modules\Matches\Controllers\MatchMessageController;
+use App\Modules\Matches\Controllers\MatchScheduleRequestController;
 use App\Modules\Matches\Controllers\PoolController;
 use App\Modules\Matches\Controllers\SetController;
 use App\Modules\MatchPrep\Controllers\MatchPrepController;
@@ -161,6 +162,10 @@ Route::prefix('match')->group(function () {
 
     Route::get('/set/{set}/messages', [MatchMessageController::class, 'index'])->middleware(['auth', 'verified'])->name('sets.messages.index');
     Route::post('/set/{set}/messages', [MatchMessageController::class, 'store'])->middleware(['auth', 'verified'])->name('sets.messages.store');
+    Route::post('/set/{set}/messages/read', [MatchMessageController::class, 'markRead'])->middleware(['auth', 'verified'])->name('sets.messages.mark-read');
+
+    Route::post('/set/{set}/schedule-request', [MatchScheduleRequestController::class, 'store'])->middleware(['auth', 'verified'])->name('sets.schedule-request.store');
+    Route::patch('/schedule-request/{scheduleRequest}/respond', [MatchScheduleRequestController::class, 'respond'])->middleware(['auth', 'verified'])->name('sets.schedule-request.respond');
 
 });
 

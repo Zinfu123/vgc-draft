@@ -13,7 +13,7 @@ class ReadCalendarEventsAction
     /**
      * @return array{
      *     draft_days: list<array{league_id: int, league_name: string, date: string}>,
-     *     match_week_starts: list<array{league_id: int, league_name: string, date: string, round_label: string}>,
+     *     match_week_starts: list<array{league_id: int, league_name: string, date: string, round_label: string, event_type: string}>,
      *     scheduled_matches: list<array{set_id: int, league_id: int, opponent_team_name: string, scheduled_at: string}>
      * }
      */
@@ -78,15 +78,33 @@ class ReadCalendarEventsAction
                 }
 
                 $startDate = Carbon::parse($league->set_start_date);
+                $sortedRounds = $leagueRounds->pluck('round')->sort()->values();
+                $maxRound = $sortedRounds->last();
 
-                foreach ($leagueRounds->pluck('round')->sort()->values() as $roundNumber) {
-                    $roundDate = $this->calculateRoundDate($startDate, (int) $roundNumber, $frequencyType, $frequencyValue);
+                foreach ($sortedRounds as $roundNumber) {
+                    $roundStart = $this->calculateRoundDate($startDate, (int) $roundNumber, $frequencyType, $frequencyValue);
+
+                    // Round end: one day before the next round starts, or use set_end_date for the final round
+                    if ((int) $roundNumber === (int) $maxRound && $league->set_end_date !== null) {
+                        $roundEnd = Carbon::parse($league->set_end_date);
+                    } else {
+                        $roundEnd = $this->calculateRoundDate($startDate, (int) $roundNumber + 1, $frequencyType, $frequencyValue)->subDay();
+                    }
 
                     $matchWeekStarts[] = [
                         'league_id' => $league->id,
                         'league_name' => $league->name,
-                        'date' => $roundDate->toDateString(),
-                        'round_label' => 'Round '.$roundNumber,
+                        'date' => $roundStart->toDateString(),
+                        'round_label' => 'Round '.$roundNumber.' Start',
+                        'event_type' => 'round_start',
+                    ];
+
+                    $matchWeekStarts[] = [
+                        'league_id' => $league->id,
+                        'league_name' => $league->name,
+                        'date' => $roundEnd->toDateString(),
+                        'round_label' => 'Round '.$roundNumber.' End',
+                        'event_type' => 'round_end',
                     ];
                 }
             }

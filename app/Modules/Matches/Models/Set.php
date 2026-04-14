@@ -80,4 +80,9 @@ class Set extends Model
     {
         return $this->hasMany(MatchMessage::class, 'set_id');
     }
+
+    public function scheduleRequests(): HasMany
+    {
+        return $this->hasMany(MatchScheduleRequest::class, 'set_id');
+    }
 }

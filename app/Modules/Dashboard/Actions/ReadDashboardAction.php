@@ -121,7 +121,8 @@ class ReadDashboardAction
      *     name: string,
      *     status: int,
      *     draft_date: string|null,
-     *     set_start_date: string,
+     *     set_start_date: string|null,
+     *     set_end_date: string|null,
      *     logo: string|null,
      *     winner: string|null,
      *     podium: array{first: string|null, second: string|null, third: string|null}
@@ -143,6 +144,7 @@ class ReadDashboardAction
             'status' => $league->status,
             'draft_date' => $league->draftConfig?->draft_date?->toDateString(),
             'set_start_date' => $league->set_start_date,
+            'set_end_date' => $league->set_end_date,
             'logo' => $logo,
             'winner' => $league->winnerUser?->name,
             'podium' => [

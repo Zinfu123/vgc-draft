@@ -9,6 +9,7 @@ use App\Modules\Matches\Models\MatchMessage;
 use App\Modules\Matches\Models\Set;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 
 class MatchMessageController extends Controller
 {
@@ -27,6 +28,7 @@ class MatchMessageController extends Controller
                 'user_id' => $message->user_id,
                 'user_name' => $message->user->name,
                 'body' => $message->body,
+                'is_read' => $message->is_read,
                 'created_at' => $message->created_at?->toISOString(),
             ]);
 
@@ -41,6 +43,7 @@ class MatchMessageController extends Controller
             'set_id' => $setModel->id,
             'user_id' => $request->user()->id,
             'body' => $request->validated('body'),
+            'is_read' => false,
         ]);
 
         $message->load('user:id,name');
@@ -51,9 +54,23 @@ class MatchMessageController extends Controller
             'user_id' => $message->user_id,
             'user_name' => $message->user->name,
             'body' => $message->body,
+            'is_read' => false,
             'created_at' => $message->created_at?->toISOString(),
         ]);
 
         return redirect()->back();
+    }
+
+    public function markRead(Request $request, int $set): JsonResponse
+    {
+        $setModel = Set::query()->findOrFail($set);
+
+        MatchMessage::query()
+            ->where('set_id', $setModel->id)
+            ->where('user_id', '!=', $request->user()->id)
+            ->where('is_read', false)
+            ->update(['is_read' => true]);
+
+        return response()->json(['ok' => true]);
     }
 }

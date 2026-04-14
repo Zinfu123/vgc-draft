@@ -153,3 +153,56 @@ it('returns messages for a set in order', function () {
     expect($data[0]['body'])->toBe('First');
     expect($data[1]['body'])->toBe('Second');
 });
+
+it('new messages are unread by default', function () {
+    Event::fake();
+
+    ['user1' => $user1, 'set' => $set] = makeSetWithTwoUsers();
+
+    $this->actingAs($user1)
+        ->post(route('sets.messages.store', ['set' => $set->id]), [
+            'body' => 'Hello!',
+        ]);
+
+    $message = MatchMessage::query()->where('set_id', $set->id)->first();
+    expect($message->is_read)->toBeFalse();
+});
+
+it('includes is_read in the message index response', function () {
+    ['user1' => $user1, 'user2' => $user2, 'set' => $set] = makeSetWithTwoUsers();
+
+    MatchMessage::create(['set_id' => $set->id, 'user_id' => $user2->id, 'body' => 'Hey!', 'is_read' => false]);
+
+    $response = $this->actingAs($user1)
+        ->getJson(route('sets.messages.index', ['set' => $set->id]));
+
+    $response->assertSuccessful();
+    expect($response->json(0))->toHaveKey('is_read');
+    expect($response->json(0)['is_read'])->toBeFalse();
+});
+
+it('marks opponent messages as read when requested', function () {
+    ['user1' => $user1, 'user2' => $user2, 'set' => $set] = makeSetWithTwoUsers();
+
+    MatchMessage::create(['set_id' => $set->id, 'user_id' => $user2->id, 'body' => 'Hey!', 'is_read' => false]);
+    MatchMessage::create(['set_id' => $set->id, 'user_id' => $user1->id, 'body' => 'Reply', 'is_read' => false]);
+
+    $response = $this->actingAs($user1)
+        ->postJson(route('sets.messages.mark-read', ['set' => $set->id]));
+
+    $response->assertSuccessful();
+
+    $messages = MatchMessage::query()->where('set_id', $set->id)->get();
+
+    // user2's message (received by user1) should now be read
+    expect($messages->firstWhere('user_id', $user2->id)->is_read)->toBeTrue();
+    // user1's own message should remain unread (they sent it)
+    expect($messages->firstWhere('user_id', $user1->id)->is_read)->toBeFalse();
+});
+
+it('requires authentication to mark messages as read', function () {
+    ['set' => $set] = makeSetWithTwoUsers();
+
+    $this->postJson(route('sets.messages.mark-read', ['set' => $set->id]))
+        ->assertUnauthorized();
+});

@@ -9,7 +9,7 @@ import { isReverbBroadcastClientConfigured } from '@/lib/broadcasting';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { useEchoPublic } from '@laravel/echo-vue';
-import { ExternalLink, MessageSquare } from 'lucide-vue-next';
+import { CalendarClock, ExternalLink, MessageSquare } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 const page = usePage();
@@ -76,6 +76,7 @@ interface Set {
     winner_name: string;
     winner_logo: string;
     status: number;
+    scheduled_at: string | null;
 }
 
 interface CurrentUserTeam {
@@ -97,7 +98,16 @@ interface MatchMessage {
     user_id: number;
     user_name: string;
     body: string;
+    is_read: boolean;
     created_at: string;
+}
+
+interface PendingScheduleRequest {
+    id: number;
+    proposed_at: string;
+    proposed_by_user_id: number;
+    status: string;
+    is_mine: boolean;
 }
 
 interface Props {
@@ -110,10 +120,116 @@ interface Props {
     requireReplaysBeforeResults?: boolean;
     matchMessages?: MatchMessage[];
     isParticipant?: boolean;
+    pendingScheduleRequest?: PendingScheduleRequest | null;
 }
 
 const props = defineProps<Props>();
 const setId = props.set.id;
+
+const chatSheetOpen = ref(false);
+const localUnreadCount = ref(0);
+
+watch(
+    () => props.matchMessages,
+    (messages) => {
+        if (messages !== undefined) {
+            const userId = authUserId.value;
+            localUnreadCount.value = messages.filter((m) => m.user_id !== userId && !m.is_read).length;
+        }
+    },
+    { once: true },
+);
+
+watch(chatSheetOpen, (open) => {
+    if (open) {
+        localUnreadCount.value = 0;
+        void markMessagesRead();
+    }
+});
+
+async function markMessagesRead(): Promise<void> {
+    if (!props.isParticipant) {
+        return;
+    }
+    try {
+        await fetch(route('sets.messages.mark-read', { set: props.set.id }), {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-XSRF-TOKEN': readXsrfToken(),
+            },
+        });
+    } catch {
+        // silently fail — badge will reset on next page load
+    }
+}
+
+const scheduleRequestDialogOpen = ref(false);
+const rescheduleDialogOpen = ref(false);
+
+const scheduleRequestForm = useForm({
+    proposed_at: '',
+});
+
+const rescheduleForm = useForm({
+    action: 'reschedule' as const,
+    proposed_at: '',
+});
+
+const respondForm = useForm({
+    action: '' as 'accept' | 'decline' | 'cancel',
+});
+
+function openScheduleRequestDialog(): void {
+    scheduleRequestForm.reset();
+    scheduleRequestForm.clearErrors();
+    scheduleRequestDialogOpen.value = true;
+}
+
+function openRescheduleDialog(): void {
+    rescheduleForm.reset();
+    rescheduleForm.clearErrors();
+    rescheduleDialogOpen.value = true;
+}
+
+function submitScheduleRequest(): void {
+    scheduleRequestForm.post(route('sets.schedule-request.store', { set: props.set.id }), {
+        onSuccess: () => { scheduleRequestDialogOpen.value = false; },
+    });
+}
+
+function submitReschedule(scheduleRequestId: number): void {
+    rescheduleForm.patch(route('sets.schedule-request.respond', { scheduleRequest: scheduleRequestId }), {
+        onSuccess: () => { rescheduleDialogOpen.value = false; },
+    });
+}
+
+function acceptScheduleRequest(scheduleRequestId: number): void {
+    respondForm.action = 'accept';
+    respondForm.patch(route('sets.schedule-request.respond', { scheduleRequest: scheduleRequestId }));
+}
+
+function declineScheduleRequest(scheduleRequestId: number): void {
+    respondForm.action = 'decline';
+    respondForm.patch(route('sets.schedule-request.respond', { scheduleRequest: scheduleRequestId }));
+}
+
+function cancelScheduleRequest(scheduleRequestId: number): void {
+    respondForm.action = 'cancel';
+    respondForm.patch(route('sets.schedule-request.respond', { scheduleRequest: scheduleRequestId }));
+}
+
+function formatScheduledTime(iso: string): string {
+    return new Date(iso).toLocaleString(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+    });
+}
 
 const scoreForm = useForm({
     set_id: props.set.id,
@@ -151,6 +267,16 @@ const echoEvent = ref<SetModel>({ id: setId, status: props.set.status });
 if (isReverbBroadcastClientConfigured) {
     useEchoPublic<SetModel>(`set_updated.${setId}`, 'SetUpdatedEvent', (e) => {
         echoEvent.value = { id: e.id, status: e.status };
+    });
+
+    useEchoPublic<MatchMessage>(`match.chat.${setId}`, 'MatchMessageSentEvent', (e) => {
+        if (e.user_id !== authUserId.value) {
+            if (chatSheetOpen.value) {
+                void markMessagesRead();
+            } else {
+                localUnreadCount.value++;
+            }
+        }
     });
 }
 
@@ -365,16 +491,20 @@ const breadcrumbs: BreadcrumbItem[] = [
                     <div class="h-9 w-32 animate-pulse rounded-md bg-muted" />
                 </div>
                 <template v-else>
-                    <Sheet>
+                    <Button variant="outline" size="sm" class="gap-1.5" @click="openScheduleRequestDialog">
+                        <CalendarClock class="size-4" />
+                        Request a Time
+                    </Button>
+                    <Sheet v-model:open="chatSheetOpen">
                         <SheetTrigger as-child>
                             <Button variant="outline" size="sm" class="gap-1.5">
                                 <MessageSquare class="size-4" />
                                 Chat
                                 <span
-                                    v-if="matchMessages.length > 0"
+                                    v-if="localUnreadCount > 0"
                                     class="bg-primary text-primary-foreground ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-xs"
                                 >
-                                    {{ matchMessages.length }}
+                                    {{ localUnreadCount }}
                                 </span>
                             </Button>
                         </SheetTrigger>
@@ -449,6 +579,14 @@ const breadcrumbs: BreadcrumbItem[] = [
             </div>
         </div>
 
+        <!-- Scheduled time badge -->
+        <div v-if="set.scheduled_at" class="mt-4 flex justify-center">
+            <span class="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-800 dark:bg-green-900/50 dark:text-green-300">
+                <CalendarClock class="size-4" />
+                Scheduled: {{ formatScheduledTime(set.scheduled_at) }}
+            </span>
+        </div>
+
         <!-- Flash message -->
         <p v-if="flashSuccess" class="mt-4 text-center text-sm font-medium text-green-700 dark:text-green-400">
             {{ flashSuccess }}
@@ -456,6 +594,60 @@ const breadcrumbs: BreadcrumbItem[] = [
 
         <!-- Main content -->
         <div class="mx-auto mt-8 max-w-5xl space-y-6 px-4 pb-16 sm:px-6 lg:px-8">
+
+            <!-- Pending schedule request -->
+            <div v-if="pendingScheduleRequest" class="border-border bg-card rounded-xl border p-6">
+                <div class="mb-3 flex items-center gap-2">
+                    <CalendarClock class="text-primary size-5" />
+                    <h2 class="font-semibold">Pending Time Request</h2>
+                </div>
+                <p class="text-muted-foreground mb-4 text-sm">
+                    Proposed time:
+                    <span class="text-foreground font-medium">{{ formatScheduledTime(pendingScheduleRequest.proposed_at) }}</span>
+                </p>
+
+                <!-- The proposer is waiting for the other player -->
+                <div v-if="pendingScheduleRequest.is_mine" class="flex flex-wrap items-center gap-3">
+                    <p class="text-muted-foreground text-sm italic">Waiting for your opponent to respond…</p>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        :disabled="respondForm.processing"
+                        class="border-destructive/60 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        @click="cancelScheduleRequest(pendingScheduleRequest!.id)"
+                    >
+                        Cancel request
+                    </Button>
+                </div>
+
+                <!-- The other player can respond -->
+                <div v-else-if="isParticipant" class="flex flex-wrap gap-2">
+                    <Button
+                        size="sm"
+                        :disabled="respondForm.processing"
+                        @click="acceptScheduleRequest(pendingScheduleRequest!.id)"
+                    >
+                        Accept
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        :disabled="respondForm.processing"
+                        @click="openRescheduleDialog"
+                    >
+                        Propose new time
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        :disabled="respondForm.processing"
+                        class="border-destructive/60 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                        @click="declineScheduleRequest(pendingScheduleRequest!.id)"
+                    >
+                        Decline
+                    </Button>
+                </div>
+            </div>
 
             <!-- Replays -->
             <div class="border-border bg-card rounded-xl border p-6">
@@ -640,6 +832,71 @@ const breadcrumbs: BreadcrumbItem[] = [
                 <MatchTeamPanel :team="set.team2" :showdown-display="showdownDisplay(set.team2)" />
             </div>
         </div>
+
+        <!-- Request a time dialog -->
+        <Dialog v-model:open="scheduleRequestDialogOpen">
+            <DialogContent class="sm:max-w-sm">
+                <DialogHeader>
+                    <DialogTitle>Request a Match Time</DialogTitle>
+                    <DialogDescription>
+                        Propose a date and time to play. Your opponent will be notified on Discord and can accept, decline, or propose a new time.
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="space-y-4">
+                    <div>
+                        <label class="mb-1.5 block text-sm font-medium">Proposed date &amp; time</label>
+                        <input
+                            v-model="scheduleRequestForm.proposed_at"
+                            type="datetime-local"
+                            class="border-input bg-background text-foreground focus:ring-ring block w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:outline-none"
+                        />
+                        <p v-if="scheduleRequestForm.errors.proposed_at" class="text-destructive mt-1 text-sm">
+                            {{ scheduleRequestForm.errors.proposed_at }}
+                        </p>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" @click="scheduleRequestDialogOpen = false">Cancel</Button>
+                    <Button :disabled="scheduleRequestForm.processing || !scheduleRequestForm.proposed_at" @click="submitScheduleRequest">
+                        {{ scheduleRequestForm.processing ? 'Sending…' : 'Send request' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+
+        <!-- Reschedule dialog -->
+        <Dialog v-model:open="rescheduleDialogOpen">
+            <DialogContent class="sm:max-w-sm">
+                <DialogHeader>
+                    <DialogTitle>Propose a New Time</DialogTitle>
+                    <DialogDescription>
+                        Suggest an alternative date and time. Your opponent will be notified on Discord.
+                    </DialogDescription>
+                </DialogHeader>
+                <div class="space-y-4">
+                    <div>
+                        <label class="mb-1.5 block text-sm font-medium">New proposed date &amp; time</label>
+                        <input
+                            v-model="rescheduleForm.proposed_at"
+                            type="datetime-local"
+                            class="border-input bg-background text-foreground focus:ring-ring block w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:outline-none"
+                        />
+                        <p v-if="rescheduleForm.errors.proposed_at" class="text-destructive mt-1 text-sm">
+                            {{ rescheduleForm.errors.proposed_at }}
+                        </p>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" @click="rescheduleDialogOpen = false">Cancel</Button>
+                    <Button
+                        :disabled="rescheduleForm.processing || !rescheduleForm.proposed_at || !pendingScheduleRequest"
+                        @click="pendingScheduleRequest && submitReschedule(pendingScheduleRequest.id)"
+                    >
+                        {{ rescheduleForm.processing ? 'Sending…' : 'Propose new time' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
 
         <!-- Import rosters from replay dialog -->
         <Dialog v-model:open="importReplayModalOpen">

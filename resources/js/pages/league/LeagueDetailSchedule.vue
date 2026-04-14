@@ -119,6 +119,11 @@ interface BracketLayout {
     rounds: BracketRound[];
 }
 
+interface DisplayColumn {
+    key: string;
+    entries: { round: BracketRound; match: BracketMatchRow }[];
+}
+
 interface PlayoffPokepasteSides {
     team1: { public_id: string; has_data: boolean } | null;
     team2: { public_id: string; has_data: boolean } | null;
@@ -454,6 +459,35 @@ const rollbackForm = useForm({
     playoff_match_id: 0,
 });
 
+const closeForm = useForm({});
+
+function closePlayoffs(): void {
+    closeForm.post(route('leagues.admin.playoffs.close', { league: props.league.id }), {
+        preserveScroll: true,
+    });
+}
+
+const allMatchesComplete = computed(() => {
+    if (!props.playoff.matches.length) {
+        return false;
+    }
+    return props.playoff.matches.every((m) => m.winner_team_id !== null);
+});
+
+const displayColumns = computed((): DisplayColumn[] => {
+    const main = props.bracketLayout.rounds.filter((r) => !r.is_bronze_round);
+    const bronze = props.bracketLayout.rounds.find((r) => r.is_bronze_round) ?? null;
+    return main.map((r, i) => {
+        const entries: { round: BracketRound; match: BracketMatchRow }[] = r.matches.map((m) => ({ round: r, match: m }));
+        if (bronze && i === main.length - 1) {
+            for (const m of bronze.matches) {
+                entries.push({ round: bronze, match: m });
+            }
+        }
+        return { key: r.key, entries };
+    });
+});
+
 watch(scoreDialogOpen, (open) => {
     if (!open) {
         selectedRoundAndMatch.value = null;
@@ -743,9 +777,9 @@ function submitPlayoffRollback(): void {
                 <!-- Desktop bracket -->
                 <div v-else class="overflow-x-auto pb-4">
                     <div class="flex min-w-max flex-row items-stretch gap-6 px-1">
-                        <div v-for="round in bracketLayout.rounds" :key="round.key" class="flex w-48 shrink-0 flex-col justify-around gap-6">
+                        <div v-for="col in displayColumns" :key="col.key" class="flex w-48 shrink-0 flex-col justify-around gap-6">
                             <div
-                                v-for="match in round.matches"
+                                v-for="{ round, match } in col.entries"
                                 :key="match.slot"
                                 :role="canOpenPlayoffMatchDialog(match) ? 'button' : undefined"
                                 :tabindex="canOpenPlayoffMatchDialog(match) ? 0 : undefined"
@@ -806,6 +840,24 @@ function submitPlayoffRollback(): void {
                             </div>
                         </div>
                     </div>
+                </div>
+
+                <div
+                    v-if="(adminFlag === true || adminFlag === 1) && playoff.status === 'active' && allMatchesComplete && league.status !== 1"
+                    class="flex flex-col gap-2 border-t border-border pt-4"
+                >
+                    <Button
+                        type="button"
+                        class="min-h-11 w-full touch-manipulation sm:w-auto"
+                        :disabled="closeForm.processing"
+                        @click="closePlayoffs"
+                    >
+                        Close playoffs &amp; finalize league
+                    </Button>
+                    <p class="text-xs text-muted-foreground">
+                        Sets league champion, 1st–3rd medals, and marks the league complete.
+                    </p>
+                    <p v-if="closeForm.errors.playoff" class="text-sm text-destructive">{{ closeForm.errors.playoff }}</p>
                 </div>
 
                 <p v-if="playoff.status === 'active' && !(adminFlag === true || adminFlag === 1)" class="text-xs text-muted-foreground">

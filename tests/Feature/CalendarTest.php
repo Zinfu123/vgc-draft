@@ -276,10 +276,17 @@ it('shows per-round match week events when draft is complete', function () {
         ->assertSuccessful()
         ->assertInertia(fn ($page) => $page
             ->component('calendar/CalendarIndex')
-            ->where('matchWeekStarts.0.round_label', 'Round 1')
+            ->where('matchWeekStarts.0.round_label', 'Round 1 Start')
             ->where('matchWeekStarts.0.date', $startDate)
-            ->where('matchWeekStarts.1.round_label', 'Round 2')
-            ->where('matchWeekStarts.1.date', now()->addDays(3)->addWeek()->toDateString())
+            ->where('matchWeekStarts.0.event_type', 'round_start')
+            ->where('matchWeekStarts.1.round_label', 'Round 1 End')
+            ->where('matchWeekStarts.1.date', now()->addDays(3)->addWeek()->subDay()->toDateString())
+            ->where('matchWeekStarts.1.event_type', 'round_end')
+            ->where('matchWeekStarts.2.round_label', 'Round 2 Start')
+            ->where('matchWeekStarts.2.date', now()->addDays(3)->addWeek()->toDateString())
+            ->where('matchWeekStarts.2.event_type', 'round_start')
+            ->where('matchWeekStarts.3.round_label', 'Round 2 End')
+            ->where('matchWeekStarts.3.event_type', 'round_end')
         );
 });
 

@@ -16,7 +16,8 @@ interface Leagues {
     id: number;
     name: string;
     draft_config: DraftConfig | null;
-    set_start_date: string;
+    set_start_date: string | null;
+    set_end_date?: string | null;
     logo: string | null;
     winner: string | null;
     status: number;
@@ -115,68 +116,109 @@ function openLeague(id: number): void {
                 </span>
             </div>
 
-            <div class="flex gap-4">
-                <div
-                    class="relative flex h-[5.5rem] w-[5.5rem] shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/25 via-violet-500/15 to-cyan-500/10 p-1.5 shadow-inner ring-1 ring-white/70 dark:from-primary/30 dark:via-violet-500/20 dark:to-fuchsia-500/10 dark:ring-white/15"
-                >
-                    <img
-                        v-if="league.logo !== null"
-                        :src="league.logo"
-                        alt=""
-                        class="h-full w-full rounded-[0.65rem] object-contain"
-                    />
-                    <span
-                        v-else
-                        class="text-2xl font-bold tracking-tight text-primary/35 dark:text-primary/50"
-                        aria-hidden="true"
+            <!-- Past league layout: logo + season dates, then podium below -->
+            <template v-if="hasPodium(league)">
+                <div class="flex gap-4">
+                    <div
+                        class="relative flex h-[5.5rem] w-[5.5rem] shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/25 via-violet-500/15 to-cyan-500/10 p-1.5 shadow-inner ring-1 ring-white/70 dark:from-primary/30 dark:via-violet-500/20 dark:to-fuchsia-500/10 dark:ring-white/15"
                     >
-                        {{ league.name.charAt(0) ? league.name.charAt(0).toUpperCase() : '?' }}
-                    </span>
+                        <img
+                            v-if="league.logo !== null"
+                            :src="league.logo"
+                            alt=""
+                            class="h-full w-full rounded-[0.65rem] object-contain"
+                        />
+                        <span
+                            v-else
+                            class="text-2xl font-bold tracking-tight text-primary/35 dark:text-primary/50"
+                            aria-hidden="true"
+                        >
+                            {{ league.name.charAt(0) ? league.name.charAt(0).toUpperCase() : '?' }}
+                        </span>
+                    </div>
+
+                    <div class="min-w-0 flex-1 space-y-2 text-left">
+                        <div class="rounded-lg border border-violet-500/20 bg-violet-500/5 px-2.5 py-1.5 dark:border-violet-400/20 dark:bg-violet-500/10">
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-violet-700 dark:text-violet-300">Season start</p>
+                            <p class="text-sm font-semibold text-foreground">{{ league.set_start_date ?? '—' }}</p>
+                        </div>
+                        <div class="rounded-lg border border-violet-500/20 bg-violet-500/5 px-2.5 py-1.5 dark:border-violet-400/20 dark:bg-violet-500/10">
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-violet-700 dark:text-violet-300">Season end</p>
+                            <p class="text-sm font-semibold text-foreground">{{ league.set_end_date ?? '—' }}</p>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="min-w-0 flex-1 space-y-2 text-left">
-                    <template v-if="hasPodium(league)">
-                        <div
-                            v-if="league.podium?.first"
-                            class="rounded-lg border border-amber-500/25 bg-amber-500/10 px-2.5 py-1.5 dark:border-amber-400/20 dark:bg-amber-500/15"
-                        >
-                            <p class="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">1st</p>
-                            <p class="truncate text-sm font-semibold text-foreground">{{ league.podium.first }}</p>
-                        </div>
+                <!-- Podium: 1st centered, then 2nd & 3rd side by side -->
+                <div class="space-y-2">
+                    <div
+                        v-if="league.podium?.first"
+                        class="rounded-lg border border-amber-500/25 bg-amber-500/10 px-2.5 py-1.5 text-center dark:border-amber-400/20 dark:bg-amber-500/15"
+                    >
+                        <p class="text-[10px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">🥇 1st</p>
+                        <p class="truncate text-sm font-semibold text-foreground">{{ league.podium.first }}</p>
+                    </div>
+                    <div class="flex gap-2">
                         <div
                             v-if="league.podium?.second"
-                            class="rounded-lg border border-slate-400/30 bg-slate-500/10 px-2.5 py-1.5 dark:border-slate-400/25 dark:bg-slate-400/10"
+                            class="min-w-0 flex-1 rounded-lg border border-slate-400/30 bg-slate-500/10 px-2.5 py-1.5 text-center dark:border-slate-400/25 dark:bg-slate-400/10"
                         >
-                            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">2nd</p>
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">🥈 2nd</p>
                             <p class="truncate text-sm font-semibold text-foreground">{{ league.podium.second }}</p>
                         </div>
                         <div
                             v-if="league.podium?.third"
-                            class="rounded-lg border border-orange-600/25 bg-orange-600/10 px-2.5 py-1.5 dark:border-orange-500/25 dark:bg-orange-500/15"
+                            class="min-w-0 flex-1 rounded-lg border border-orange-600/25 bg-orange-600/10 px-2.5 py-1.5 text-center dark:border-orange-500/25 dark:bg-orange-500/15"
                         >
-                            <p class="text-[10px] font-bold uppercase tracking-wider text-orange-800 dark:text-orange-400">3rd</p>
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-orange-800 dark:text-orange-400">🥉 3rd</p>
                             <p class="truncate text-sm font-semibold text-foreground">{{ league.podium.third }}</p>
                         </div>
-                    </template>
-                    <div
-                        v-else-if="league.winner !== null"
-                        class="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 dark:border-emerald-400/25 dark:bg-emerald-500/15"
-                    >
-                        <p class="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Winner</p>
-                        <p class="truncate text-sm font-semibold text-foreground">{{ league.winner }}</p>
-                    </div>
-                    <template v-else>
-                        <div class="rounded-lg border border-sky-500/20 bg-sky-500/5 px-2.5 py-1.5 dark:border-sky-400/20 dark:bg-sky-500/10">
-                            <p class="text-[10px] font-bold uppercase tracking-wider text-sky-700 dark:text-sky-300">Draft</p>
-                            <p class="text-sm font-semibold text-foreground">{{ formatDraftDate(league) }}</p>
-                        </div>
-                    </template>
-                    <div class="rounded-lg border border-violet-500/20 bg-violet-500/5 px-2.5 py-1.5 dark:border-violet-400/20 dark:bg-violet-500/10">
-                        <p class="text-[10px] font-bold uppercase tracking-wider text-violet-700 dark:text-violet-300">Season start</p>
-                        <p class="text-sm font-semibold text-foreground">{{ league.set_start_date }}</p>
                     </div>
                 </div>
-            </div>
+            </template>
+
+            <!-- Active / open league layout: logo + info side by side -->
+            <template v-else>
+                <div class="flex gap-4">
+                    <div
+                        class="relative flex h-[5.5rem] w-[5.5rem] shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/25 via-violet-500/15 to-cyan-500/10 p-1.5 shadow-inner ring-1 ring-white/70 dark:from-primary/30 dark:via-violet-500/20 dark:to-fuchsia-500/10 dark:ring-white/15"
+                    >
+                        <img
+                            v-if="league.logo !== null"
+                            :src="league.logo"
+                            alt=""
+                            class="h-full w-full rounded-[0.65rem] object-contain"
+                        />
+                        <span
+                            v-else
+                            class="text-2xl font-bold tracking-tight text-primary/35 dark:text-primary/50"
+                            aria-hidden="true"
+                        >
+                            {{ league.name.charAt(0) ? league.name.charAt(0).toUpperCase() : '?' }}
+                        </span>
+                    </div>
+
+                    <div class="min-w-0 flex-1 space-y-2 text-left">
+                        <div
+                            v-if="league.winner !== null"
+                            class="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1.5 dark:border-emerald-400/25 dark:bg-emerald-500/15"
+                        >
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Winner</p>
+                            <p class="truncate text-sm font-semibold text-foreground">{{ league.winner }}</p>
+                        </div>
+                        <template v-else>
+                            <div class="rounded-lg border border-sky-500/20 bg-sky-500/5 px-2.5 py-1.5 dark:border-sky-400/20 dark:bg-sky-500/10">
+                                <p class="text-[10px] font-bold uppercase tracking-wider text-sky-700 dark:text-sky-300">Draft</p>
+                                <p class="text-sm font-semibold text-foreground">{{ formatDraftDate(league) }}</p>
+                            </div>
+                        </template>
+                        <div class="rounded-lg border border-violet-500/20 bg-violet-500/5 px-2.5 py-1.5 dark:border-violet-400/20 dark:bg-violet-500/10">
+                            <p class="text-[10px] font-bold uppercase tracking-wider text-violet-700 dark:text-violet-300">Season start</p>
+                            <p class="text-sm font-semibold text-foreground">{{ league.set_start_date ?? '—' }}</p>
+                        </div>
+                    </div>
+                </div>
+            </template>
 
             <p
                 class="text-center text-[11px] font-medium text-primary/70 opacity-0 transition-opacity group-hover:opacity-100 dark:text-primary/60"
