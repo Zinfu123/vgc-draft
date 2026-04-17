@@ -175,6 +175,7 @@ class DiscordController extends Controller
     {
         $user->discord_id = $discordUser->getId();
         $user->discord_username = $discordUser->getNickname() ?? $discordUser->getName();
+        $user->discord_avatar_url = $discordUser->getAvatar() ?: null;
         $user->save();
     }
 
@@ -204,6 +205,7 @@ class DiscordController extends Controller
             'password' => Hash::make(Str::password(64)),
             'discord_id' => $discordUser->getId(),
             'discord_username' => $discordUser->getNickname() ?? $discordUser->getName(),
+            'discord_avatar_url' => $discordUser->getAvatar() ?: null,
         ]);
 
         $user->forceFill(['email_verified_at' => now()])->save();

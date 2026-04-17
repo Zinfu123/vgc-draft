@@ -219,7 +219,7 @@ it('falls back to the default variety when the name matches the default form', f
 });
 
 it('sets tera_capable true and mega false for tera mechanic version groups', function () {
-    $versionGroup = new VersionGroup(['battle_mechanic' => 'tera']);
+    $versionGroup = new VersionGroup(['generational_mechanics' => [1]]);
     $importer = new PokeApiPokemonGameDataImporter;
     $method = new ReflectionMethod(PokeApiPokemonGameDataImporter::class, 'defaultMechanicsForVersionGroup');
     $method->setAccessible(true);
@@ -231,7 +231,7 @@ it('sets tera_capable true and mega false for tera mechanic version groups', fun
 });
 
 it('sets mega true and tera_capable false for mega mechanic version groups like champions', function () {
-    $versionGroup = new VersionGroup(['battle_mechanic' => 'mega']);
+    $versionGroup = new VersionGroup(['generational_mechanics' => [2]]);
     $importer = new PokeApiPokemonGameDataImporter;
     $method = new ReflectionMethod(PokeApiPokemonGameDataImporter::class, 'defaultMechanicsForVersionGroup');
     $method->setAccessible(true);
@@ -246,7 +246,7 @@ it('sets mega true and tera_capable false for mega mechanic version groups like 
 });
 
 it('sets all mechanics to false for version groups with no battle mechanic', function () {
-    $versionGroup = new VersionGroup(['battle_mechanic' => null]);
+    $versionGroup = new VersionGroup(['generational_mechanics' => [0]]);
     $importer = new PokeApiPokemonGameDataImporter;
     $method = new ReflectionMethod(PokeApiPokemonGameDataImporter::class, 'defaultMechanicsForVersionGroup');
     $method->setAccessible(true);

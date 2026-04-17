@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import DraftPicksPanel from '@/components/draft/DraftPicksPanel.vue';
 import DraftTeamsPanel from '@/components/draft/DraftTeamsPanel.vue';
+import DraftPokemonActionDialog from '@/components/draft/DraftPokemonActionDialog.vue';
+import DraftWishlistPanel, { type WishlistRowPokemon } from '@/components/draft/DraftWishlistPanel.vue';
 import PokemonCard from '@/components/pokemon/PokemonCard.vue';
 import PokemonFilter, { type PokemonFilters } from '@/components/draft/PokemonFilter.vue';
 import { Button } from '@/components/ui/button';
 import { ButtonGroup } from '@/components/ui/button-group';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import Tabs from '@/components/ui/tabs/Tabs.vue';
 import TabsContent from '@/components/ui/tabs/TabsContent.vue';
@@ -17,7 +18,7 @@ import { isReverbBroadcastClientConfigured } from '@/lib/broadcasting';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router } from '@inertiajs/vue3';
 import { useEchoPublic } from '@laravel/echo-vue';
-import { ArrowUp, Ban, CheckCircle, LoaderCircle, ShieldBan, Swords } from 'lucide-vue-next';
+import { ArrowUp, Ban, CheckCircle, Heart, ShieldBan, Swords } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 interface League {
@@ -42,6 +43,7 @@ interface Pokemon {
     cost: number;
     banned: number | boolean;
     is_drafted: number | boolean;
+    drafted_by_team_id: number | null;
     drafted_by_team_name: string | null;
 }
 
@@ -183,9 +185,12 @@ interface Props {
     lastPick: LastPick | null;
     lastBan: LastBan | null;
     allBans: BanEntry[];
+    wishlist_league_pokemon_ids?: number[];
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+    wishlist_league_pokemon_ids: () => [],
+});
 
 const { isMobile } = useMobileLayout();
 
@@ -199,6 +204,42 @@ const isBanPhase = computed(() => props.draft?.status === 2);
 const isDraftPhase = computed(() => props.draft?.status === 1);
 
 const isDraftActive = computed(() => props.draft?.status === 1 || props.draft?.status === 2);
+
+const isPreDraft = computed(() => props.draft === null);
+
+const wishlistIdSet = computed(() => new Set(props.wishlist_league_pokemon_ids));
+
+const isWishlistStolen = (pokemon: Pokemon): boolean => {
+    if (!pokemon.is_drafted) {
+        return false;
+    }
+    if (!wishlistIdSet.value.has(pokemon.id)) {
+        return false;
+    }
+    if (pokemon.drafted_by_team_id === null || props.userTeam === null) {
+        return false;
+    }
+
+    return pokemon.drafted_by_team_id !== props.userTeam.id;
+};
+
+const wishlistPanelRows = computed((): WishlistRowPokemon[] =>
+    props.wishlist_league_pokemon_ids
+        .map((id) => props.pokemon.find((p) => p.id === id))
+        .filter((p): p is Pokemon => p !== undefined)
+        .map((p) => ({ ...p, wishlistStolen: isWishlistStolen(p) })),
+);
+
+const boardShellBorderClass = computed(() => {
+    if (isPreDraft.value) {
+        return 'border-gray-300 dark:border-gray-600';
+    }
+    if (isBanPhase.value) {
+        return 'border-orange-400 dark:border-orange-600';
+    }
+
+    return 'border-blue-400 dark:border-blue-600';
+});
 
 const isMyTurnToBan = computed(() => isBanPhase.value && props.currentBanner?.team?.id === props.userTeam?.id);
 const isMyTurnToPick = computed(() => isDraftPhase.value && props.currentPicker?.team?.id === props.userTeam?.id);
@@ -253,6 +294,7 @@ const reloadKeys = [
     'lastPick',
     'draft',
     'canManageDraftAsAdmin',
+    'wishlist_league_pokemon_ids',
 ];
 
 if (isReverbBroadcastClientConfigured) {
@@ -276,11 +318,151 @@ const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 const revertLastPick = () => router.post(route('draft.revert-last-pick'), { league_id: props.league.id });
 const abortDraft = () => router.post(route('draft.abort-draft'), { league_id: props.league.id });
 
-const openActionDialog = (pokemon: Pokemon) => {
-    if (!isClickable(pokemon)) return;
+const openPokemonManageDialog = (pokemon: Pokemon) => {
+    if (!props.userTeam) {
+        return;
+    }
     selectedPokemon.value = pokemon;
     pickError.value = null;
     isDialogOpen.value = true;
+};
+
+const openActionDialog = (pokemon: Pokemon) => {
+    if (pokemon.banned || pokemon.is_drafted) {
+        return;
+    }
+    openPokemonManageDialog(pokemon);
+};
+
+const openWishlistRowDialog = (row: WishlistRowPokemon) => {
+    const full = props.pokemon.find((p) => p.id === row.id);
+    if (full) {
+        openPokemonManageDialog(full);
+    }
+};
+
+const onDialogCancel = () => {
+    pickError.value = null;
+};
+
+const canConfirmBanOrPick = computed(() => (selectedPokemon.value ? isClickable(selectedPokemon.value) : false));
+
+const isTogglingWishlist = ref(false);
+
+const selectedIsOnWishlist = computed(() =>
+    selectedPokemon.value ? wishlistIdSet.value.has(selectedPokemon.value.id) : false,
+);
+
+const canToggleWishlist = computed(
+    () =>
+        !!props.userTeam &&
+        !!selectedPokemon.value &&
+        !selectedPokemon.value.banned &&
+        !selectedPokemon.value.is_drafted,
+);
+
+const wishlistPanelError = ref<string | null>(null);
+const wishlistRemovingId = ref<number | null>(null);
+const wishlistReordering = ref(false);
+
+const reloadDraftDetailProps = () => {
+    router.visit(route('draft.detail', { league_id: props.league.id }), {
+        only: [...reloadKeys],
+        preserveState: true,
+        preserveScroll: true,
+    });
+};
+
+const postWishlistToggle = (leaguePokemonId: number, source: 'dialog' | 'panel') => {
+    if (!props.userTeam) {
+        return;
+    }
+    if (source === 'dialog') {
+        if (isTogglingWishlist.value) {
+            return;
+        }
+        isTogglingWishlist.value = true;
+    } else {
+        if (wishlistRemovingId.value !== null) {
+            return;
+        }
+        wishlistRemovingId.value = leaguePokemonId;
+        wishlistPanelError.value = null;
+    }
+
+    router.post(
+        route('draft.wishlist.toggle'),
+        {
+            league_id: props.league.id,
+            league_pokemon_id: leaguePokemonId,
+        },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                reloadDraftDetailProps();
+            },
+            onError: (errors) => {
+                const msg =
+                    (errors as Record<string, string>).league_pokemon_id ??
+                    (errors as Record<string, string>).league_id ??
+                    'Could not update wishlist.';
+                if (source === 'dialog') {
+                    pickError.value = msg;
+                } else {
+                    wishlistPanelError.value = msg;
+                }
+            },
+            onFinish: () => {
+                if (source === 'dialog') {
+                    isTogglingWishlist.value = false;
+                } else {
+                    wishlistRemovingId.value = null;
+                }
+            },
+        },
+    );
+};
+
+const toggleWishlist = () => {
+    if (!selectedPokemon.value || !props.userTeam) {
+        return;
+    }
+    postWishlistToggle(selectedPokemon.value.id, 'dialog');
+};
+
+const removeWishlistRow = (row: WishlistRowPokemon) => {
+    postWishlistToggle(row.id, 'panel');
+};
+
+const reorderWishlist = (leaguePokemonIds: number[]) => {
+    if (!props.userTeam || wishlistReordering.value || wishlistRemovingId.value !== null) {
+        return;
+    }
+    wishlistReordering.value = true;
+    wishlistPanelError.value = null;
+
+    router.post(
+        route('draft.wishlist.reorder'),
+        {
+            league_id: props.league.id,
+            league_pokemon_ids: leaguePokemonIds,
+        },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                reloadDraftDetailProps();
+            },
+            onError: (errors) => {
+                wishlistPanelError.value =
+                    (errors as Record<string, string>).league_pokemon_ids ??
+                    (errors as Record<string, string>).league_id ??
+                    'Could not reorder wishlist.';
+            },
+            onFinish: () => {
+                wishlistReordering.value = false;
+            },
+        },
+    );
 };
 
 const submitAction = () => {
@@ -325,7 +507,7 @@ const submitAction = () => {
             <title>{{ props.league.name }} Draft</title>
         </Head>
 
-        <div class="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+        <div class="mx-auto max-w-screen-2xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
             <!-- Header -->
             <div class="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                 <div class="flex flex-wrap items-center gap-3">
@@ -341,6 +523,12 @@ const submitAction = () => {
                         class="inline-flex items-center gap-1.5 rounded-full bg-blue-100 px-3 py-1 text-sm font-semibold text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
                     >
                         <Swords class="size-4" /> Draft Phase
+                    </span>
+                    <span
+                        v-else-if="isPreDraft"
+                        class="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-sm font-semibold text-gray-800 dark:bg-gray-800/80 dark:text-gray-200"
+                    >
+                        Pre-draft
                     </span>
                     <span
                         v-if="userTeamData"
@@ -366,10 +554,23 @@ const submitAction = () => {
             </div>
 
             <Tabs v-if="isMobile" default-value="board" class="w-full gap-4">
-                <TabsList class="grid h-auto w-full grid-cols-3 gap-1 p-1">
-                    <TabsTrigger value="overview" class="touch-manipulation px-1 text-xs sm:text-sm">Overview</TabsTrigger>
-                    <TabsTrigger value="board" class="touch-manipulation px-1 text-xs sm:text-sm">Board</TabsTrigger>
-                    <TabsTrigger value="teams" class="touch-manipulation px-1 text-xs sm:text-sm">Teams</TabsTrigger>
+                <TabsList
+                    class="grid h-auto w-full gap-1 p-1"
+                    :class="props.userTeam ? 'grid-cols-4' : 'grid-cols-3'"
+                >
+                    <TabsTrigger value="overview" class="touch-manipulation px-0.5 text-[10px] sm:px-1 sm:text-xs">Overview</TabsTrigger>
+                    <TabsTrigger value="board" class="touch-manipulation px-0.5 text-[10px] sm:px-1 sm:text-xs">Board</TabsTrigger>
+                    <TabsTrigger value="teams" class="touch-manipulation px-0.5 text-[10px] sm:px-1 sm:text-xs">Teams</TabsTrigger>
+                    <TabsTrigger
+                        v-if="props.userTeam"
+                        value="wishlist"
+                        class="touch-manipulation px-0.5 text-[10px] sm:px-1 sm:text-xs"
+                    >
+                        <span class="inline-flex items-center gap-0.5 sm:gap-1">
+                            <Heart class="size-3 shrink-0 text-red-500 sm:size-3.5" />
+                            Wishlist
+                        </span>
+                    </TabsTrigger>
                 </TabsList>
                 <TabsContent value="overview" class="mt-4 space-y-4">
                     <div class="grid grid-cols-1 gap-4">
@@ -569,13 +770,15 @@ const submitAction = () => {
                         :is-ban-phase="isBanPhase"
                         :min-cost-to-ban="minCostToBan"
                     />
-                    <div
-                        v-if="props.draft"
-                        class="overflow-hidden rounded-xl border-2 shadow-sm"
-                        :class="isBanPhase ? 'border-orange-400 dark:border-orange-600' : 'border-blue-400 dark:border-blue-600'"
-                    >
+                    <div class="overflow-hidden rounded-xl border-2 shadow-sm" :class="boardShellBorderClass">
+                        <div v-if="isPreDraft" class="bg-muted/40 px-5 py-3 dark:bg-muted/20">
+                            <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Draft has not started yet</h2>
+                            <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                                Tap an available Pokémon to manage your wishlist. When the draft begins, you can draft here on your turn.
+                            </p>
+                        </div>
                         <div
-                            v-if="isMyTurn"
+                            v-else-if="isMyTurn"
                             class="px-5 py-3"
                             :class="isBanPhase ? 'bg-orange-50 dark:bg-orange-900/20' : 'bg-blue-50 dark:bg-blue-900/20'"
                         >
@@ -626,7 +829,11 @@ const submitAction = () => {
                                             v-for="pokemon in filteredPokemon.filter((p) => p.cost === costHeader)"
                                             :key="pokemon.id"
                                             class="relative overflow-hidden rounded-lg"
-                                            :class="isClickable(pokemon) ? 'cursor-pointer transition-all active:scale-[0.98] sm:hover:scale-105 sm:hover:shadow-md' : 'cursor-default'"
+                                            :class="
+                                                isClickable(pokemon) || (!!props.userTeam && !pokemon.banned && !pokemon.is_drafted)
+                                                    ? 'cursor-pointer transition-all active:scale-[0.98] sm:hover:scale-105 sm:hover:shadow-md'
+                                                    : 'cursor-default'
+                                            "
                                             @click="openActionDialog(pokemon)"
                                         >
                                             <PokemonCard :pokemon="pokemon" />
@@ -639,9 +846,13 @@ const submitAction = () => {
                                             </div>
                                             <div
                                                 v-else-if="pokemon.is_drafted"
-                                                class="absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-lg bg-gray-900/60 px-1"
+                                                class="absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-lg px-1"
+                                                :class="isWishlistStolen(pokemon) ? 'bg-red-950/70' : 'bg-gray-900/60'"
                                             >
-                                                <CheckCircle class="size-7 text-green-400" />
+                                                <CheckCircle
+                                                    class="size-7"
+                                                    :class="isWishlistStolen(pokemon) ? 'text-red-400' : 'text-green-400'"
+                                                />
                                                 <span class="text-center text-xs font-bold uppercase leading-tight tracking-wide text-white">
                                                     Drafted By<br />{{ pokemon.drafted_by_team_name ?? '' }}
                                                 </span>
@@ -661,10 +872,26 @@ const submitAction = () => {
                         <Button variant="destructive" size="sm" class="min-h-11 touch-manipulation" @click="abortDraft">Abort Draft</Button>
                     </ButtonGroup>
                 </TabsContent>
+                <TabsContent v-if="props.userTeam" value="wishlist" class="mt-4 space-y-3">
+                    <p v-if="wishlistPanelError" class="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive dark:bg-destructive/20">
+                        {{ wishlistPanelError }}
+                    </p>
+                    <DraftWishlistPanel
+                        :rows="wishlistPanelRows"
+                        :removing-league-pokemon-id="wishlistRemovingId"
+                        :wishlist-reorder-busy="wishlistReordering || wishlistRemovingId !== null"
+                        @remove="removeWishlistRow"
+                        @select="openWishlistRowDialog"
+                        @reorder="reorderWishlist"
+                    />
+                </TabsContent>
             </Tabs>
 
+            <!-- Desktop: main column + wishlist sidebar -->
+            <div v-if="!isMobile" class="flex flex-col gap-6 lg:flex-row lg:items-start">
+                <div class="min-w-0 flex-1 space-y-6">
             <!-- Status Cards (desktop) -->
-            <div v-if="!isMobile" class="grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div class="grid grid-cols-1 gap-4 lg:grid-cols-2">
                 <!-- Current Actor -->
                 <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-800/50">
                     <div class="border-b border-gray-100 px-5 py-3 dark:border-white/10">
@@ -869,14 +1096,15 @@ const submitAction = () => {
             />
 
             <!-- Pokémon Section (desktop) -->
-            <div
-                v-if="!isMobile && props.draft"
-                class="overflow-hidden rounded-xl border-2 shadow-sm"
-                :class="isBanPhase ? 'border-orange-400 dark:border-orange-600' : 'border-blue-400 dark:border-blue-600'"
-            >
-                <!-- Your turn header -->
+            <div v-if="!isMobile" class="overflow-hidden rounded-xl border-2 shadow-sm" :class="boardShellBorderClass">
+                <div v-if="isPreDraft" class="bg-muted/40 px-5 py-3 dark:bg-muted/20">
+                    <h2 class="text-sm font-semibold text-gray-900 dark:text-white">Draft has not started yet</h2>
+                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-400">
+                        Click an available Pokémon to manage your wishlist. When the draft begins, you can draft here on your turn.
+                    </p>
+                </div>
                 <div
-                    v-if="isMyTurn"
+                    v-else-if="isMyTurn"
                     class="px-5 py-3"
                     :class="isBanPhase ? 'bg-orange-50 dark:bg-orange-900/20' : 'bg-blue-50 dark:bg-blue-900/20'"
                 >
@@ -890,7 +1118,6 @@ const submitAction = () => {
                         <span v-else>Your turn to pick &mdash; click a Pokémon to draft it</span>
                     </h2>
                 </div>
-                <!-- Waiting header -->
                 <div
                     v-else
                     class="px-5 py-3"
@@ -928,7 +1155,11 @@ const submitAction = () => {
                                     :key="pokemon.id"
                                     @click="openActionDialog(pokemon)"
                                     class="relative overflow-hidden rounded-lg"
-                                    :class="isClickable(pokemon) ? 'cursor-pointer transition-all hover:scale-105 hover:shadow-md' : 'cursor-default'"
+                                    :class="
+                                        isClickable(pokemon) || (!!props.userTeam && !pokemon.banned && !pokemon.is_drafted)
+                                            ? 'cursor-pointer transition-all hover:scale-105 hover:shadow-md'
+                                            : 'cursor-default'
+                                    "
                                 >
                                     <PokemonCard :pokemon="pokemon" />
                                     <!-- Banned overlay -->
@@ -942,9 +1173,13 @@ const submitAction = () => {
                                     <!-- Drafted overlay -->
                                     <div
                                         v-else-if="pokemon.is_drafted"
-                                        class="absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-lg bg-gray-900/60 px-1"
+                                        class="absolute inset-0 flex flex-col items-center justify-center gap-1 rounded-lg px-1"
+                                        :class="isWishlistStolen(pokemon) ? 'bg-red-950/70' : 'bg-gray-900/60'"
                                     >
-                                        <CheckCircle class="size-7 text-green-400" />
+                                        <CheckCircle
+                                            class="size-7"
+                                            :class="isWishlistStolen(pokemon) ? 'text-red-400' : 'text-green-400'"
+                                        />
                                         <span class="text-center text-xs font-bold uppercase leading-tight tracking-wide text-white">
                                             Drafted By<br />{{ pokemon.drafted_by_team_name ?? '' }}
                                         </span>
@@ -954,6 +1189,28 @@ const submitAction = () => {
                         </div>
                     </div>
                 </div>
+            </div>
+                </div>
+
+                <aside
+                    v-if="props.userTeam"
+                    class="w-full shrink-0 space-y-2 lg:sticky lg:top-4 lg:w-64 xl:w-72"
+                >
+                    <p
+                        v-if="wishlistPanelError"
+                        class="rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive dark:bg-destructive/20"
+                    >
+                        {{ wishlistPanelError }}
+                    </p>
+                    <DraftWishlistPanel
+                        :rows="wishlistPanelRows"
+                        :removing-league-pokemon-id="wishlistRemovingId"
+                        :wishlist-reorder-busy="wishlistReordering || wishlistRemovingId !== null"
+                        @remove="removeWishlistRow"
+                        @select="openWishlistRowDialog"
+                        @reorder="reorderWishlist"
+                    />
+                </aside>
             </div>
         </div>
 
@@ -978,38 +1235,20 @@ const submitAction = () => {
             </button>
         </div>
 
-        <!-- Confirmation Dialog -->
-        <Dialog v-model:open="isDialogOpen">
-            <DialogContent>
-                <DialogHeader>
-                    <DialogTitle>{{ isBanPhase ? 'Confirm Ban' : 'Confirm Pick' }}</DialogTitle>
-                    <DialogDescription>
-                        {{
-                            isBanPhase
-                                ? 'Are you sure you want to ban this Pokémon? It will be unavailable for the rest of the draft.'
-                                : 'Are you sure you want to draft this Pokémon?'
-                        }}
-                    </DialogDescription>
-                </DialogHeader>
-                <div v-if="pickError" class="flex items-start gap-2 rounded-lg bg-destructive/10 px-4 py-3 text-sm text-destructive dark:bg-destructive/20">
-                    <span class="mt-0.5 shrink-0">⚠</span>
-                    <span>{{ pickError }}</span>
-                </div>
-                <div v-if="selectedPokemon" class="flex flex-col items-center gap-4 py-4">
-                    <PokemonCard :pokemon="selectedPokemon" />
-                    <div class="text-center">
-                        <p class="text-lg font-semibold capitalize">{{ selectedPokemon.name }}</p>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">Cost: {{ selectedPokemon.cost }}</p>
-                    </div>
-                </div>
-                <DialogFooter>
-                    <Button variant="outline" @click="() => { if (!isSubmitting) { isDialogOpen = false; pickError = null; } }" :disabled="isSubmitting">Cancel</Button>
-                    <Button @click="submitAction" :disabled="isSubmitting" :variant="isBanPhase ? 'destructive' : 'default'">
-                        <LoaderCircle v-if="isSubmitting" class="mr-2 size-4 animate-spin" />
-                        {{ isBanPhase ? 'Ban Pokémon' : 'Draft Pokémon' }}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+        <DraftPokemonActionDialog
+            v-model:open="isDialogOpen"
+            :selected-pokemon="selectedPokemon"
+            :pick-error="pickError"
+            :is-ban-phase="isBanPhase"
+            :is-pre-draft="isPreDraft"
+            :can-confirm-ban-or-pick="canConfirmBanOrPick"
+            :can-toggle-wishlist="canToggleWishlist"
+            :selected-is-on-wishlist="selectedIsOnWishlist"
+            :is-submitting="isSubmitting"
+            :is-toggling-wishlist="isTogglingWishlist"
+            @cancel="onDialogCancel"
+            @toggle-wishlist="toggleWishlist"
+            @submit="submitAction"
+        />
     </AppLayout>
 </template>

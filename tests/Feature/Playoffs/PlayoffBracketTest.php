@@ -465,6 +465,37 @@ it('includes original bracket seeds on live layout cells', function () {
             ->where('bracketLayout.rounds.0.matches.0.bottom.seed_number', 4));
 });
 
+it('re-seeds when a team is added to the league after the initial seed order was saved', function () {
+    [$league, $teams] = createLeagueWithFourTeams();
+    $admin = $teams[0]->user;
+
+    $playoff = Playoff::query()->firstOrCreate(
+        ['league_id' => $league->id],
+        [
+            'format' => \App\Enums\Playoffs\PlayoffFormat::SingleElimination,
+            'bracket_size' => 4,
+            'status' => PlayoffStatus::Draft,
+            'seed_order' => null,
+        ]
+    );
+
+    $existingThreeIds = array_slice(array_map(fn (Team $t) => $t->id, $teams), 0, 3);
+    $playoff->seed_order = $existingThreeIds;
+    $playoff->save();
+
+    $this->actingAs($admin)
+        ->get(route('leagues.admin.playoffs', $league))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('playoff.seed_order', 4));
+
+    $playoff->refresh();
+    $currentTeamIds = array_map(fn (Team $t) => $t->id, $teams);
+
+    expect($playoff->seed_order)->toHaveCount(4)
+        ->and(array_diff($currentTeamIds, $playoff->seed_order))->toBeEmpty();
+});
+
 it('re-seeds when seed_order contains stale team ids that no longer exist in the league', function () {
     [$league, $teams] = createLeagueWithFourTeams();
     $admin = $teams[0]->user;

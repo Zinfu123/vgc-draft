@@ -3,14 +3,19 @@
 namespace App\Modules\Draft\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Draft\ReorderDraftWishlistRequest;
+use App\Http\Requests\Draft\ToggleDraftWishlistRequest;
 use App\Modules\Draft\Actions\BanPokemonAction;
 use App\Modules\Draft\Actions\CreateEditDraftAction;
 use App\Modules\Draft\Actions\CreateEditDraftOrderAction;
 use App\Modules\Draft\Actions\DraftPokemonAction;
 use App\Modules\Draft\Actions\ReadCurrentDraftAction;
+use App\Modules\Draft\Actions\ReorderDraftWishlistAction;
+use App\Modules\Draft\Actions\ToggleDraftWishlistAction;
 use App\Modules\Draft\Models\BanOrder;
 use App\Modules\Draft\Models\Draft;
 use App\Modules\Draft\Models\DraftOrder;
+use App\Modules\Draft\Models\DraftWishlistItem;
 use App\Modules\League\Actions\ReadLeagueDraftAction;
 use App\Modules\League\Actions\ReadLeaguePokemonAction;
 use App\Modules\League\Models\League;
@@ -35,7 +40,15 @@ class DraftController extends Controller
         $costHeaders = $pokemon->unique('cost')->pluck('cost')->sortDesc()->values();
         $teams = $readCurrentDraftAction(['league_id' => $league_id, 'command' => 'teams']);
         $user = Auth::user();
-        $userTeam = Team::where('user_id', $user->id)->select('id', 'admin_flag')->where('league_id', $league_id)->first();
+        $userTeam = Team::where('user_id', $user->id)->select('id', 'admin_flag')->where('league_id', $league_id)->whereNull('dropped_at')->first();
+        $wishlistLeaguePokemonIds = $userTeam !== null
+            ? DraftWishlistItem::query()
+                ->where('team_id', $userTeam->id)
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->pluck('league_pokemon_id')
+                ->all()
+            : [];
         $canManageDraftAsAdmin = (int) $user->id === (int) $league->league_owner
             || ($userTeam !== null && (int) $userTeam->admin_flag === 1);
 
@@ -73,7 +86,24 @@ class DraftController extends Controller
             'canManageDraftAsAdmin' => fn () => $canManageDraftAsAdmin,
             'teams' => fn () => $teams,
             'draft' => fn () => $draft,
+            'wishlist_league_pokemon_ids' => fn () => $wishlistLeaguePokemonIds,
         ]);
+    }
+
+    public function toggleWishlist(ToggleDraftWishlistRequest $request, ToggleDraftWishlistAction $toggleDraftWishlistAction): \Illuminate\Http\RedirectResponse
+    {
+        $leagueId = (int) $request->validated('league_id');
+        $toggleDraftWishlistAction($request->team(), (int) $request->validated('league_pokemon_id'));
+
+        return redirect()->route('draft.detail', ['league_id' => $leagueId]);
+    }
+
+    public function reorderWishlist(ReorderDraftWishlistRequest $request, ReorderDraftWishlistAction $reorderDraftWishlistAction): \Illuminate\Http\RedirectResponse
+    {
+        $leagueId = (int) $request->validated('league_id');
+        $reorderDraftWishlistAction($request->team(), $request->orderedLeaguePokemonIds());
+
+        return redirect()->route('draft.detail', ['league_id' => $leagueId]);
     }
 
     public function create(Request $request, CreateEditDraftAction $createEditDraftAction, CreateEditDraftOrderAction $createEditDraftOrderAction)

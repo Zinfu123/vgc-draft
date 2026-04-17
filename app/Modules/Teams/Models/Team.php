@@ -108,6 +108,11 @@ class Team extends Model
         return $this->hasMany(\App\Modules\Draft\Models\DraftPick::class, 'team_id');
     }
 
+    public function draftWishlistItems()
+    {
+        return $this->hasMany(\App\Modules\Draft\Models\DraftWishlistItem::class, 'team_id');
+    }
+
     public function pokemon()
     {
         return $this->hasMany(\App\Modules\League\Models\LeaguePokemon::class, 'drafted_by', 'id')->orderBy('cost', 'desc');

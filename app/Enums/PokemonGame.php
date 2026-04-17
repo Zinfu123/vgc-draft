@@ -17,13 +17,12 @@ enum PokemonGame: string
 
     /**
      * Whether this game is available for league creation.
-     * Set to false while Pokémon data is not yet importable (e.g. PokeAPI not populated).
      */
     public function isAvailable(): bool
     {
         return match ($this) {
             self::ScarletViolet => true,
-            self::Champions => false,
+            self::Champions => true,
         };
     }
 
@@ -31,7 +30,7 @@ enum PokemonGame: string
     {
         return match ($this) {
             self::ScarletViolet => 'scarlet-violet',
-            self::Champions => 'champions',
+            self::Champions => 'champions-reg-ma',
         };
     }
 

@@ -84,7 +84,7 @@ Route::prefix('leagues')->group(function () {
     Route::get('/{league}/standings', fn ($league) => redirect()->route('leagues.schedule', ['league' => $league, 'view' => 'standings']))->middleware(['auth', 'verified'])->name('leagues.standings');
     Route::get('/{league}/playoffs', fn ($league) => redirect()->route('leagues.schedule', ['league' => $league, 'view' => 'playoffs']))->middleware(['auth', 'verified'])->name('leagues.playoffs');
     Route::get('/{league}/stats', [LeagueController::class, 'showStats'])->middleware(['auth', 'verified'])->name('leagues.stats');
-    Route::get('/{league}/trades', fn ($league) => redirect()->route('leagues.dashboard', ['league' => $league]))->middleware(['auth', 'verified'])->name('leagues.trades');
+    Route::get('/{league}/trades', [TradeController::class, 'index'])->middleware(['auth', 'verified'])->name('leagues.trades');
     Route::post('/{league}/trades', [TradeController::class, 'create'])->middleware(['auth', 'verified'])->name('leagues.trades.create');
     Route::post('/{league}/trades/free-agency', [TradeController::class, 'freeAgency'])->middleware(['auth', 'verified'])->name('leagues.trades.free-agency');
     Route::put('/{league}/trades/{trade}', [TradeController::class, 'respond'])->middleware(['auth', 'verified'])->name('leagues.trades.respond');
@@ -149,6 +149,8 @@ Route::prefix('draft')->group(function () {
     Route::post('/ban', [DraftController::class, 'ban'])->middleware(['auth', 'verified'])->name('draft.ban');
     Route::post('/revert-last-pick', [DraftController::class, 'revertLastPick'])->middleware(['auth', 'verified'])->name('draft.revert-last-pick');
     Route::post('/abort-draft', [DraftController::class, 'abortDraft'])->middleware(['auth', 'verified'])->name('draft.abort-draft');
+    Route::post('/wishlist/toggle', [DraftController::class, 'toggleWishlist'])->middleware(['auth', 'verified'])->name('draft.wishlist.toggle');
+    Route::post('/wishlist/reorder', [DraftController::class, 'reorderWishlist'])->middleware(['auth', 'verified'])->name('draft.wishlist.reorder');
 });
 
 // Match Routes

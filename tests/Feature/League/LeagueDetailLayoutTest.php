@@ -174,13 +174,17 @@ it('renders the standings view within the schedule tab', function () {
     );
 });
 
-it('redirects the old trades route to dashboard', function () {
+it('renders the trades tab', function () {
     $user = User::factory()->create();
     $league = createLeagueAndTeamForUser($user);
 
     $this->actingAs($user)
         ->get("/leagues/{$league->id}/trades")
-        ->assertRedirect(route('leagues.dashboard', ['league' => $league->id]));
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('league/LeagueDetailTrades')
+            ->where('section', 'trades')
+        );
 });
 
 it('renders the draft tab', function () {

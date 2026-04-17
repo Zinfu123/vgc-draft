@@ -59,6 +59,11 @@ class LeaguePokemon extends Model
         return $this->hasMany(\App\Modules\Draft\Models\DraftPick::class, 'league_pokemon_id');
     }
 
+    public function draftWishlistItems()
+    {
+        return $this->hasMany(\App\Modules\Draft\Models\DraftWishlistItem::class, 'league_pokemon_id');
+    }
+
     /**
      * @param  Builder<static>  $query
      * @return Builder<static>

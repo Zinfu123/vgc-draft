@@ -11,7 +11,7 @@ import { computed } from 'vue';
 
 const { isMobile } = useMobileLayout();
 
-export type LeagueDetailSection = 'dashboard' | 'draft' | 'rosters' | 'schedule' | 'pokemon' | 'stats' | 'commissioner';
+export type LeagueDetailSection = 'dashboard' | 'draft' | 'rosters' | 'schedule' | 'pokemon' | 'stats' | 'trades' | 'match-prep' | 'commissioner';
 
 // League status constants
 const LEAGUE_STATUS_REGISTRATION = 2;
@@ -97,6 +97,8 @@ const baseSections: { value: LeagueDetailSection; label: string; route: string }
     { value: 'schedule', label: 'Schedule', route: 'leagues.schedule' },
     { value: 'pokemon', label: 'Pokémon', route: 'leagues.pokemon' },
     { value: 'stats', label: 'Stats', route: 'leagues.stats' },
+    { value: 'trades', label: 'Trades', route: 'leagues.trades' },
+    { value: 'match-prep', label: 'Match Prep', route: 'match-prep.index' },
 ];
 
 const sections = computed(() => {
@@ -111,7 +113,7 @@ const sections = computed(() => {
 });
 
 const draftHref = computed(() => {
-    if (props.draft === null || props.draft.status === 0) {
+    if (props.draft !== null && props.draft.status === 0) {
         return route('leagues.draft', { league: props.league.id });
     }
 
@@ -121,6 +123,10 @@ const draftHref = computed(() => {
 function sectionHref(s: { value: LeagueDetailSection; route: string }): string {
     if (s.value === 'draft') {
         return draftHref.value;
+    }
+
+    if (s.value === 'match-prep') {
+        return route('match-prep.index');
     }
 
     return route(s.route, { league: props.league.id });

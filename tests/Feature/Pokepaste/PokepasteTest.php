@@ -775,7 +775,7 @@ function createChampionsLeagueTeamWithMatch(): array
         'status' => 1,
     ]);
 
-    $versionGroup = VersionGroup::query()->where('slug', 'champions')->firstOrFail();
+    $versionGroup = VersionGroup::query()->where('slug', 'champions-reg-ma')->firstOrFail();
 
     $learnset = [
         ['move_id' => 33, 'move_name' => 'tackle', 'method' => 'level-up', 'level' => 1],

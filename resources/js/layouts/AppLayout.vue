@@ -1,18 +1,17 @@
 <script setup lang="ts">
-import AppLayout from '@/layouts/app/AppSidebarLayout.vue';
-import type { BreadcrumbItemType } from '@/types';
+import AppSidebarLayout from '@/layouts/app/AppSidebarLayout.vue';
 
-interface Props {
-    breadcrumbs?: BreadcrumbItemType[];
-}
-
-withDefaults(defineProps<Props>(), {
-    breadcrumbs: () => [],
-});
+defineProps<{
+    // Accepted for backward compatibility — breadcrumbs are no longer rendered in the top nav
+    breadcrumbs?: { title: string; href?: string }[];
+}>();
 </script>
 
 <template>
-    <AppLayout :breadcrumbs="breadcrumbs">
+    <AppSidebarLayout>
+        <template v-if="$slots.nav" #nav>
+            <slot name="nav" />
+        </template>
         <slot />
-    </AppLayout>
+    </AppSidebarLayout>
 </template>

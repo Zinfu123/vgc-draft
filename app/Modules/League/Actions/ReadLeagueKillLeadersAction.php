@@ -4,7 +4,9 @@ namespace App\Modules\League\Actions;
 
 use App\Modules\League\Models\League;
 use App\Modules\League\Models\LeaguePokemon;
+use App\Modules\Matches\Models\Set;
 use App\Modules\Matches\Models\SetGameResult;
+use Illuminate\Support\Facades\Cache;
 
 class ReadLeagueKillLeadersAction
 {
@@ -13,7 +15,8 @@ class ReadLeagueKillLeadersAction
      *
      * Each entry corresponds to one drafted Pokemon in the league and includes
      * the owning team's coach name plus accumulated battle statistics derived
-     * from SetGameResult replay data.
+     * from SetGameResult replay data. Results are cached for 30 minutes and
+     * invalidated whenever replays are (re)processed for a set in this league.
      *
      * @return list<array{
      *     pokedex_id: int,
@@ -31,8 +34,36 @@ class ReadLeagueKillLeadersAction
      */
     public function __invoke(League $league): array
     {
+        return Cache::remember(
+            "league:{$league->id}:kill_leaders",
+            now()->addMinutes(30),
+            fn () => $this->compute($league),
+        );
+    }
+
+    /**
+     * @return list<array{
+     *     pokedex_id: int,
+     *     name: string|null,
+     *     sprite_url: string|null,
+     *     type1: string|null,
+     *     type2: string|null,
+     *     coach: string|null,
+     *     kills: int,
+     *     deaths: int,
+     *     differential: int,
+     *     gp: int,
+     *     damage: int,
+     * }>
+     */
+    private function compute(League $league): array
+    {
+        $setIds = Set::query()
+            ->where('league_id', $league->id)
+            ->pluck('id');
+
         $gameResults = SetGameResult::query()
-            ->whereHas('set', fn ($q) => $q->where('league_id', $league->id))
+            ->whereIn('set_id', $setIds)
             ->get(['p1_team_id', 'p2_team_id', 'p1_pokemon', 'p2_pokemon', 'p1_knockouts', 'p2_knockouts', 'p1_deaths', 'p2_deaths', 'p1_damage', 'p2_damage']);
 
         /** @var array<int, int> $killsByDex */

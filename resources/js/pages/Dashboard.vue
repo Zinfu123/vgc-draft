@@ -7,7 +7,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router, usePage } from '@inertiajs/vue3';
 import { useEchoNotification } from '@laravel/echo-vue';
-import { ChevronDown, ChevronUp } from 'lucide-vue-next';
+import { AlertTriangle, ChevronDown, ChevronUp } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -106,6 +106,11 @@ const props = defineProps<Props>();
 const page = usePage();
 const userId = page.props.auth?.user?.id;
 
+const authUser = computed(() => page.props.auth?.user as { id?: number; discord_id?: string | null; discord_avatar_url?: string | null } | undefined);
+const needsDiscordReauth = computed(() =>
+    !!authUser.value?.discord_id && !authUser.value?.discord_avatar_url,
+);
+
 const upcomingEvents = computed(() => {
     if (!props.calendarEvents) {
         return null;
@@ -179,6 +184,14 @@ if (isReverbBroadcastClientConfigured && userId) {
     <Head title="Dashboard" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
+        <a
+            v-if="needsDiscordReauth"
+            :href="route('discord.redirect')"
+            class="flex items-center justify-center gap-3 bg-red-600 px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800"
+        >
+            <AlertTriangle class="h-5 w-5 shrink-0" />
+            <span>Your Discord avatar is missing — click here to re-authenticate with Discord and update your profile.</span>
+        </a>
         <div class="flex flex-col gap-8 p-4 pb-10 sm:p-6">
             <section>
                 <h2 class="mb-4 text-2xl font-bold">{{ props.userName }}'s Stats</h2>

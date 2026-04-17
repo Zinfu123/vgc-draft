@@ -16,7 +16,7 @@ import { isReverbBroadcastClientConfigured } from '@/lib/broadcasting';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { useEchoPublic } from '@laravel/echo-vue';
 import { ArrowRight, Bell, CalendarClock, Clock, MessageSquare, RadioTower, Swords } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 interface League {
     id: number;
@@ -387,6 +387,20 @@ const filteredFreeAgencyPool = computed(() => {
         }
         return true;
     });
+});
+
+// --- League Activity pagination ---
+const activityPageSize = 8;
+const activityPage = ref(1);
+
+const totalActivityPages = computed(() => Math.ceil(props.leagueTransactions.length / activityPageSize));
+
+const paginatedTransactions = computed(() =>
+    props.leagueTransactions.slice((activityPage.value - 1) * activityPageSize, activityPage.value * activityPageSize),
+);
+
+watch(() => props.leagueTransactions, () => {
+    activityPage.value = 1;
 });
 
 // --- Real-time updates ---
@@ -1005,10 +1019,10 @@ if (isReverbBroadcastClientConfigured) {
 
                     <div
                         v-if="leagueTransactions.length > 0"
-                        class="flex max-h-[70vh] flex-col gap-2 overflow-y-auto rounded-xl border border-border bg-card/60 p-3"
+                        class="flex flex-col gap-2 rounded-xl border border-border bg-card/60 p-3"
                     >
                         <div
-                            v-for="tx in leagueTransactions"
+                            v-for="tx in paginatedTransactions"
                             :key="tx.id"
                             class="flex items-start justify-between gap-3 rounded-lg border border-border bg-background px-3 py-2.5"
                         >
@@ -1026,6 +1040,27 @@ if (isReverbBroadcastClientConfigured) {
                                 <p class="mt-0.5 text-xs text-muted-foreground">{{ tradeTransactionLabel(tx) }}</p>
                             </div>
                             <span class="shrink-0 whitespace-nowrap text-xs text-muted-foreground">{{ relativeTime(tx.created_at) }}</span>
+                        </div>
+
+                        <!-- Pagination controls -->
+                        <div v-if="totalActivityPages > 1" class="mt-1 flex items-center justify-between gap-2 border-t border-border pt-2">
+                            <button
+                                type="button"
+                                :disabled="activityPage === 1"
+                                class="rounded px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+                                @click="activityPage--"
+                            >
+                                ← Prev
+                            </button>
+                            <span class="text-xs text-muted-foreground">{{ activityPage }} / {{ totalActivityPages }}</span>
+                            <button
+                                type="button"
+                                :disabled="activityPage === totalActivityPages"
+                                class="rounded px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed"
+                                @click="activityPage++"
+                            >
+                                Next →
+                            </button>
                         </div>
                     </div>
 

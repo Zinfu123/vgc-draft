@@ -1,27 +1,16 @@
 <script setup lang="ts">
-import AppContent from '@/components/AppContent.vue';
-import AppShell from '@/components/AppShell.vue';
-import AppSidebar from '@/components/AppSidebar.vue';
-import AppSidebarHeader from '@/components/AppSidebarHeader.vue';
+import AppTopNav from '@/components/AppTopNav.vue';
 import DraftStartedBanner from '@/components/DraftStartedBanner.vue';
-import type { BreadcrumbItemType } from '@/types';
-
-interface Props {
-    breadcrumbs?: BreadcrumbItemType[];
-}
-
-withDefaults(defineProps<Props>(), {
-    breadcrumbs: () => [],
-});
 </script>
 
 <template>
-    <AppShell variant="sidebar">
-        <AppSidebar />
-        <AppContent variant="sidebar" class="overflow-x-hidden">
-            <AppSidebarHeader :breadcrumbs="breadcrumbs" />
-            <DraftStartedBanner />
+    <div class="flex min-h-screen w-full flex-col">
+        <AppTopNav>
+            <slot name="nav" />
+        </AppTopNav>
+        <DraftStartedBanner />
+        <main class="flex w-full flex-1 flex-col overflow-x-hidden">
             <slot />
-        </AppContent>
-    </AppShell>
+        </main>
+    </div>
 </template>

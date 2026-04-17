@@ -16,6 +16,7 @@ use App\Modules\Pokepaste\Services\ShowdownReplayWinnerParser;
 use App\Modules\Pokepaste\Services\ShowdownUsernameNormalizer;
 use App\Modules\Pokepaste\Services\SuggestP1TeamFromShowdownReplay;
 use App\Modules\Teams\Models\Team;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class ParseSetGameResultsFromReplaysAction
@@ -110,6 +111,8 @@ class ParseSetGameResultsFromReplaysAction
                 ]
             );
         }
+
+        Cache::forget("league:{$set->league_id}:kill_leaders");
     }
 
     private function resolveWinnerTeamId(Set $set, int $p1TeamId, int $p2TeamId, string $winnerName): ?int

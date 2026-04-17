@@ -25,14 +25,14 @@ it('does nothing when only-missing and the only pokedex row already has game dat
     $this->artisan('pokemon:import-version-group', [
         'slug' => 'scarlet-violet',
         '--only-missing' => true,
+        '--id' => $pokedexId,
     ])
         ->expectsOutputToContain('Nothing to import')
         ->assertExitCode(0);
 });
 
 it('still imports a row when only-missing and game data is absent', function () {
-    $versionGroup = VersionGroup::query()->where('slug', 'scarlet-violet')->firstOrFail();
-    DB::table('pokedex')->insertGetId([
+    $pokedexId = DB::table('pokedex')->insertGetId([
         'nationaldex_id' => 999,
         'name' => 'bulbasaur',
         'type1' => 'Grass',
@@ -49,6 +49,7 @@ it('still imports a row when only-missing and game data is absent', function () 
     $this->artisan('pokemon:import-version-group', [
         'slug' => 'scarlet-violet',
         '--only-missing' => true,
+        '--id' => $pokedexId,
     ])
         ->expectsOutputToContain('Importing 1 species')
         ->assertExitCode(0);

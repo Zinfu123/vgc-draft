@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Actions\GetNotificationDataAction;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -55,6 +56,9 @@ class HandleInertiaRequests extends Middleware
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'awsUrl' => config('filesystems.disks.s3.url'),
+            'notifications' => fn () => $request->user()
+                ? app(GetNotificationDataAction::class)($request->user())
+                : null,
         ];
     }
 }

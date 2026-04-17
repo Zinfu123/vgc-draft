@@ -13,6 +13,7 @@ function mockDiscordUser(string $id = '123456789', string $nickname = 'TestUser#
     $socialiteUser->shouldReceive('getNickname')->andReturn($nickname);
     $socialiteUser->shouldReceive('getName')->andReturn($nickname);
     $socialiteUser->shouldReceive('getEmail')->andReturn($email);
+    $socialiteUser->shouldReceive('getAvatar')->andReturn('');
 
     $provider = Mockery::mock(\Laravel\Socialite\Two\AbstractProvider::class);
     $provider->shouldReceive('user')->andReturn($socialiteUser);

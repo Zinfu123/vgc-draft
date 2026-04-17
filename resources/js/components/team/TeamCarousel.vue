@@ -2,15 +2,21 @@
 import TeamCard from '@/components/team/TeamCard.vue';
 import { Link } from '@inertiajs/vue3';
 
+interface RosterPokemon {
+    id: number;
+    name: string;
+    sprite_url: string | null;
+    type1: string | null;
+}
+
 interface Teams {
     id: number;
     league_id: number;
     name: string;
     logo: string | null;
-    set_wins: number;
-    set_losses: number;
-    victory_points: number;
     coach: string;
+    coach_discord_avatar_url: string | null;
+    pokemon: RosterPokemon[];
 }
 
 defineProps<{
@@ -25,7 +31,7 @@ defineProps<{
     >
         <p class="text-sm font-medium text-foreground">No teams in this league yet</p>
         <p class="mx-auto mt-2 max-w-md text-sm text-muted-foreground">
-            After coaches register, each team shows up here as a card with record and victory points—same stat emphasis as your dashboard.
+            After coaches register, each team shows up here as a card with their drafted Pokémon.
         </p>
     </div>
     <div

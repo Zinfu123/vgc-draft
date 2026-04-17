@@ -2,6 +2,7 @@
 
 namespace App\Modules\Pokedex\Models;
 
+use App\Modules\Pokedex\Enums\GenerationalMechanic;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
@@ -16,7 +17,7 @@ class VersionGroup extends Model
         'name',
         'showdown_format_key',
         'showdown_ladder_rating',
-        'battle_mechanic',
+        'generational_mechanics',
     ];
 
     /**
@@ -28,17 +29,23 @@ class VersionGroup extends Model
             'generation' => 'integer',
             'sort_order' => 'integer',
             'showdown_ladder_rating' => 'integer',
+            'generational_mechanics' => 'array',
         ];
+    }
+
+    public function hasMechanic(GenerationalMechanic $mechanic): bool
+    {
+        return in_array($mechanic->value, $this->generational_mechanics ?? [], true);
     }
 
     public function isTeraMechanic(): bool
     {
-        return $this->battle_mechanic === 'tera';
+        return $this->hasMechanic(GenerationalMechanic::Tera);
     }
 
     public function isMegaMechanic(): bool
     {
-        return $this->battle_mechanic === 'mega';
+        return $this->hasMechanic(GenerationalMechanic::Mega);
     }
 
     public function pokemonGenerationData(): HasMany

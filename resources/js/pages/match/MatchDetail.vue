@@ -468,6 +468,12 @@ function submitImportFromReplay(): void {
     });
 }
 
+function preventKeyboardEntry(e: KeyboardEvent): void {
+    if (!['Tab', 'Escape'].includes(e.key)) {
+        e.preventDefault();
+    }
+}
+
 function handleReopenMatch(): void {
     if (!confirm('Reopen this match? The set result will be cleared and players can submit a new result.')) return;
     reopenForm.put('/match');
@@ -483,8 +489,8 @@ const breadcrumbs: BreadcrumbItem[] = [
     <AppLayout :breadcrumbs="breadcrumbs">
         <Head :title="`${set.team1.name} vs ${set.team2.name}`" />
 
-        <!-- Top bar: chat + schedule (participants only, active matches only) -->
-        <template v-if="isParticipant && !isSetCompleted">
+        <!-- Top bar: chat + schedule (match players only, active matches only) -->
+        <template v-if="isUserInSet && !isSetCompleted">
             <div class="flex w-full justify-end gap-2 px-4 sm:px-6 lg:px-8">
                 <div v-if="matchMessages === undefined" class="flex gap-2">
                     <div class="h-9 w-24 animate-pulse rounded-md bg-muted" />
@@ -493,7 +499,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                 <template v-else>
                     <Button variant="outline" size="sm" class="gap-1.5" @click="openScheduleRequestDialog">
                         <CalendarClock class="size-4" />
-                        Request a Time
+                        {{ set.scheduled_at ? 'Reschedule' : 'Request a Time' }}
                     </Button>
                     <Sheet v-model:open="chatSheetOpen">
                         <SheetTrigger as-child>
@@ -621,7 +627,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                 </div>
 
                 <!-- The other player can respond -->
-                <div v-else-if="isParticipant" class="flex flex-wrap gap-2">
+                <div v-else-if="isUserInSet" class="flex flex-wrap gap-2">
                     <Button
                         size="sm"
                         :disabled="respondForm.processing"
@@ -833,13 +839,13 @@ const breadcrumbs: BreadcrumbItem[] = [
             </div>
         </div>
 
-        <!-- Request a time dialog -->
+        <!-- Request / reschedule a time dialog -->
         <Dialog v-model:open="scheduleRequestDialogOpen">
             <DialogContent class="sm:max-w-sm">
                 <DialogHeader>
-                    <DialogTitle>Request a Match Time</DialogTitle>
+                    <DialogTitle>{{ set.scheduled_at ? 'Reschedule Match' : 'Request a Match Time' }}</DialogTitle>
                     <DialogDescription>
-                        Propose a date and time to play. Your opponent will be notified on Discord and can accept, decline, or propose a new time.
+                        {{ set.scheduled_at ? 'Propose a new date and time. Your opponent will be notified on Discord and can accept, decline, or counter-propose.' : 'Propose a date and time to play. Your opponent will be notified on Discord and can accept, decline, or propose a new time.' }}
                     </DialogDescription>
                 </DialogHeader>
                 <div class="space-y-4">
@@ -849,6 +855,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                             v-model="scheduleRequestForm.proposed_at"
                             type="datetime-local"
                             class="border-input bg-background text-foreground focus:ring-ring block w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:outline-none"
+                            @keydown="preventKeyboardEntry"
                         />
                         <p v-if="scheduleRequestForm.errors.proposed_at" class="text-destructive mt-1 text-sm">
                             {{ scheduleRequestForm.errors.proposed_at }}
@@ -880,6 +887,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                             v-model="rescheduleForm.proposed_at"
                             type="datetime-local"
                             class="border-input bg-background text-foreground focus:ring-ring block w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:outline-none"
+                            @keydown="preventKeyboardEntry"
                         />
                         <p v-if="rescheduleForm.errors.proposed_at" class="text-destructive mt-1 text-sm">
                             {{ rescheduleForm.errors.proposed_at }}

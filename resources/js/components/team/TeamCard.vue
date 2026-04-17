@@ -2,28 +2,25 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { ChevronRight } from 'lucide-vue-next';
 
+interface RosterPokemon {
+    id: number;
+    name: string;
+    sprite_url: string | null;
+    type1: string | null;
+}
+
 interface Teams {
     id: number;
     name: string;
     logo: string | null;
-    set_wins: number;
-    set_losses: number;
-    victory_points: number;
     coach: string;
+    coach_discord_avatar_url: string | null;
+    pokemon: RosterPokemon[];
 }
 
 defineProps<{
     team: Teams;
 }>();
-
-function winPct(wins: number, losses: number): string {
-    const total = wins + losses;
-    if (total === 0) {
-        return '—';
-    }
-
-    return (wins / total).toLocaleString('en-US', { style: 'percent', minimumFractionDigits: 1 });
-}
 </script>
 
 <template>
@@ -35,12 +32,17 @@ function winPct(wins: number, losses: number): string {
             aria-hidden="true"
         />
         <CardContent class="flex flex-col gap-4 p-5 sm:p-6">
-            <div class="flex items-start gap-4">
+            <!-- Avatar + name/coach -->
+            <div class="flex items-center gap-4">
                 <div
-                    v-if="team.logo"
+                    v-if="team.logo || team.coach_discord_avatar_url"
                     class="ring-offset-background shrink-0 rounded-full ring-2 ring-border/80 ring-offset-2 shadow-md"
                 >
-                    <img :src="team.logo" alt="" class="size-14 rounded-full object-cover sm:size-16" />
+                    <img
+                        :src="team.logo ?? team.coach_discord_avatar_url!"
+                        alt=""
+                        class="size-14 rounded-full object-cover sm:size-16"
+                    />
                 </div>
                 <div
                     v-else
@@ -49,40 +51,50 @@ function winPct(wins: number, losses: number): string {
                 >
                     {{ team.name.charAt(0).toUpperCase() }}
                 </div>
-                <div class="min-w-0 flex-1 pt-0.5">
-                    <h3 class="text-balance font-semibold leading-tight tracking-tight sm:text-lg">{{ team.name }}</h3>
-                    <p class="mt-1 line-clamp-2 text-xs text-muted-foreground sm:text-sm">
+                <div class="min-w-0 flex-1">
+                    <h3 class="truncate font-semibold leading-tight tracking-tight sm:text-lg">{{ team.name }}</h3>
+                    <p class="mt-0.5 truncate text-xs text-muted-foreground sm:text-sm">
                         Coach <span class="font-medium text-foreground/90">{{ team.coach }}</span>
                     </p>
                 </div>
             </div>
 
-            <div class="space-y-3 rounded-xl border border-border/60 bg-muted/25 px-3 py-3 dark:bg-muted/15">
-                <div class="text-center">
-                    <p class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Set record</p>
-                    <p class="mt-1 text-3xl font-bold tabular-nums tracking-tight sm:text-4xl">
-                        <span class="text-green-600 dark:text-green-400">{{ team.set_wins }}</span>
-                        <span class="text-muted-foreground/80">–</span>
-                        <span class="text-red-600 dark:text-red-400">{{ team.set_losses }}</span>
-                    </p>
-                    <p class="mt-0.5 text-xs text-muted-foreground">{{ winPct(team.set_wins, team.set_losses) }} won</p>
+            <!-- Pokémon sprites -->
+            <div
+                v-if="team.pokemon.length > 0"
+                class="grid grid-cols-6 gap-1 rounded-xl border border-border/60 bg-muted/25 p-2 dark:bg-muted/15"
+            >
+                <div
+                    v-for="mon in team.pokemon"
+                    :key="mon.id"
+                    class="flex items-center justify-center"
+                    :title="mon.name"
+                >
+                    <img
+                        v-if="mon.sprite_url"
+                        :src="mon.sprite_url"
+                        :alt="mon.name"
+                        class="size-10 object-contain drop-shadow-sm sm:size-11"
+                        loading="lazy"
+                    />
+                    <div
+                        v-else
+                        class="size-10 rounded-full bg-muted sm:size-11"
+                        :aria-label="mon.name"
+                    />
                 </div>
-                <div class="flex items-center justify-center border-t border-border/50 pt-3">
-                    <div class="inline-flex flex-col items-center gap-0.5">
-                        <span class="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Points</span>
-                        <span
-                            class="rounded-full bg-orange-500/15 px-3 py-1 text-lg font-bold tabular-nums text-orange-600 dark:bg-orange-500/20 dark:text-orange-400 sm:text-xl"
-                        >
-                            {{ team.victory_points }}
-                        </span>
-                    </div>
-                </div>
+            </div>
+            <div
+                v-else
+                class="rounded-xl border border-dashed border-border/60 bg-muted/20 px-3 py-4 text-center dark:bg-muted/10"
+            >
+                <p class="text-xs text-muted-foreground">No Pokémon drafted yet</p>
             </div>
 
             <p
                 class="flex items-center justify-center gap-1 text-center text-xs font-medium text-muted-foreground transition-colors group-hover:text-primary"
             >
-                View roster
+                View team hub
                 <ChevronRight class="size-3.5 transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
             </p>
         </CardContent>

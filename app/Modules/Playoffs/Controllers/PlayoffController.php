@@ -44,7 +44,8 @@ class PlayoffController extends Controller
         $currentTeamIds = $data['teams']->pluck('id')->all();
         $existingSeedOrder = $playoff->seed_order ?? [];
         $needsReseed = $existingSeedOrder === []
-            || ! empty(array_diff($existingSeedOrder, $currentTeamIds));
+            || ! empty(array_diff($existingSeedOrder, $currentTeamIds))
+            || ! empty(array_diff($currentTeamIds, $existingSeedOrder));
 
         if ($playoff->status === PlayoffStatus::Draft && $needsReseed) {
             $playoff->seed_order = $playoffBracketService->suggestedSeedTeams($league)->pluck('id')->all();

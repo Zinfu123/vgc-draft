@@ -167,8 +167,26 @@ it('renders the league create wizard page', function () {
             ->where('playoff_format', PlayoffFormat::SingleElimination->value)
             ->where('playoff_bracket_size', 4)
             ->where('require_showdown_username', false)
+            ->where('pokemon_game_options', fn (\Illuminate\Support\Collection $options) => $options
+                ->pluck('value')
+                ->contains(PokemonGame::Champions->value))
             ->has('playoff_format_options')
             ->has('playoff_bracket_size_options'));
+});
+
+it('creates a league with Pokémon Champions selected', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->post('/leagues', baseLeagueCreatePayload([
+        'name' => 'Champions Ruleset League',
+        'minimum_drafts' => 10,
+        'pokemon_generation' => 9,
+        'pokemon_game' => PokemonGame::Champions->value,
+    ]))->assertRedirect();
+
+    $league = \App\Modules\League\Models\League::where('name', 'Champions Ruleset League')->first();
+    expect($league)->not->toBeNull();
+    expect($league->pokemon_game)->toBe(PokemonGame::Champions);
 });
 
 it('stores require_showdown_username when creating a league', function () {

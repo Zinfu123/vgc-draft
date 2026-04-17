@@ -32,6 +32,7 @@ use App\Modules\Matches\Models\Set;
 use App\Modules\Playoffs\Controllers\PlayoffController;
 use App\Modules\Playoffs\Services\PlayoffBracketLayoutService;
 use App\Modules\Playoffs\Services\PlayoffBracketService;
+use App\Modules\Shared\Actions\LogoToUrlAction;
 use App\Modules\Teams\Actions\ReadTeamAction;
 use App\Modules\Teams\Models\Team;
 use App\Modules\Trade\Actions\ReadTradesAction;
@@ -174,7 +175,7 @@ class LeagueController extends Controller
                 'requestedPokemon.leaguePokemon.pokemon:id,name,sprite_url',
             ])
             ->latest()
-            ->take(25)
+            ->take(80)
             ->get();
 
         return Inertia::render('league/LeagueDashboard', [
@@ -191,11 +192,43 @@ class LeagueController extends Controller
         ]);
     }
 
-    public function showTeams(League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction)
+    public function showTeams(League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction): \Inertia\Response
     {
+        $logoAction = new LogoToUrlAction;
+
+        $rosterTeams = Team::query()
+            ->where('league_id', $league->id)
+            ->notDropped()
+            ->with([
+                'user:id,name,discord_avatar_url',
+                'pokemon.pokemon:id,name,sprite_url,type1,type2',
+            ])
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Team $team) => [
+                'id' => $team->id,
+                'league_id' => $team->league_id,
+                'name' => $team->name,
+                'logo' => $team->logo !== null && trim($team->logo) !== ''
+                    ? $logoAction->logoToUrl($team->logo)
+                    : null,
+                'coach' => $team->user?->name ?? '—',
+                'coach_discord_avatar_url' => $team->user?->discord_avatar_url,
+                'pokemon' => $team->pokemon
+                    ->map(fn ($tp) => [
+                        'id' => $tp->id,
+                        'name' => $tp->name,
+                        'sprite_url' => $tp->pokemon?->sprite_url,
+                        'type1' => $tp->pokemon?->type1,
+                    ])
+                    ->all(),
+            ])
+            ->all();
+
         return Inertia::render('league/LeagueDetailTeams', [
             ...$leagueDetailLayoutDataAction($league),
             'section' => 'rosters',
+            'rosterTeams' => $rosterTeams,
         ]);
     }
 

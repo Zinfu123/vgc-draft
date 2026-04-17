@@ -29,6 +29,23 @@ interface Team {
     victory_points: number;
 }
 
+interface RosterPokemon {
+    id: number;
+    name: string;
+    sprite_url: string | null;
+    type1: string | null;
+}
+
+interface RosterTeam {
+    id: number;
+    league_id: number;
+    name: string;
+    logo: string | null;
+    coach: string;
+    coach_discord_avatar_url: string | null;
+    pokemon: RosterPokemon[];
+}
+
 interface Draft {
     id: number | null;
     round_number: number;
@@ -52,9 +69,10 @@ const props = defineProps<{
     draft: Draft | null;
     adminFlag: boolean | number;
     matchConfig: MatchConfig | null;
+    rosterTeams: RosterTeam[];
 }>();
 
-const teamCount = props.teams.length;
+const teamCount = props.rosterTeams.length;
 const teamCountLabel = teamCount === 1 ? '1 team' : `${teamCount} teams`;
 </script>
 
@@ -73,7 +91,7 @@ const teamCountLabel = teamCount === 1 ? '1 team' : `${teamCount} teams`;
                 <PageHeader eyebrow="Rosters" title="Teams" :icon="Users">
                     {{ teamCountLabel }}
                     <template v-if="teamCount > 0">
-                        — Open a card for full roster, record, and league links. Stats mirror the dashboard cards.
+                        — Click a card to open that team's league hub.
                     </template>
                     <template v-else>Create or join a team with the controls above. Cards appear here for each coach.</template>
                 </PageHeader>
@@ -81,7 +99,7 @@ const teamCountLabel = teamCount === 1 ? '1 team' : `${teamCount} teams`;
                 <div
                     class="rounded-2xl border border-border/80 bg-gradient-to-b from-muted/30 via-card/60 to-card p-4 shadow-sm backdrop-blur-sm dark:from-muted/20 dark:via-card/40 sm:p-6"
                 >
-                    <TeamCarousel :teams="teams" />
+                    <TeamCarousel :teams="rosterTeams" />
                 </div>
             </div>
         </div>
