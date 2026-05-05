@@ -665,7 +665,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                 </div>
 
                 <div class="space-y-3">
-                    <template v-for="(slot, i) in [{ key: 'replay1', label: 'Game 1' }, { key: 'replay2', label: 'Game 2' }, { key: 'replay3', label: 'Game 3' }]" :key="slot.key">
+                    <template v-for="slot in [{ key: 'replay1', label: 'Game 1' }, { key: 'replay2', label: 'Game 2' }, { key: 'replay3', label: 'Game 3' }]" :key="slot.key">
                         <div class="flex items-center gap-3">
                             <span class="text-muted-foreground w-14 shrink-0 text-sm font-medium">{{ slot.label }}</span>
                             <div class="relative min-w-0 flex-1">
@@ -799,7 +799,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                     </div>
                 </div>
 
-                <p v-if="scoreForm.errors.set_result" class="text-destructive mt-2 text-sm">{{ scoreForm.errors.set_result }}</p>
+                <p v-if="(scoreForm.errors as any).set_result" class="text-destructive mt-2 text-sm">{{ (scoreForm.errors as any).set_result }}</p>
                 <p v-else-if="requireTeamMatchPokepasteBeforeResults && !bothSidesPasteReady" class="mt-2 text-sm text-amber-700 dark:text-amber-400">
                     Both teams must submit their match paste before results can be entered.
                     <span v-if="!matchPokepasteSides.team1?.has_data" class="block">Missing: {{ set.team1.name }}</span>

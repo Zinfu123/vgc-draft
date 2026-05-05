@@ -55,8 +55,7 @@ class PokeApiPokemonGameDataImporter
         }
 
         $slug = $versionGroup->slug;
-        $learnset = $this->buildLearnset($pokemon, $slug);
-        $learnset = $this->mergeAncestorEggMovesIntoLearnset($learnset, $species, $slug);
+        $learnset = $this->buildLearnsetForVersionGroup($pokemon, $species, $slug);
         if ($learnset === []) {
             $this->deleteSnapshot($pokedex->id, $versionGroup->id);
 
@@ -68,8 +67,6 @@ class PokeApiPokemonGameDataImporter
 
             return false;
         }
-
-        $learnset = $this->mergeReminderMovesFromPriorGenerations($learnset, $pokemon, $slug);
 
         $stats = $this->mapStats($pokemon);
         [$type1, $type2] = $this->mapTypes($pokemon);
@@ -102,6 +99,56 @@ class PokeApiPokemonGameDataImporter
         $this->hydrateMoveCache($baseUrl, $learnset);
 
         return true;
+    }
+
+    /**
+     * Build the same learnset rows as stored in {@see PokemonGenerationData::$learnset} from PokéAPI for a
+     * reference version group (e.g. scarlet-violet). PokéAPI does not list learnsets for champions.
+     *
+     * @return list<array{move_id: int, move_name: string, method: string, level: int}>|null Null when the species or variety cannot be resolved
+     */
+    public function learnsetSnapshotForPokedex(Pokedex $pokedex, string $pokeapiVersionGroupSlug): ?array
+    {
+        $baseUrl = rtrim((string) config('pokemon.pokeapi_url'), '/');
+        $speciesId = (int) floor((float) $pokedex->getAttribute('nationaldex_id'));
+
+        $species = $this->getJson("{$baseUrl}/pokemon-species/{$speciesId}/");
+        if ($species === null) {
+            return null;
+        }
+
+        $pokemonUrl = $this->resolveVarietyPokemonUrl($species, $pokedex);
+        if ($pokemonUrl === null) {
+            return null;
+        }
+
+        $pokemonId = $this->extractTrailingId($pokemonUrl);
+        if ($pokemonId === null) {
+            return null;
+        }
+
+        $pokemon = $this->getJson("{$baseUrl}/pokemon/{$pokemonId}/");
+        if ($pokemon === null) {
+            return null;
+        }
+
+        return $this->buildLearnsetForVersionGroup($pokemon, $species, $pokeapiVersionGroupSlug);
+    }
+
+    /**
+     * @param  array<string, mixed>  $pokemon
+     * @param  array<string, mixed>  $species
+     * @return list<array{move_id: int, move_name: string, method: string, level: int}>
+     */
+    private function buildLearnsetForVersionGroup(array $pokemon, array $species, string $versionGroupSlug): array
+    {
+        $learnset = $this->buildLearnset($pokemon, $versionGroupSlug);
+        $learnset = $this->mergeAncestorEggMovesIntoLearnset($learnset, $species, $versionGroupSlug);
+        if ($learnset === []) {
+            return [];
+        }
+
+        return $this->mergeReminderMovesFromPriorGenerations($learnset, $pokemon, $versionGroupSlug);
     }
 
     private function deleteSnapshot(int $pokedexId, int $versionGroupId): void

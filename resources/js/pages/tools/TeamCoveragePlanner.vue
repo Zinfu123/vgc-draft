@@ -132,12 +132,6 @@ const searchTimers = new Map<string, ReturnType<typeof setTimeout>>();
 
 const typeOptions = computed(() => (props.typeOrder.length ? props.typeOrder : [...TYPE_ORDER]));
 
-const selectedGeneration = computed(() => {
-    const g = props.versionGroups.find((v) => v.slug === selectedVersionSlug.value);
-
-    return g?.generation ?? null;
-});
-
 type DefensiveCellKind = 'neutral' | 'weak2' | 'weak4' | 'resistHalf' | 'resistQuarter' | 'immune';
 
 interface DefensiveCell {
@@ -277,9 +271,6 @@ async function runSearch(side: 'ally' | 'enemy', index: number): Promise<void> {
     }
 
     const params = new URLSearchParams({ search: q, per_page: '24' });
-    if (selectedGeneration.value !== null) {
-        params.set('generation', String(selectedGeneration.value));
-    }
     const url = route('team-coverage.pokedex-search') + '?' + params.toString();
     const res = await jsonFetch(url);
     if (!res.ok) {
@@ -411,12 +402,13 @@ interface PersistShape {
     ally: {
         pokedexId: number | null;
         label: string;
+        spriteUrl: string | null;
         type1: string;
         type2: string;
         teraType: string;
         moveIds: MoveIdTuple;
     }[];
-    enemy: { pokedexId: number | null; label: string; type1: string; type2: string; teraType: string }[];
+    enemy: { pokedexId: number | null; label: string; spriteUrl: string | null; type1: string; type2: string; teraType: string }[];
 }
 
 function persist(): void {
@@ -426,6 +418,7 @@ function persist(): void {
         ally: allySlots.value.map((s) => ({
             pokedexId: s.pokedexId,
             label: s.label,
+            spriteUrl: s.spriteUrl,
             type1: s.type1,
             type2: s.type2,
             teraType: s.teraType,
@@ -434,6 +427,7 @@ function persist(): void {
         enemy: enemySlots.value.map((s) => ({
             pokedexId: s.pokedexId,
             label: s.label,
+            spriteUrl: s.spriteUrl,
             type1: s.type1,
             type2: s.type2,
             teraType: s.teraType,
@@ -478,6 +472,7 @@ async function restore(): Promise<void> {
         if (sa?.pokedexId) {
             allySlots.value[i].pokedexId = sa.pokedexId;
             allySlots.value[i].label = sa.label ?? '';
+            allySlots.value[i].spriteUrl = sa.spriteUrl ?? null;
             allySlots.value[i].type1 = sa.type1 ?? '';
             allySlots.value[i].type2 = sa.type2 ?? '';
             allySlots.value[i].teraType = sa.teraType ?? '';
@@ -492,6 +487,7 @@ async function restore(): Promise<void> {
         if (se?.pokedexId) {
             enemySlots.value[i].pokedexId = se.pokedexId;
             enemySlots.value[i].label = se.label ?? '';
+            enemySlots.value[i].spriteUrl = se.spriteUrl ?? null;
             enemySlots.value[i].type1 = se.type1 ?? '';
             enemySlots.value[i].type2 = se.type2 ?? '';
             enemySlots.value[i].teraType = se.teraType ?? '';
