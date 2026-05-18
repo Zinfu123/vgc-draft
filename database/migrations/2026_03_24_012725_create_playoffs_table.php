@@ -16,7 +16,7 @@ return new class extends Migration
             $table->foreignId('league_id')->constrained('leagues')->onDelete('cascade');
             $table->string('format', 32)->default('single_elimination');
             $table->unsignedTinyInteger('bracket_size')->default(4);
-            $table->string('status', 24)->default('draft');
+            $table->unsignedTinyInteger('status')->default(0);
             $table->json('seed_order')->nullable();
             $table->timestamps();
 

@@ -135,7 +135,7 @@ it('allows league admins to view playoffs and creates a draft playoff with seeds
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page
         ->component('league/admin/Playoffs')
-        ->where('playoff.status', 'draft')
+        ->where('playoff.status', PlayoffStatus::Draft->value)
         ->has('playoff.seed_order', 4));
 
     $playoff = Playoff::query()->where('league_id', $league->id)->first();
@@ -161,7 +161,7 @@ it('generates a single elimination bracket for six teams with byes for the top t
     $response->assertSessionHasNoErrors();
 
     $playoff = Playoff::query()->where('league_id', $league->id)->first();
-    expect($playoff->status->value)->toBe('active')
+    expect($playoff->status->value)->toBe(PlayoffStatus::Active->value)
         ->and(PlayoffMatch::query()->where('playoff_id', $playoff->id)->count())->toBe(6);
 
     $r10 = PlayoffMatch::query()->where('playoff_id', $playoff->id)->where('slot', 'r1-0')->first();
@@ -184,7 +184,7 @@ it('generates a single elimination bracket with bronze for four teams', function
     $response->assertSessionHasNoErrors();
 
     $playoff = Playoff::query()->where('league_id', $league->id)->first();
-    expect($playoff->status->value)->toBe('active')
+    expect($playoff->status->value)->toBe(PlayoffStatus::Active->value)
         ->and(PlayoffMatch::query()->where('playoff_id', $playoff->id)->count())->toBe(4);
 });
 

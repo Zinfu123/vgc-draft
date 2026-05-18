@@ -2,9 +2,9 @@
 
 namespace App\Enums\Playoffs;
 
-enum PlayoffStatus: string
+enum PlayoffStatus: int
 {
-    case Draft = 'draft';
-    case Active = 'active';
-    case Completed = 'completed';
+    case Draft = 0;
+    case Active = 1;
+    case Completed = 2;
 }
