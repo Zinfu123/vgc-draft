@@ -74,7 +74,7 @@ interface PlayoffPayload {
     id: number;
     format: string;
     bracket_size: number;
-    status: string;
+    status: number;
     seed_order: number[];
     matches: PlayoffMatchRow[];
     require_team_match_pokepaste_before_results?: boolean;
@@ -162,9 +162,9 @@ const rollbackForm = useForm({
 const selectedMatchId = ref<number | null>(null);
 const scoreDraft = ref({ team1: 0, team2: 0 });
 
-const isDraft = computed(() => props.playoff.status === 'draft');
-const isActive = computed(() => props.playoff.status === 'active');
-const isCompleted = computed(() => props.playoff.status === 'completed');
+const isDraft = computed(() => props.playoff.status === 0);
+const isActive = computed(() => props.playoff.status === 1);
+const isCompleted = computed(() => props.playoff.status === 2);
 
 const matchesByRound = computed(() => {
     const groups = new Map<number, PlayoffMatchRow[]>();

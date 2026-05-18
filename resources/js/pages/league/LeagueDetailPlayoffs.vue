@@ -115,7 +115,7 @@ interface PlayoffPayload {
     id: number;
     format: string;
     bracket_size: number;
-    status: string;
+    status: number;
     seed_order: number[];
     matches: PlayoffMatchPayload[];
     require_team_match_pokepaste_before_results?: boolean;
@@ -511,7 +511,7 @@ function submitPlayoffRollback(): void {
                     Single-elimination bracket{{ bracketLayout.mode === 'draft' ? ' (preview)' : '' }}. Everyone can view; league admins can arrange seeds before generate, then click a match while playoffs are active to enter results here.
                 </p>
                 <div v-if="adminFlag === true || adminFlag === 1" class="flex flex-wrap gap-2">
-                    <Button v-if="playoff.status === 'draft' || playoff.status === 'active'" variant="outline" size="sm" as-child>
+                    <Button v-if="playoff.status === 0 || playoff.status === 1" variant="outline" size="sm" as-child>
                         <Link :href="route('leagues.admin.playoffs', { league: league.id })"> Admin tools </Link>
                     </Button>
                 </div>
@@ -728,7 +728,7 @@ function submitPlayoffRollback(): void {
             </div>
 
             <div
-                v-if="(adminFlag === true || adminFlag === 1) && playoff.status === 'active' && allMatchesComplete && league.status !== 1"
+                v-if="(adminFlag === true || adminFlag === 1) && playoff.status === 1 && allMatchesComplete && league.status !== 1"
                 class="flex flex-col gap-2 border-t border-border pt-4"
             >
                 <Button
@@ -745,7 +745,7 @@ function submitPlayoffRollback(): void {
                 <p v-if="closeForm.errors.playoff" class="text-sm text-destructive">{{ closeForm.errors.playoff }}</p>
             </div>
 
-            <p v-if="playoff.status === 'active' && !(adminFlag === true || adminFlag === 1)" class="text-xs text-muted-foreground">
+            <p v-if="playoff.status === 1 && !(adminFlag === true || adminFlag === 1)" class="text-xs text-muted-foreground">
                 Results are entered by league admins.
             </p>
         </div>
