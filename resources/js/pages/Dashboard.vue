@@ -23,11 +23,16 @@ interface Podium {
     third: string | null;
 }
 
+interface DraftConfig {
+    draft_date: string | null;
+    draft_start_at: string | null;
+}
+
 interface League {
     id: number;
     name: string;
     status: number;
-    draft_date: string | null;
+    draft_config: DraftConfig | null;
     set_start_date: string;
     logo: string | null;
     winner: string | null;
@@ -37,7 +42,7 @@ interface League {
 interface OpenLeague {
     id: number;
     name: string;
-    draft_date: string | null;
+    draft_config: DraftConfig | null;
     set_start_date: string;
     logo: string | null;
     winner: null;

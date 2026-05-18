@@ -87,7 +87,7 @@ class ReadDashboardAction
      * @return array{
      *     id: int,
      *     name: string,
-     *     draft_date: string|null,
+     *     draft_config: array{draft_date: string|null, draft_start_at: string|null}|null,
      *     set_start_date: string,
      *     logo: string|null,
      *     winner: null,
@@ -103,7 +103,10 @@ class ReadDashboardAction
         return [
             'id' => $league->id,
             'name' => $league->name,
-            'draft_date' => $league->draftConfig?->draft_date?->toDateString(),
+            'draft_config' => $league->draftConfig !== null ? [
+                'draft_date' => $league->draftConfig->draft_date?->toDateString(),
+                'draft_start_at' => $league->draftConfig->draft_start_at?->toIso8601String(),
+            ] : null,
             'set_start_date' => $league->set_start_date,
             'logo' => $logo,
             'winner' => null,
@@ -120,7 +123,7 @@ class ReadDashboardAction
      *     id: int,
      *     name: string,
      *     status: int,
-     *     draft_date: string|null,
+     *     draft_config: array{draft_date: string|null, draft_start_at: string|null}|null,
      *     set_start_date: string|null,
      *     set_end_date: string|null,
      *     logo: string|null,
@@ -142,7 +145,10 @@ class ReadDashboardAction
             'id' => $league->id,
             'name' => $league->name,
             'status' => $league->status,
-            'draft_date' => $league->draftConfig?->draft_date?->toDateString(),
+            'draft_config' => $league->draftConfig !== null ? [
+                'draft_date' => $league->draftConfig->draft_date?->toDateString(),
+                'draft_start_at' => $league->draftConfig->draft_start_at?->toIso8601String(),
+            ] : null,
             'set_start_date' => $league->set_start_date,
             'set_end_date' => $league->set_end_date,
             'logo' => $logo,

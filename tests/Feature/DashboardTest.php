@@ -159,7 +159,7 @@ test('dashboard active leagues expose draft_date as Y-m-d', function () {
     $response->assertOk();
     $response->assertInertia(
         fn ($page) => $page
-            ->where('usersActiveLeagues.0.draft_date', '2026-04-03')
+            ->where('usersActiveLeagues.0.draft_config.draft_date', '2026-04-03')
             ->where('usersActiveLeagues.0.set_start_date', '2026-04-10')
     );
 });
@@ -191,7 +191,7 @@ test('dashboard open leagues expose draft_date as Y-m-d', function () {
     $response->assertInertia(
         fn ($page) => $page
             ->has('openLeagues', 1)
-            ->where('openLeagues.0.draft_date', '2026-04-05')
+            ->where('openLeagues.0.draft_config.draft_date', '2026-04-05')
             ->where('openLeagues.0.set_start_date', '2026-04-15')
     );
 });
