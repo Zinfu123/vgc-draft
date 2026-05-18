@@ -114,6 +114,24 @@ it('prepare link uses inertia location for inertia requests so oauth is not foll
     $this->assertGuest();
 });
 
+// ── Callback: invalid state ───────────────────────────────────────────────────
+
+it('redirects to login with an error when discord returns an invalid state', function () {
+    $provider = Mockery::mock(\Laravel\Socialite\Two\AbstractProvider::class);
+    $provider->shouldReceive('user')->andThrow(\Laravel\Socialite\Two\InvalidStateException::class);
+
+    $socialite = Mockery::mock(\Laravel\Socialite\Contracts\Factory::class);
+    $socialite->shouldReceive('driver')->with('discord')->andReturn($provider);
+
+    app()->instance(\Laravel\Socialite\Contracts\Factory::class, $socialite);
+
+    $response = $this->get(route('discord.callback'));
+
+    $response->assertRedirect(route('login'));
+    $response->assertSessionHasErrors('email');
+    $this->assertGuest();
+});
+
 // ── Callback: link account (logged in) ───────────────────────────────────────
 
 it('links discord to an existing logged-in account', function () {

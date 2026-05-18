@@ -15,6 +15,7 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\Two\InvalidStateException;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class DiscordController extends Controller
@@ -101,7 +102,13 @@ class DiscordController extends Controller
      */
     public function callback(): RedirectResponse
     {
-        $discordUser = Socialite::driver('discord')->user();
+        try {
+            $discordUser = Socialite::driver('discord')->user();
+        } catch (InvalidStateException) {
+            return redirect()->route('login')->withErrors([
+                'email' => 'Discord authentication failed. Please try again.',
+            ]);
+        }
 
         if (Auth::check()) {
             $this->linkAccount(Auth::user(), $discordUser);
