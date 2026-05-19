@@ -23,14 +23,14 @@ const showPassword = ref(false);
     <div class="relative">
         <Input
             :id="id"
-            :value="modelValue"
+            :modelValue="modelValue"
             :type="showPassword ? 'text' : 'password'"
             :required="required"
             :tabindex="tabindex"
             :autocomplete="autocomplete"
             :placeholder="placeholder"
             class="pr-10"
-            @input="$emit('update:modelValue', ($event.target as HTMLInputElement).value)"
+            @update:modelValue="$emit('update:modelValue', $event as string)"
         />
         <button
             type="button"
