@@ -16,7 +16,7 @@ import { useMobileLayout } from '@/composables/useMobileLayout';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { isReverbBroadcastClientConfigured } from '@/lib/broadcasting';
 import { type BreadcrumbItem } from '@/types';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import { useEchoPublic } from '@laravel/echo-vue';
 import { ArrowUp, Ban, CheckCircle, Heart, ShieldBan, Swords } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
@@ -510,6 +510,14 @@ const submitAction = () => {
         <div class="mx-auto max-w-screen-2xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
             <!-- Header -->
             <div class="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
+                <div class="flex flex-col gap-1.5">
+                    <Link
+                        :href="`/leagues/${props.league.id}`"
+                        class="inline-flex w-fit items-center gap-1 text-sm font-medium text-gray-500 transition-colors hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="size-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+                        {{ props.league.name }}
+                    </Link>
                 <div class="flex flex-wrap items-center gap-3">
                     <h1 class="text-2xl font-bold text-gray-900 sm:text-3xl dark:text-white">{{ props.league.name }} Draft</h1>
                     <span
@@ -542,6 +550,7 @@ const submitAction = () => {
                     >
                         {{ minimumPicksRemaining }} min. pick{{ minimumPicksRemaining === 1 ? '' : 's' }} remaining
                     </span>
+                </div>
                 </div>
                 <div v-if="!isMobile" class="flex flex-wrap items-center gap-2">
                     <DraftPicksPanel :teams="props.teams" :bans="props.allBans" />
