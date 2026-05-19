@@ -34,9 +34,9 @@ const props = defineProps<{
 </script>
 
 <template>
-    <div class="flex flex-col items-center justify-center">
+    <div class="flex w-full flex-col items-center">
         <h1 class="text-2xl font-bold">Available Pokemon</h1>
-        <div class="grid grid-cols-6 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
+        <div class="grid w-full grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             <Link
                 v-for="pokemon in props.pokemon"
                 :key="pokemon.id"
@@ -47,7 +47,7 @@ const props = defineProps<{
             </Link>
         </div>
         <h1 class="text-2xl font-bold">Drafted Pokemon</h1>
-        <div class="grid grid-cols-6 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-6">
+        <div class="grid w-full grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             <Link
                 v-for="pokemon in props.pokemon_drafted"
                 :key="pokemon.id"

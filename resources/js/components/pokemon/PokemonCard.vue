@@ -33,7 +33,7 @@ function typeoutput() {
 }
 </script>
 <template>
-    <Card :style="typeoutput()" class="grid h-[200px] w-[200px] grid-cols-6 grid-rows-8 outline-1 outline-gray-200">
+    <Card :style="typeoutput()" class="grid aspect-square w-full grid-cols-6 grid-rows-8 outline-1 outline-gray-200">
         <CardHeader class="col-span-6 col-start-1 row-span-1 row-start-1">
             <CardTitle :class="`col-span-4 col-start-1 row-span-1 row-start-1 text-center text-sm font-bold text-white capitalize`">
                 <span class="col-span-5 col-start-1 row-span-1 row-start-1 rounded bg-gray-800/85 dark:bg-muted/85">
