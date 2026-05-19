@@ -599,7 +599,7 @@ const breadcrumbs: BreadcrumbItem[] = [
         </p>
 
         <!-- Main content -->
-        <div class="mx-auto mt-8 max-w-5xl space-y-6 px-4 pb-16 sm:px-6 lg:px-8">
+        <div class="mx-auto mt-8 max-w-screen-xl space-y-6 px-4 pb-16 sm:px-6 lg:px-8">
 
             <!-- Pending schedule request -->
             <div v-if="pendingScheduleRequest" class="border-border bg-card rounded-xl border p-6">
@@ -833,7 +833,7 @@ const breadcrumbs: BreadcrumbItem[] = [
             </div>
 
             <!-- Team rosters -->
-            <div class="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <MatchTeamPanel :team="set.team1" :showdown-display="showdownDisplay(set.team1)" />
                 <MatchTeamPanel :team="set.team2" :showdown-display="showdownDisplay(set.team2)" />
             </div>

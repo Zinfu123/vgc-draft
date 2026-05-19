@@ -85,7 +85,9 @@ const onCancelClick = () => {
                 <span>{{ props.pickError }}</span>
             </div>
             <div v-if="props.selectedPokemon" class="flex flex-col items-center gap-4 py-4">
-                <PokemonCard :pokemon="props.selectedPokemon" />
+                <div class="w-48">
+                    <PokemonCard :pokemon="props.selectedPokemon" />
+                </div>
                 <div class="text-center">
                     <p class="text-lg font-semibold capitalize">{{ props.selectedPokemon.name }}</p>
                     <p class="text-sm text-gray-500 dark:text-gray-400">Cost: {{ props.selectedPokemon.cost }}</p>

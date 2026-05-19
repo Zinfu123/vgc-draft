@@ -886,7 +886,10 @@ if (isReverbBroadcastClientConfigured) {
                             <CardDescription>Roster for this league.</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <div v-if="selected_team.pokemon.length > 0" class="flex flex-wrap items-center justify-center gap-3 sm:justify-start">
+                            <div
+                                v-if="selected_team.pokemon.length > 0"
+                                class="grid grid-cols-[repeat(auto-fill,minmax(8.5rem,1fr))] gap-3"
+                            >
                                 <PokemonCard
                                     v-for="pokemon in selected_team.pokemon"
                                     :key="pokemon.id"

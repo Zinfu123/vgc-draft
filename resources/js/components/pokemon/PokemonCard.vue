@@ -47,20 +47,21 @@ function typeoutput() {
                 :alt="props.pokemon.name"
                 class="col-span-4 col-start-1 row-start-3"
             />
-            <span class="col-span-2 col-start-5 row-start-4 self-center rounded bg-gray-800/85 text-center text-sm capitalize dark:bg-muted/85">
+            <span class="col-span-2 col-start-5 row-start-4 self-center truncate rounded bg-gray-800/85 text-center text-[10px] capitalize leading-tight dark:bg-muted/85">
                 {{ props.pokemon.type1 }}
             </span>
             <span
                 v-if="props.pokemon.type2 !== '-' && props.pokemon.type2 !== undefined && props.pokemon.type2 !== null && props.pokemon.type2 !== ''"
-                class="col-span-2 col-start-5 row-start-5 self-center rounded bg-gray-800/85 text-center text-sm capitalize dark:bg-muted/85"
+                class="col-span-2 col-start-5 row-start-5 self-center truncate rounded bg-gray-800/85 text-center text-[10px] capitalize leading-tight dark:bg-muted/85"
             >
                 {{ props.pokemon.type2 }}
             </span>
             <span
-                class="col-span-2 col-start-3 row-span-1 row-start-8 self-center rounded bg-gray-800/85 text-center text-xs dark:bg-muted/85"
+                class="col-span-2 col-start-3 row-span-1 row-start-8 flex flex-col items-center self-center rounded bg-gray-800/85 text-center text-[10px] leading-tight dark:bg-muted/85"
                 v-if="props.pokemon.cost !== undefined || props.cost !== undefined"
             >
-                Cost: {{ props.pokemon.cost || props.cost?.cost }}
+                <span>Cost:</span>
+                <span>{{ props.pokemon.cost || props.cost?.cost }}</span>
             </span>
         </CardContent>
     </Card>

@@ -126,7 +126,7 @@ function sectionHref(s: { value: LeagueDetailSection; route: string }): string {
     }
 
     if (s.value === 'match-prep') {
-        return route('match-prep.index');
+        return route('match-prep.index', { league_id: props.league.id });
     }
 
     return route(s.route, { league: props.league.id });

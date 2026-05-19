@@ -4,7 +4,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { type BreadcrumbItemType } from '@/types';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { ArrowLeft } from 'lucide-vue-next';
+import { computed } from 'vue';
 
 interface LeagueOption {
     id: number;
@@ -22,10 +24,24 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const breadcrumbs: BreadcrumbItemType[] = [
-    { title: 'Dashboard', href: '/dashboard' },
-    { title: 'Match prep', href: '/match-prep' },
-];
+const selectedLeague = computed<LeagueOption | null>(
+    () => props.leagues.find((lg) => lg.id === props.selected_league_id) ?? null,
+);
+
+const breadcrumbs = computed<BreadcrumbItemType[]>(() => {
+    if (selectedLeague.value) {
+        return [
+            { title: 'Leagues', href: '/leagues' },
+            { title: selectedLeague.value.name, href: route('leagues.dashboard', { league: selectedLeague.value.id }) },
+            { title: 'Match prep', href: route('match-prep.index', { league_id: selectedLeague.value.id }) },
+        ];
+    }
+
+    return [
+        { title: 'Dashboard', href: '/dashboard' },
+        { title: 'Match prep', href: '/match-prep' },
+    ];
+});
 
 function onLeagueChange(event: Event): void {
     const el = event.target as HTMLSelectElement;
@@ -42,7 +58,15 @@ function onLeagueChange(event: Event): void {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="flex flex-col gap-6 p-4 pb-10 sm:p-6">
-            <div>
+            <div class="flex flex-col gap-2">
+                <Link
+                    v-if="selectedLeague"
+                    :href="route('leagues.dashboard', { league: selectedLeague.id })"
+                    class="text-muted-foreground hover:text-foreground inline-flex w-fit items-center gap-1.5 text-sm font-medium transition-colors"
+                >
+                    <ArrowLeft class="size-4" />
+                    Back to {{ selectedLeague.name }}
+                </Link>
                 <h1 class="text-2xl font-bold tracking-tight">Match prep</h1>
                 <p class="text-muted-foreground mt-1 max-w-2xl text-sm">
                     Plan brings and gameplans against each opponent’s drafted roster. Opponent match teamsheets (pokepaste) are never shown here.

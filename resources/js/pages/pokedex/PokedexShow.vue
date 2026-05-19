@@ -114,7 +114,7 @@ function switchVersion(slug: string) {
             </div>
 
             <div class="flex flex-col gap-6 md:flex-row md:items-start">
-                <div class="shrink-0">
+                <div class="w-48 shrink-0">
                     <PokemonCard class="pointer-events-none" :pokemon="pokemon" />
                 </div>
                 <div class="min-w-0 flex-1 space-y-4">
