@@ -18,6 +18,12 @@ class DraftConfig extends Model
         'ban_enabled',
         'bans_per_user',
         'minimum_cost_to_ban',
+        'pick_timer_enabled',
+        'pick_timer_seconds',
+        'quiet_hours_enabled',
+        'quiet_hours_start',
+        'quiet_hours_end',
+        'quiet_hours_timezone',
     ];
 
     /**
@@ -34,6 +40,9 @@ class DraftConfig extends Model
             'ban_enabled' => 'boolean',
             'bans_per_user' => 'integer',
             'minimum_cost_to_ban' => 'integer',
+            'pick_timer_enabled' => 'boolean',
+            'pick_timer_seconds' => 'integer',
+            'quiet_hours_enabled' => 'boolean',
         ];
     }
 

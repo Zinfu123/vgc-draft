@@ -2,13 +2,10 @@
 
 namespace App\Console\Commands;
 
-use App\Modules\Draft\Actions\CreateEditDraftAction;
-use App\Modules\Draft\Actions\CreateEditDraftOrderAction;
+use App\Modules\Draft\Actions\StartDraftAction;
 use App\Modules\Draft\Models\Draft;
 use App\Modules\Draft\Models\DraftConfig;
 use App\Modules\League\Models\League;
-use App\Notifications\DraftStartedBroadcastNotification;
-use App\Notifications\DraftStartedNotification;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 
@@ -19,8 +16,7 @@ class StartScheduledDraftsCommand extends Command
     protected $description = 'Start any drafts whose scheduled start time has arrived.';
 
     public function __construct(
-        private readonly CreateEditDraftAction $createEditDraftAction,
-        private readonly CreateEditDraftOrderAction $createEditDraftOrderAction,
+        private readonly StartDraftAction $startDraftAction,
     ) {
         parent::__construct();
     }
@@ -47,7 +43,7 @@ class StartScheduledDraftsCommand extends Command
                 continue;
             }
 
-            $league = League::with('draftConfig')->find($leagueId);
+            $league = League::query()->find($leagueId);
 
             if ($league === null) {
                 $this->warn("League {$leagueId}: not found, skipping.");
@@ -55,25 +51,13 @@ class StartScheduledDraftsCommand extends Command
                 continue;
             }
 
-            ($this->createEditDraftAction)(['league_id' => $leagueId, 'command' => 'create']);
+            $started = ($this->startDraftAction)($leagueId);
 
-            if ($league->draftConfig->ban_enabled) {
-                ($this->createEditDraftAction)(['league_id' => $leagueId, 'command' => 'create_ban']);
-                ($this->createEditDraftOrderAction)(['league_id' => $leagueId, 'command' => 'create_ban_order']);
+            if ($started) {
+                $this->info("League {$leagueId} ({$league->name}): draft started.");
             } else {
-                ($this->createEditDraftOrderAction)(['league_id' => $leagueId]);
+                $this->line("League {$leagueId}: draft could not be started, skipping.");
             }
-
-            $league->notify(new DraftStartedNotification($league));
-
-            $league->load('teams.user');
-            foreach ($league->teams as $team) {
-                if ($team->user !== null) {
-                    $team->user->notifyNow(new DraftStartedBroadcastNotification($league));
-                }
-            }
-
-            $this->info("League {$leagueId} ({$league->name}): draft started.");
         }
 
         return self::SUCCESS;

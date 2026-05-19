@@ -19,6 +19,8 @@ class UpdateDraftConfigRequest extends FormRequest
     {
         $this->merge([
             'ban_enabled' => $this->boolean('ban_enabled'),
+            'pick_timer_enabled' => $this->boolean('pick_timer_enabled'),
+            'quiet_hours_enabled' => $this->boolean('quiet_hours_enabled'),
         ]);
     }
 
@@ -35,6 +37,12 @@ class UpdateDraftConfigRequest extends FormRequest
             'ban_enabled' => ['boolean'],
             'bans_per_user' => ['required_if:ban_enabled,true', 'nullable', 'integer', 'min:1'],
             'minimum_cost_to_ban' => ['required_if:ban_enabled,true', 'nullable', 'integer', 'min:0'],
+            'pick_timer_enabled' => ['boolean'],
+            'pick_timer_seconds' => ['required_if:pick_timer_enabled,true', 'nullable', 'integer', 'min:60', 'max:604800'],
+            'quiet_hours_enabled' => ['boolean'],
+            'quiet_hours_start' => ['required_if:quiet_hours_enabled,true', 'nullable', 'date_format:H:i'],
+            'quiet_hours_end' => ['required_if:quiet_hours_enabled,true', 'nullable', 'date_format:H:i'],
+            'quiet_hours_timezone' => ['required_if:quiet_hours_enabled,true', 'nullable', 'timezone'],
         ];
     }
 }

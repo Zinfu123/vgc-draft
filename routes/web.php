@@ -151,6 +151,10 @@ Route::prefix('draft')->group(function () {
     Route::post('/abort-draft', [DraftController::class, 'abortDraft'])->middleware(['auth', 'verified'])->name('draft.abort-draft');
     Route::post('/wishlist/toggle', [DraftController::class, 'toggleWishlist'])->middleware(['auth', 'verified'])->name('draft.wishlist.toggle');
     Route::post('/wishlist/reorder', [DraftController::class, 'reorderWishlist'])->middleware(['auth', 'verified'])->name('draft.wishlist.reorder');
+    Route::post('/timer/pause', [DraftController::class, 'pauseTimer'])->middleware(['auth', 'verified'])->name('draft.timer.pause');
+    Route::post('/timer/resume', [DraftController::class, 'resumeTimer'])->middleware(['auth', 'verified'])->name('draft.timer.resume');
+    Route::post('/timer/adjust', [DraftController::class, 'adjustTimer'])->middleware(['auth', 'verified'])->name('draft.timer.adjust');
+    Route::post('/timer/skip', [DraftController::class, 'forceSkip'])->middleware(['auth', 'verified'])->name('draft.timer.skip');
 });
 
 // Match Routes

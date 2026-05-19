@@ -2,15 +2,21 @@
 
 namespace App\Modules\Draft\Controllers;
 
+use App\Events\DraftDetailEvent;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Draft\AdjustDraftTimerRequest;
+use App\Http\Requests\Draft\ManageDraftTimerRequest;
 use App\Http\Requests\Draft\ReorderDraftWishlistRequest;
+use App\Http\Requests\Draft\StartDraftRequest;
 use App\Http\Requests\Draft\ToggleDraftWishlistRequest;
 use App\Modules\Draft\Actions\BanPokemonAction;
 use App\Modules\Draft\Actions\CreateEditDraftAction;
-use App\Modules\Draft\Actions\CreateEditDraftOrderAction;
 use App\Modules\Draft\Actions\DraftPokemonAction;
+use App\Modules\Draft\Actions\DraftTimerAction;
 use App\Modules\Draft\Actions\ReadCurrentDraftAction;
 use App\Modules\Draft\Actions\ReorderDraftWishlistAction;
+use App\Modules\Draft\Actions\SkipCurrentTurnAction;
+use App\Modules\Draft\Actions\StartDraftAction;
 use App\Modules\Draft\Actions\ToggleDraftWishlistAction;
 use App\Modules\Draft\Models\BanOrder;
 use App\Modules\Draft\Models\Draft;
@@ -20,8 +26,6 @@ use App\Modules\League\Actions\ReadLeagueDraftAction;
 use App\Modules\League\Actions\ReadLeaguePokemonAction;
 use App\Modules\League\Models\League;
 use App\Modules\Teams\Models\Team;
-use App\Notifications\DraftStartedBroadcastNotification;
-use App\Notifications\DraftStartedNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -106,30 +110,13 @@ class DraftController extends Controller
         return redirect()->route('draft.detail', ['league_id' => $leagueId]);
     }
 
-    public function create(Request $request, CreateEditDraftAction $createEditDraftAction, CreateEditDraftOrderAction $createEditDraftOrderAction)
+    public function create(StartDraftRequest $request, StartDraftAction $startDraftAction): \Illuminate\Http\RedirectResponse
     {
-        $leagueid = $request->league_id;
-        $league = League::with('draftConfig')->find($leagueid);
+        $leagueId = (int) $request->validated('league_id');
 
-        $createEditDraftAction(['league_id' => $leagueid, 'command' => 'create']);
+        $startDraftAction($leagueId);
 
-        if ($league->draftConfig->ban_enabled == true) {
-            $createEditDraftAction(['league_id' => $leagueid, 'command' => 'create_ban']);
-            $createEditDraftOrderAction(['league_id' => $leagueid, 'command' => 'create_ban_order']);
-        } else {
-            $createEditDraftOrderAction(['league_id' => $leagueid]);
-        }
-
-        $league->notify(new DraftStartedNotification($league));
-
-        $league->load('teams.user');
-        foreach ($league->teams as $team) {
-            if ($team->user !== null) {
-                $team->user->notifyNow(new DraftStartedBroadcastNotification($league));
-            }
-        }
-
-        return redirect()->route('draft.detail', ['league_id' => $request->league_id]);
+        return redirect()->route('draft.detail', ['league_id' => $leagueId]);
     }
 
     public function ban(Request $request, BanPokemonAction $banPokemonAction, ReadLeagueDraftAction $readLeagueDraftAction)
@@ -183,7 +170,11 @@ class DraftController extends Controller
             return redirect()->route('draft.detail', ['league_id' => $leagueId])->withErrors(['error' => 'League not found.']);
         }
 
-        $mandatoryPicks = $league->draftConfig->minimum_drafts - $draft->round_number;
+        $picksMadeByTeam = \App\Modules\Draft\Models\DraftPick::query()
+            ->where('league_id', $leagueId)
+            ->where('team_id', $team->id)
+            ->count();
+        $mandatoryPicks = max(0, (int) $league->draftConfig->minimum_drafts - $picksMadeByTeam - 1);
         $draftOrder = DraftOrder::where('league_id', $leagueId)->where('team_id', $team->id)->where('status', 1)->first();
         if (! $draftOrder) {
             return redirect()->route('draft.detail', ['league_id' => $leagueId])->withErrors(['error' => 'Draft order not found for this team.']);
@@ -214,5 +205,67 @@ class DraftController extends Controller
         $readLeagueDraftAction(['league_id' => $request->league_id, 'command' => 'broadcastdraft', 'end_draft' => 1]);
 
         return redirect()->route('leagues.detail', ['league' => $request->league_id]);
+    }
+
+    public function pauseTimer(ManageDraftTimerRequest $request, DraftTimerAction $draftTimerAction): \Illuminate\Http\RedirectResponse
+    {
+        $leagueId = (int) $request->validated('league_id');
+
+        $draftTimerAction(['league_id' => $leagueId, 'command' => DraftTimerAction::COMMAND_PAUSE]);
+
+        activity()
+            ->withProperties(['league_id' => $leagueId])
+            ->log('Draft timer paused by commissioner');
+
+        DraftDetailEvent::dispatch(['league_id' => $leagueId, 'end_draft' => 0]);
+
+        return redirect()->route('draft.detail', ['league_id' => $leagueId]);
+    }
+
+    public function resumeTimer(ManageDraftTimerRequest $request, DraftTimerAction $draftTimerAction): \Illuminate\Http\RedirectResponse
+    {
+        $leagueId = (int) $request->validated('league_id');
+
+        $draftTimerAction(['league_id' => $leagueId, 'command' => DraftTimerAction::COMMAND_RESUME]);
+
+        activity()
+            ->withProperties(['league_id' => $leagueId])
+            ->log('Draft timer resumed by commissioner');
+
+        DraftDetailEvent::dispatch(['league_id' => $leagueId, 'end_draft' => 0]);
+
+        return redirect()->route('draft.detail', ['league_id' => $leagueId]);
+    }
+
+    public function adjustTimer(AdjustDraftTimerRequest $request, DraftTimerAction $draftTimerAction): \Illuminate\Http\RedirectResponse
+    {
+        $leagueId = (int) $request->validated('league_id');
+        $delta = (int) $request->validated('delta_seconds');
+
+        $draftTimerAction([
+            'league_id' => $leagueId,
+            'command' => DraftTimerAction::COMMAND_ADJUST,
+            'delta_seconds' => $delta,
+        ]);
+
+        activity()
+            ->withProperties(['league_id' => $leagueId, 'delta_seconds' => $delta])
+            ->log('Draft timer adjusted by commissioner');
+
+        DraftDetailEvent::dispatch(['league_id' => $leagueId, 'end_draft' => 0]);
+
+        return redirect()->route('draft.detail', ['league_id' => $leagueId]);
+    }
+
+    public function forceSkip(ManageDraftTimerRequest $request, SkipCurrentTurnAction $skipCurrentTurnAction): \Illuminate\Http\RedirectResponse
+    {
+        $leagueId = (int) $request->validated('league_id');
+
+        $skipCurrentTurnAction([
+            'league_id' => $leagueId,
+            'reason' => 'commissioner_force_skip',
+        ]);
+
+        return redirect()->route('draft.detail', ['league_id' => $leagueId]);
     }
 }

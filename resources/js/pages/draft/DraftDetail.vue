@@ -2,6 +2,7 @@
 import DraftPicksPanel from '@/components/draft/DraftPicksPanel.vue';
 import DraftTeamsPanel from '@/components/draft/DraftTeamsPanel.vue';
 import DraftPokemonActionDialog from '@/components/draft/DraftPokemonActionDialog.vue';
+import DraftTimerCard from '@/components/draft/DraftTimerCard.vue';
 import DraftWishlistPanel, { type WishlistRowPokemon } from '@/components/draft/DraftWishlistPanel.vue';
 import PokemonCard from '@/components/pokemon/PokemonCard.vue';
 import PokemonFilter, { type PokemonFilters } from '@/components/draft/PokemonFilter.vue';
@@ -19,7 +20,7 @@ import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { useEchoPublic } from '@laravel/echo-vue';
 import { ArrowUp, Ban, CheckCircle, Heart, ShieldBan, Swords } from 'lucide-vue-next';
-import { computed, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 
 interface League {
     id: number;
@@ -32,6 +33,12 @@ interface DraftConfig {
     minimum_cost_to_ban: number;
     draft_points: number;
     minimum_drafts: number;
+    pick_timer_enabled?: boolean;
+    pick_timer_seconds?: number | null;
+    quiet_hours_enabled?: boolean;
+    quiet_hours_start?: string | null;
+    quiet_hours_end?: string | null;
+    quiet_hours_timezone?: string | null;
 }
 
 interface Pokemon {
@@ -59,6 +66,9 @@ interface Draft {
     round_number: number;
     pick_number: number;
     status: number;
+    current_deadline_at?: string | null;
+    paused_at?: string | null;
+    paused_remaining_seconds?: number | null;
 }
 
 interface DraftOrder {
@@ -246,6 +256,68 @@ const isMyTurnToPick = computed(() => isDraftPhase.value && props.currentPicker?
 const isMyTurn = computed(() => isMyTurnToBan.value || isMyTurnToPick.value);
 
 const minCostToBan = computed(() => props.draftConfig?.minimum_cost_to_ban ?? 0);
+
+const timerEnabled = computed(() => Boolean(props.draftConfig?.pick_timer_enabled));
+const isManuallyPaused = computed(() => Boolean(props.draft?.paused_at));
+
+const quietHoursClock = ref(Date.now());
+let quietHoursTickId: number | null = null;
+
+onMounted(() => {
+    quietHoursTickId = window.setInterval(() => {
+        quietHoursClock.value = Date.now();
+    }, 30 * 1000);
+});
+
+onBeforeUnmount(() => {
+    if (quietHoursTickId !== null) {
+        window.clearInterval(quietHoursTickId);
+        quietHoursTickId = null;
+    }
+});
+
+const minutesFromTimeString = (value: string | null | undefined): number | null => {
+    if (!value) return null;
+    const match = /^(\d{1,2}):(\d{2})/.exec(value);
+    if (!match) return null;
+    const hour = Number(match[1]);
+    const minute = Number(match[2]);
+    if (Number.isNaN(hour) || Number.isNaN(minute)) return null;
+    return hour * 60 + minute;
+};
+
+const currentMinutesInZone = (timezone: string, atMs: number): number => {
+    try {
+        const parts = new Intl.DateTimeFormat('en-US', {
+            timeZone: timezone,
+            hour12: false,
+            hour: '2-digit',
+            minute: '2-digit',
+        }).formatToParts(new Date(atMs));
+        let hour = 0;
+        let minute = 0;
+        for (const part of parts) {
+            if (part.type === 'hour') hour = Number(part.value);
+            if (part.type === 'minute') minute = Number(part.value);
+        }
+        return hour * 60 + minute;
+    } catch {
+        const d = new Date(atMs);
+        return d.getHours() * 60 + d.getMinutes();
+    }
+};
+
+const isQuietHoursActive = computed(() => {
+    if (!props.draftConfig?.quiet_hours_enabled) return false;
+    const start = minutesFromTimeString(props.draftConfig?.quiet_hours_start);
+    const end = minutesFromTimeString(props.draftConfig?.quiet_hours_end);
+    if (start === null || end === null || start === end) return false;
+    const current = currentMinutesInZone(
+        props.draftConfig?.quiet_hours_timezone || 'America/New_York',
+        quietHoursClock.value,
+    );
+    return start < end ? current >= start && current < end : current >= start || current < end;
+});
 
 const userTeamData = computed(() => props.teams.find((t) => t.id === props.userTeam?.id) ?? null);
 
@@ -508,6 +580,20 @@ const submitAction = () => {
         </Head>
 
         <div class="mx-auto max-w-screen-2xl space-y-6 px-4 py-8 sm:px-6 lg:px-8">
+            <div
+                v-if="isDraftActive && isManuallyPaused"
+                class="rounded-lg border border-gray-300 bg-gray-100 px-4 py-2 text-sm font-medium text-gray-800 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-200"
+                role="status"
+            >
+                Draft is paused by the commissioner.
+            </div>
+            <div
+                v-else-if="isDraftActive && timerEnabled && isQuietHoursActive"
+                class="rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-800 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-200"
+                role="status"
+            >
+                Quiet hours — auto-skip is paused. Picks are still allowed; the timer resumes after quiet hours end.
+            </div>
             <!-- Header -->
             <div class="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
                 <div class="flex flex-col gap-1.5">
@@ -646,6 +732,21 @@ const submitAction = () => {
                                 >
                                     YOUR TURN
                                 </span>
+                            </div>
+                            <div v-if="timerEnabled && isDraftActive" class="border-t border-gray-100 px-5 py-3 dark:border-white/10">
+                                <DraftTimerCard
+                                    :league-id="props.league.id"
+                                    :pick-timer-enabled="Boolean(props.draftConfig?.pick_timer_enabled)"
+                                    :pick-timer-seconds="props.draftConfig?.pick_timer_seconds ?? null"
+                                    :current-deadline-at="props.draft?.current_deadline_at ?? null"
+                                    :paused-at="props.draft?.paused_at ?? null"
+                                    :paused-remaining-seconds="props.draft?.paused_remaining_seconds ?? null"
+                                    :quiet-hours-enabled="Boolean(props.draftConfig?.quiet_hours_enabled)"
+                                    :quiet-hours-start="props.draftConfig?.quiet_hours_start ?? null"
+                                    :quiet-hours-end="props.draftConfig?.quiet_hours_end ?? null"
+                                    :quiet-hours-timezone="props.draftConfig?.quiet_hours_timezone ?? null"
+                                    :can-manage="Boolean(props.canManageDraftAsAdmin)"
+                                />
                             </div>
                         </div>
                         <div class="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-800/50">
@@ -965,6 +1066,21 @@ const submitAction = () => {
                         >
                             YOUR TURN
                         </span>
+                    </div>
+                    <div v-if="timerEnabled && isDraftActive" class="border-t border-gray-100 px-5 py-3 dark:border-white/10">
+                        <DraftTimerCard
+                            :league-id="props.league.id"
+                            :pick-timer-enabled="Boolean(props.draftConfig?.pick_timer_enabled)"
+                            :pick-timer-seconds="props.draftConfig?.pick_timer_seconds ?? null"
+                            :current-deadline-at="props.draft?.current_deadline_at ?? null"
+                            :paused-at="props.draft?.paused_at ?? null"
+                            :paused-remaining-seconds="props.draft?.paused_remaining_seconds ?? null"
+                            :quiet-hours-enabled="Boolean(props.draftConfig?.quiet_hours_enabled)"
+                            :quiet-hours-start="props.draftConfig?.quiet_hours_start ?? null"
+                            :quiet-hours-end="props.draftConfig?.quiet_hours_end ?? null"
+                            :quiet-hours-timezone="props.draftConfig?.quiet_hours_timezone ?? null"
+                            :can-manage="Boolean(props.canManageDraftAsAdmin)"
+                        />
                     </div>
                 </div>
 

@@ -516,13 +516,22 @@ class LeagueController extends Controller
         $league->load('draftConfig');
 
         $teamsForPicks = $data['teams']->sortBy('pick_position')->values()->all();
-        $canReorderPicks = ! Draft::where('league_id', $league->id)->exists();
+        $draftExists = Draft::where('league_id', $league->id)->exists();
+        $canReorderPicks = ! $draftExists;
+        $activeTeamCount = Team::query()
+            ->where('league_id', $league->id)
+            ->whereNull('dropped_at')
+            ->count();
+        $canStartDraft = ! $draftExists && $activeTeamCount > 0;
 
         return Inertia::render('league/admin/DraftSettings', [
             ...$data,
             'draftConfig' => $league->draftConfig,
             'teams' => $teamsForPicks,
             'canReorderPicks' => $canReorderPicks,
+            'canStartDraft' => $canStartDraft,
+            'draftExists' => $draftExists,
+            'activeTeamCount' => $activeTeamCount,
         ]);
     }
 
@@ -541,6 +550,8 @@ class LeagueController extends Controller
 
         $validated = $request->validated();
         $banEnabled = $request->boolean('ban_enabled');
+        $pickTimerEnabled = $request->boolean('pick_timer_enabled');
+        $quietHoursEnabled = $request->boolean('quiet_hours_enabled');
 
         $config->draft_date = $validated['draft_date'] ?? null;
         $config->draft_start_at = $validated['draft_start_at'] ?? null;
@@ -549,6 +560,12 @@ class LeagueController extends Controller
         $config->ban_enabled = $banEnabled;
         $config->bans_per_user = $banEnabled ? (int) $validated['bans_per_user'] : null;
         $config->minimum_cost_to_ban = $banEnabled ? (int) $validated['minimum_cost_to_ban'] : null;
+        $config->pick_timer_enabled = $pickTimerEnabled;
+        $config->pick_timer_seconds = $pickTimerEnabled ? (int) $validated['pick_timer_seconds'] : null;
+        $config->quiet_hours_enabled = $quietHoursEnabled;
+        $config->quiet_hours_start = $quietHoursEnabled ? ($validated['quiet_hours_start'] ?? null) : null;
+        $config->quiet_hours_end = $quietHoursEnabled ? ($validated['quiet_hours_end'] ?? null) : null;
+        $config->quiet_hours_timezone = $quietHoursEnabled ? ($validated['quiet_hours_timezone'] ?? null) : null;
         $config->save();
 
         return back()->with('success', 'Draft configuration saved.');

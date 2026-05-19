@@ -3,9 +3,11 @@ import type { LeagueDetailSection } from '@/components/league/LeagueDetailLayout
 import CommissionerSubNav from '@/components/league/CommissionerSubNav.vue';
 import LeagueDetailLayout from '@/components/league/LeagueDetailLayout.vue';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Head, useForm, usePage } from '@inertiajs/vue3';
+import { Play } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 interface FlashProps {
@@ -33,6 +35,12 @@ interface DraftConfigPayload {
     ban_enabled: boolean;
     bans_per_user: number | null;
     minimum_cost_to_ban: number | null;
+    pick_timer_enabled: boolean;
+    pick_timer_seconds: number | null;
+    quiet_hours_enabled: boolean;
+    quiet_hours_start: string | null;
+    quiet_hours_end: string | null;
+    quiet_hours_timezone: string | null;
 }
 
 interface Team {
@@ -68,6 +76,9 @@ const props = defineProps<{
     matchConfig: MatchConfig | null;
     draftConfig: DraftConfigPayload;
     canReorderPicks: boolean;
+    canStartDraft: boolean;
+    draftExists: boolean;
+    activeTeamCount: number;
 }>();
 
 const page = usePage();
@@ -86,6 +97,16 @@ function toDatetimeLocalValue(utcStr: string | null | undefined): string {
     return new Date(d.getTime() - offset).toISOString().slice(0, 16);
 }
 
+function toTimeInputValue(value: string | null | undefined): string {
+    if (!value) return '';
+    return value.slice(0, 5);
+}
+
+function pickTimerSecondsToMinutes(value: number | null | undefined): number {
+    if (!value || value < 60) return 120;
+    return Math.round(value / 60);
+}
+
 const configForm = useForm({
     draft_date: formatDraftDateInput(props.draftConfig.draft_date),
     draft_start_at: toDatetimeLocalValue(props.draftConfig.draft_start_at),
@@ -94,7 +115,45 @@ const configForm = useForm({
     ban_enabled: Boolean(props.draftConfig.ban_enabled),
     bans_per_user: props.draftConfig.bans_per_user ?? 1,
     minimum_cost_to_ban: props.draftConfig.minimum_cost_to_ban ?? 0,
+    pick_timer_enabled: Boolean(props.draftConfig.pick_timer_enabled),
+    pick_timer_minutes: pickTimerSecondsToMinutes(props.draftConfig.pick_timer_seconds),
+    quiet_hours_enabled: Boolean(props.draftConfig.quiet_hours_enabled),
+    quiet_hours_start: toTimeInputValue(props.draftConfig.quiet_hours_start) || '00:00',
+    quiet_hours_end: toTimeInputValue(props.draftConfig.quiet_hours_end) || '08:00',
+    quiet_hours_timezone: props.draftConfig.quiet_hours_timezone ?? 'America/New_York',
 });
+
+const timerPresets: { label: string; minutes: number }[] = [
+    { label: '30m', minutes: 30 },
+    { label: '1h', minutes: 60 },
+    { label: '2h', minutes: 120 },
+    { label: '4h', minutes: 240 },
+    { label: '8h', minutes: 480 },
+    { label: '24h', minutes: 1440 },
+];
+
+const applyWeekendPreset = () => {
+    configForm.pick_timer_enabled = true;
+    configForm.pick_timer_minutes = 120;
+    configForm.quiet_hours_enabled = true;
+    configForm.quiet_hours_start = '00:00';
+    configForm.quiet_hours_end = '08:00';
+    configForm.quiet_hours_timezone = 'America/New_York';
+};
+
+const timezoneOptions = [
+    'America/New_York',
+    'America/Chicago',
+    'America/Denver',
+    'America/Los_Angeles',
+    'America/Anchorage',
+    'Pacific/Honolulu',
+    'UTC',
+    'Europe/London',
+    'Europe/Berlin',
+    'Asia/Tokyo',
+    'Australia/Sydney',
+];
 
 watch(
     () => props.draftConfig,
@@ -106,6 +165,12 @@ watch(
         configForm.ban_enabled = Boolean(c.ban_enabled);
         configForm.bans_per_user = c.bans_per_user ?? 1;
         configForm.minimum_cost_to_ban = c.minimum_cost_to_ban ?? 0;
+        configForm.pick_timer_enabled = Boolean(c.pick_timer_enabled);
+        configForm.pick_timer_minutes = pickTimerSecondsToMinutes(c.pick_timer_seconds);
+        configForm.quiet_hours_enabled = Boolean(c.quiet_hours_enabled);
+        configForm.quiet_hours_start = toTimeInputValue(c.quiet_hours_start) || '00:00';
+        configForm.quiet_hours_end = toTimeInputValue(c.quiet_hours_end) || '08:00';
+        configForm.quiet_hours_timezone = c.quiet_hours_timezone ?? 'America/New_York';
     },
     { deep: true },
 );
@@ -115,6 +180,7 @@ const submitConfig = () => {
         .transform((data) => ({
             ...data,
             draft_start_at: data.draft_start_at ? new Date(data.draft_start_at).toISOString() : null,
+            pick_timer_seconds: data.pick_timer_enabled ? Math.max(60, Math.round(data.pick_timer_minutes * 60)) : null,
         }))
         .patch(route('leagues.admin.draft-config.update', { league: props.league.id }), {
             preserveScroll: true,
@@ -150,6 +216,18 @@ const savePickOrder = () => {
     pickOrderForm.team_ids = orderedTeams.value.map((t) => t.id);
     pickOrderForm.patch(route('leagues.admin.draft-pick-order.update', { league: props.league.id }), {
         preserveScroll: true,
+    });
+};
+
+const startDraftForm = useForm({ league_id: props.league.id });
+const startDraftDialogOpen = ref(false);
+
+const confirmStartDraft = () => {
+    startDraftForm.post(route('draft.create'), {
+        preserveScroll: false,
+        onSuccess: () => {
+            startDraftDialogOpen.value = false;
+        },
     });
 };
 </script>
@@ -226,6 +304,78 @@ const savePickOrder = () => {
                             <p v-if="configForm.errors.minimum_cost_to_ban" class="text-sm text-destructive">{{ configForm.errors.minimum_cost_to_ban }}</p>
                         </div>
                     </template>
+
+                    <div class="mt-4 border-t border-border pt-4">
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <h3 class="text-sm font-semibold">Pick timer</h3>
+                                <p class="text-xs text-muted-foreground">If a team doesn't pick in time, their turn is skipped and the next team is up.</p>
+                            </div>
+                            <button
+                                type="button"
+                                class="shrink-0 rounded-md border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary transition-colors hover:bg-primary/20"
+                                @click="applyWeekendPreset"
+                            >
+                                Weekend draft preset
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <input id="pick_timer_enabled" v-model="configForm.pick_timer_enabled" type="checkbox" class="size-4 rounded border-input accent-primary" />
+                        <Label for="pick_timer_enabled" class="font-normal">Enable pick timer</Label>
+                    </div>
+                    <template v-if="configForm.pick_timer_enabled">
+                        <div class="flex flex-col gap-1.5">
+                            <Label for="pick_timer_minutes">Minutes per pick</Label>
+                            <Input id="pick_timer_minutes" v-model.number="configForm.pick_timer_minutes" type="number" min="1" />
+                            <div class="flex flex-wrap gap-1.5 pt-1">
+                                <button
+                                    v-for="preset in timerPresets"
+                                    :key="preset.label"
+                                    type="button"
+                                    class="rounded-md border border-border px-2 py-0.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/60"
+                                    :class="configForm.pick_timer_minutes === preset.minutes ? 'bg-primary text-primary-foreground hover:bg-primary' : ''"
+                                    @click="configForm.pick_timer_minutes = preset.minutes"
+                                >
+                                    {{ preset.label }}
+                                </button>
+                            </div>
+                            <p v-if="configForm.errors.pick_timer_seconds" class="text-sm text-destructive">{{ configForm.errors.pick_timer_seconds }}</p>
+                        </div>
+                    </template>
+
+                    <div class="flex items-center gap-2">
+                        <input id="quiet_hours_enabled" v-model="configForm.quiet_hours_enabled" type="checkbox" class="size-4 rounded border-input accent-primary" />
+                        <Label for="quiet_hours_enabled" class="font-normal">Enable quiet hours (no auto-skip overnight)</Label>
+                    </div>
+                    <template v-if="configForm.quiet_hours_enabled">
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="flex flex-col gap-1.5">
+                                <Label for="quiet_hours_start">Quiet hours start</Label>
+                                <Input id="quiet_hours_start" v-model="configForm.quiet_hours_start" type="time" />
+                                <p v-if="configForm.errors.quiet_hours_start" class="text-sm text-destructive">{{ configForm.errors.quiet_hours_start }}</p>
+                            </div>
+                            <div class="flex flex-col gap-1.5">
+                                <Label for="quiet_hours_end">Quiet hours end</Label>
+                                <Input id="quiet_hours_end" v-model="configForm.quiet_hours_end" type="time" />
+                                <p v-if="configForm.errors.quiet_hours_end" class="text-sm text-destructive">{{ configForm.errors.quiet_hours_end }}</p>
+                            </div>
+                        </div>
+                        <div class="flex flex-col gap-1.5">
+                            <Label for="quiet_hours_timezone">Timezone</Label>
+                            <select
+                                id="quiet_hours_timezone"
+                                v-model="configForm.quiet_hours_timezone"
+                                class="rounded-md border border-input bg-background px-3 py-2 text-sm shadow-sm"
+                            >
+                                <option v-for="tz in timezoneOptions" :key="tz" :value="tz">{{ tz }}</option>
+                            </select>
+                            <p class="text-xs text-muted-foreground">Picks are still allowed during quiet hours; only the auto-skip timer is frozen.</p>
+                            <p v-if="configForm.errors.quiet_hours_timezone" class="text-sm text-destructive">{{ configForm.errors.quiet_hours_timezone }}</p>
+                        </div>
+                    </template>
+
                     <div class="flex pt-2">
                         <Button type="submit" :disabled="configForm.processing">Save draft configuration</Button>
                     </div>
@@ -271,6 +421,67 @@ const savePickOrder = () => {
                     before starting again.
                 </p>
             </section>
+
+            <!-- Start Draft -->
+            <section class="flex flex-col gap-6">
+                <div class="border-b border-border pb-3">
+                    <h2 class="text-xl font-semibold">Start Draft</h2>
+                    <p class="mt-0.5 text-sm text-muted-foreground">
+                        Lock in the configuration and open the draft room. Notifications are sent to every coach as soon as the draft starts.
+                    </p>
+                </div>
+
+                <div
+                    class="flex flex-col gap-4 rounded-2xl border border-border bg-card p-6 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+                >
+                    <div class="flex flex-col gap-1">
+                        <p class="text-sm font-medium text-foreground">
+                            <template v-if="draftExists">A draft has already been started for this league.</template>
+                            <template v-else-if="activeTeamCount === 0">Add at least one team before starting the draft.</template>
+                            <template v-else>Ready to start when you are.</template>
+                        </p>
+                        <p class="text-xs text-muted-foreground">
+                            <template v-if="draftExists">Open the draft room from the league draft tab to make picks.</template>
+                            <template v-else>
+                                Once started, picks begin in the configured pick order. You can pause, adjust, or skip the timer from the draft room.
+                            </template>
+                        </p>
+                    </div>
+                    <Button
+                        type="button"
+                        size="lg"
+                        class="shrink-0"
+                        :disabled="!canStartDraft || startDraftForm.processing"
+                        @click="startDraftDialogOpen = true"
+                    >
+                        <Play class="size-4" />
+                        Start draft
+                    </Button>
+                </div>
+                <p v-if="startDraftForm.errors.league_id" class="text-sm text-destructive">{{ startDraftForm.errors.league_id }}</p>
+            </section>
         </div>
+
+        <Dialog v-model:open="startDraftDialogOpen">
+            <DialogContent class="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Start the draft?</DialogTitle>
+                    <DialogDescription>
+                        This will open the draft room for <strong class="text-foreground">{{ league.name }}</strong>, lock the pick order,
+                        and notify every coach. You can still pause or adjust the timer once the draft is live, but the pick order cannot be
+                        changed without aborting.
+                    </DialogDescription>
+                </DialogHeader>
+                <DialogFooter class="gap-2">
+                    <Button type="button" variant="outline" :disabled="startDraftForm.processing" @click="startDraftDialogOpen = false">
+                        Cancel
+                    </Button>
+                    <Button type="button" :disabled="startDraftForm.processing" @click="confirmStartDraft">
+                        <Play class="size-4" />
+                        Start draft
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     </LeagueDetailLayout>
 </template>

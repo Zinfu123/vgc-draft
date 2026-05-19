@@ -134,6 +134,8 @@ class CreateEditDraftAction
                     'league_pokemon_id' => $lastPickedPokemonID,
                 ])
                 ->log('Draft pick reverted');
+
+            (new DraftTimerAction)(['league_id' => $data['league_id'], 'command' => DraftTimerAction::COMMAND_START_TURN]);
         }
         // Abort Draft
         elseif ($data['command'] == 'abort_draft') {
@@ -197,6 +199,10 @@ class CreateEditDraftAction
                 $draftConfig->save();
             }
             $league->save();
+        }
+        // Finalize draft also clears any timer state
+        if ($data['command'] == 'finalize_draft') {
+            (new DraftTimerAction)(['league_id' => $data['league_id'], 'command' => DraftTimerAction::COMMAND_CLEAR]);
         }
     }
 

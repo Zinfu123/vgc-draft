@@ -6,6 +6,7 @@ use App\Events\EndDraftEvent;
 use App\Modules\Draft\Models\BanOrder;
 use App\Modules\Draft\Models\Draft;
 use App\Modules\Draft\Models\DraftOrder;
+use App\Modules\Draft\Models\DraftPick;
 use App\Modules\League\Enums\LeagueStagingStatus;
 use App\Modules\League\Enums\LeagueStatus;
 use App\Modules\League\Models\League;
@@ -23,9 +24,14 @@ class CreateEditDraftOrderAction
         }
 
         $AvailableTeamsCount = Team::where('league_id', $data['league_id'])->where('draft_points', '>', 0)->count();
-        if ($AvailableTeamsCount == 0) {
+        $shouldFinalize = $AvailableTeamsCount === 0 || $this->previousRoundProducedNoPicks((int) $data['league_id']);
+
+        if ($shouldFinalize) {
             $draft = Draft::where('league_id', $data['league_id'])->first();
             $draft->status = 0;
+            $draft->current_deadline_at = null;
+            $draft->paused_at = null;
+            $draft->paused_remaining_seconds = null;
             $draft->save();
 
             $this->adjustSetStartDateIfNeeded((int) $data['league_id']);
@@ -41,6 +47,11 @@ class CreateEditDraftOrderAction
                 $league->staging_sub_status = LeagueStagingStatus::FreeTradeWindow;
                 $league->save();
             }
+
+            activity()
+                ->performedOn($draft)
+                ->withProperties(['league_id' => $data['league_id']])
+                ->log('Draft finalized via order creation');
 
             EndDraftEvent::dispatch([
                 'league_id' => $data['league_id'],
@@ -68,6 +79,39 @@ class CreateEditDraftOrderAction
             $lastPick->is_last_pick = 1;
             $lastPick->save();
         }
+    }
+
+    /**
+     * Detect "everyone in the previous round timed out" so the draft can finalize
+     * gracefully instead of looping forever when no one is responding.
+     */
+    private function previousRoundProducedNoPicks(int $leagueId): bool
+    {
+        $draft = Draft::query()->where('league_id', $leagueId)->first();
+        if ($draft === null) {
+            return false;
+        }
+
+        $previousRound = (int) $draft->round_number - 1;
+        if ($previousRound < 1) {
+            return false;
+        }
+
+        $picksLastRound = DraftPick::query()
+            ->where('league_id', $leagueId)
+            ->where('round_number', $previousRound)
+            ->count();
+
+        if ($picksLastRound > 0) {
+            return false;
+        }
+
+        $previousRoundExisted = DraftOrder::query()
+            ->where('league_id', $leagueId)
+            ->where('round_number', $previousRound)
+            ->exists();
+
+        return $previousRoundExisted;
     }
 
     private function adjustSetStartDateIfNeeded(int $leagueId): void

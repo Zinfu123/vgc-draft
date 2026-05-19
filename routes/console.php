@@ -29,3 +29,13 @@ Schedule::command('draft:start-scheduled')
     ->name('draft-start-scheduled')
     ->everyFiveMinutes()
     ->withoutOverlapping(5);
+
+Schedule::command('draft:tick-timers')
+    ->name('draft-tick-timers')
+    ->everyMinute()
+    ->withoutOverlapping(5)
+    ->skip(fn () => ! \App\Modules\Draft\Models\Draft::query()
+        ->join('draft_config', 'draft_config.league_id', '=', 'drafts.league_id')
+        ->whereIn('drafts.status', [1, 2])
+        ->where('draft_config.pick_timer_enabled', true)
+        ->exists());
