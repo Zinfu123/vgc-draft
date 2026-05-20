@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { Button } from '@/components/ui/button';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { GripVertical, Heart, LoaderCircle, X } from 'lucide-vue-next';
 import { ref } from 'vue';
 
@@ -101,7 +100,7 @@ const onHandleDragEnd = () => {
                 Drag the grip to set priority (top = highest).
             </p>
         </div>
-        <ScrollArea class="max-h-[min(70vh,36rem)]">
+        <div class="max-h-[min(70vh,32rem)] overflow-y-auto">
             <div v-if="rows.length === 0" class="px-4 py-8 text-center text-sm text-gray-500 dark:text-gray-400">
                 No Pokémon on your wishlist yet. Tap the board to add some.
             </div>
@@ -166,6 +165,6 @@ const onHandleDragEnd = () => {
                     </Button>
                 </li>
             </ul>
-        </ScrollArea>
+        </div>
     </div>
 </template>
