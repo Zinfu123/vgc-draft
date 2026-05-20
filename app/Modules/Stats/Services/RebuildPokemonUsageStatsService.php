@@ -21,17 +21,22 @@ class RebuildPokemonUsageStatsService
         DB::transaction(function () use ($setClass, $playoffClass): void {
             PokemonUsageStat::query()->delete();
 
-            $totalPicks = (int) DraftPick::query()->count();
-            $totalBans = (int) Bans::query()->count();
+            $totalPicks = (int) DraftPick::query()
+                ->join('league_pokemon as lp', 'lp.id', '=', 'draft_picks.league_pokemon_id')
+                ->whereNotNull('lp.pokedex_id')
+                ->count();
+            $totalBans = (int) Bans::query()->whereNotNull('pokedex_id')->count();
 
             $pickRows = DB::table('draft_picks as dp')
                 ->join('league_pokemon as lp', 'lp.id', '=', 'dp.league_pokemon_id')
+                ->whereNotNull('lp.pokedex_id')
                 ->selectRaw('lp.pokedex_id as pokedex_id, COUNT(*) as c')
                 ->groupBy('lp.pokedex_id')
                 ->get()
                 ->keyBy('pokedex_id');
 
             $banRows = DB::table('draft_bans as db')
+                ->whereNotNull('db.pokedex_id')
                 ->selectRaw('db.pokedex_id as pokedex_id, COUNT(*) as c')
                 ->groupBy('db.pokedex_id')
                 ->get()
@@ -92,14 +97,17 @@ class RebuildPokemonUsageStatsService
             $this->mergeFallbackBringFromSets($setClass, $bringByDex, $totalBringUnits);
             $this->mergeFallbackBringFromPlayoffs($playoffClass, $bringByDex, $totalBringUnits);
 
-            $allIds = array_unique(array_merge(
-                array_keys($bringByDex),
-                array_keys($gameWins),
-                array_keys($gameLosses),
-                array_keys($koByDex),
-                $pickRows->keys()->all(),
-                $banRows->keys()->all(),
-            ));
+            $allIds = array_values(array_unique(array_filter(
+                array_map('intval', array_merge(
+                    array_keys($bringByDex),
+                    array_keys($gameWins),
+                    array_keys($gameLosses),
+                    array_keys($koByDex),
+                    $pickRows->keys()->all(),
+                    $banRows->keys()->all(),
+                )),
+                fn (int $id): bool => $id > 0,
+            )));
 
             foreach ($allIds as $pokedexId) {
                 PokemonUsageStat::query()->create([
