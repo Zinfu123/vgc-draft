@@ -109,7 +109,11 @@ class CreateEditTeamAction
         }
 
         if ($request->hasFile('logo')) {
-            $logo = (new TeamLogoUploadAction)->upload($request);
+            $logo = (new TeamLogoUploadAction)->upload(
+                $request->file('logo'),
+                $request->integer('league_id'),
+                (string) $request->input('name'),
+            );
         } else {
             $logo = null;
         }
@@ -193,7 +197,11 @@ class CreateEditTeamAction
                 $oldlogo = $team->logo;
                 Storage::disk('s3-team-logos')->delete($oldlogo);
             }
-            $logo = (new TeamLogoUploadAction)->upload($request);
+            $logo = (new TeamLogoUploadAction)->upload(
+                $request->file('logo'),
+                (int) $team->league_id,
+                (string) $team->name,
+            );
             $team->logo = $logo;
         }
         $team->save();

@@ -2,20 +2,20 @@
 
 namespace App\Modules\Teams\Actions;
 
-use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class TeamLogoUploadAction
 {
-    public function upload(Request $request)
+    public function upload(UploadedFile $logo, int $leagueId, string $name): string
     {
-        $logo = $request->file('logo');
-        $league_id = $request->league_id;
-        $extension = $logo->getClientOriginalExtension();
-        $logoName = $request->name;
-        $filepath = $league_id.'/'.str_replace(' ', '_', $logoName).'.'.$extension;
-        Storage::disk('s3-team-logos')->putFileAs($logo, $filepath);
+        $extension = strtolower((string) $logo->getClientOriginalExtension());
+        $slug = Str::slug($name, '_') ?: 'team';
+        $filename = $slug.'-'.Str::lower(Str::random(8)).'.'.$extension;
 
-        return $filepath;
+        Storage::disk('s3-team-logos')->putFileAs((string) $leagueId, $logo, $filename);
+
+        return $leagueId.'/'.$filename;
     }
 }
