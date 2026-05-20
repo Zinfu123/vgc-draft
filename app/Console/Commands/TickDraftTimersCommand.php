@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Events\DraftDetailEvent;
 use App\Modules\Draft\Actions\DraftTimerAction;
 use App\Modules\Draft\Actions\SkipCurrentTurnAction;
 use App\Modules\Draft\Models\Draft;
@@ -50,6 +51,11 @@ class TickDraftTimersCommand extends Command
                 ($this->draftTimerAction)([
                     'league_id' => $draft->league_id,
                     'command' => DraftTimerAction::COMMAND_SHIELD_QUIET_HOURS,
+                ]);
+
+                DraftDetailEvent::dispatch([
+                    'league_id' => $draft->league_id,
+                    'end_draft' => 0,
                 ]);
 
                 continue;

@@ -786,7 +786,7 @@ const submitAction = () => {
                                         {{ props.lastPick.league_pokemon.pokemon.name }}
                                     </p>
                                 </div>
-                                <div class="w-16 shrink-0">
+                                <div class="w-40 shrink-0">
                                     <PokemonCard
                                         :pokemon="{
                                             ...props.lastPick.league_pokemon.pokemon,
@@ -1124,7 +1124,7 @@ const submitAction = () => {
                                 {{ props.lastPick.league_pokemon.pokemon.name }}
                             </p>
                         </div>
-                        <div class="w-16 shrink-0">
+                        <div class="w-40 shrink-0">
                             <PokemonCard
                                 :pokemon="{
                                     ...props.lastPick.league_pokemon.pokemon,

@@ -1,5 +1,6 @@
 <?php
 
+use App\Events\DraftDetailEvent;
 use App\Models\User;
 use App\Modules\Draft\Actions\CreateEditDraftAction;
 use App\Modules\Draft\Actions\CreateEditDraftOrderAction;
@@ -12,6 +13,7 @@ use App\Modules\League\Models\League;
 use App\Modules\Teams\Models\Team;
 use App\Notifications\DraftNextTurnNotification;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
 
 uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
@@ -244,6 +246,34 @@ it('tick command keeps remaining time constant across quiet hours', function () 
     Carbon::setTestNow();
 });
 
+it('tick command broadcasts DraftDetailEvent while shielding quiet hours so clients refresh the countdown', function () {
+    Event::fake([DraftDetailEvent::class]);
+
+    ['league' => $league] = makeTimerLeague(
+        pickTimerSeconds: 1800,
+        quietHoursEnabled: true,
+        quietHoursStart: '00:00',
+        quietHoursEnd: '08:00',
+        quietHoursTimezone: 'UTC',
+    );
+
+    Carbon::setTestNow(Carbon::parse('2026-05-19 23:45:00', 'UTC'));
+    (new CreateEditDraftAction)(['league_id' => $league->id, 'command' => 'create']);
+    (new CreateEditDraftOrderAction)(['league_id' => $league->id]);
+    (new DraftTimerAction)(['league_id' => $league->id, 'command' => DraftTimerAction::COMMAND_START_TURN]);
+
+    Carbon::setTestNow(Carbon::parse('2026-05-20 02:00:00', 'UTC'));
+    $this->artisan('draft:tick-timers')->assertSuccessful();
+
+    Event::assertDispatched(
+        DraftDetailEvent::class,
+        fn (DraftDetailEvent $event) => (int) $event->data['league_id'] === (int) $league->id
+            && (int) $event->data['end_draft'] === 0,
+    );
+
+    Carbon::setTestNow();
+});
+
 it('tick command auto-skips when deadline passes outside quiet hours', function () {
     ['league' => $league, 'teams' => $teams] = makeTimerLeague();
 
@@ -302,6 +332,7 @@ it('does not notify when a skip ends the draft', function () {
 it('rejects pause/resume/adjust/skip for non-admin users', function () {
     ['league' => $league] = makeTimerLeague();
 
+    /** @var User $outsider */
     $outsider = User::factory()->create();
 
     $this->actingAs($outsider)
