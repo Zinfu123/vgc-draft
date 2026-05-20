@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Support\Facades\Crypt;
 use Laravel\Socialite\Contracts\Factory as SocialiteFactory;
 use Laravel\Socialite\Two\User as SocialiteUser;
 
@@ -16,6 +17,7 @@ function mockDiscordUser(string $id = '123456789', string $nickname = 'TestUser#
     $socialiteUser->shouldReceive('getAvatar')->andReturn('');
 
     $provider = Mockery::mock(\Laravel\Socialite\Two\AbstractProvider::class);
+    $provider->shouldReceive('stateless')->andReturnSelf();
     $provider->shouldReceive('user')->andReturn($socialiteUser);
 
     $socialite = Mockery::mock(SocialiteFactory::class);
@@ -24,27 +26,51 @@ function mockDiscordUser(string $id = '123456789', string $nickname = 'TestUser#
     app()->instance(SocialiteFactory::class, $socialite);
 }
 
+/**
+ * Build a Discord OAuth `state` payload identical to what DiscordController mints.
+ * Used to drive the callback tests without depending on Socialite's session state.
+ */
+function discordOAuthState(string $intent = 'login', ?int $linkUserId = null): string
+{
+    return Crypt::encryptString(json_encode([
+        'intent' => $intent,
+        'link_user_id' => $linkUserId,
+        'expires_at' => now()->addMinutes(10)->timestamp,
+        'nonce' => 'test-nonce',
+    ], JSON_THROW_ON_ERROR));
+}
+
 // ── Redirect ─────────────────────────────────────────────────────────────────
 
-it('redirects to discord oauth', function () {
+it('redirects to discord oauth with an encrypted state parameter', function () {
     $response = $this->get(route('discord.redirect'));
+
     $response->assertRedirect();
-    expect($response->headers->get('Location'))->toContain('discord.com');
+
+    $location = $response->headers->get('Location');
+    expect($location)->toContain('discord.com');
+
+    parse_str((string) parse_url($location, PHP_URL_QUERY), $query);
+    expect($query['state'] ?? null)->toBeString()->not->toBeEmpty();
+
+    $payload = json_decode(Crypt::decryptString($query['state']), associative: true);
+    expect($payload['intent'])->toBe('login')
+        ->and($payload['link_user_id'])->toBeNull();
 });
 
-it('stores register intent when redirect includes intent register', function () {
-    session(['discord_link_user_id' => 999]);
+it('embeds register intent in the oauth state when redirect includes intent register', function () {
+    $response = $this->get(route('discord.redirect', ['intent' => 'register']));
 
+    $response->assertRedirect();
+
+    parse_str((string) parse_url($response->headers->get('Location'), PHP_URL_QUERY), $query);
+    $payload = json_decode(Crypt::decryptString($query['state']), associative: true);
+
+    expect($payload['intent'])->toBe('register');
+});
+
+it('does not put oauth intent into the session', function () {
     $this->get(route('discord.redirect', ['intent' => 'register']));
-
-    expect(session()->get('discord_oauth_intent'))->toBe('register')
-        ->and(session()->get('discord_link_user_id'))->toBeNull();
-});
-
-it('clears register intent when redirect has no intent', function () {
-    session(['discord_oauth_intent' => 'register']);
-
-    $this->get(route('discord.redirect'));
 
     expect(session()->get('discord_oauth_intent'))->toBeNull();
 });
@@ -56,7 +82,7 @@ it('redirects to link form when intent is link but prepare-link session is missi
     $response->assertSessionHasErrors('link_email');
 });
 
-it('allows discord redirect with intent link when prepare-link session is present', function () {
+it('embeds the prepare-link user id into the oauth state when intent is link', function () {
     $user = User::factory()->create();
 
     session(['discord_link_user_id' => $user->id]);
@@ -65,7 +91,14 @@ it('allows discord redirect with intent link when prepare-link session is presen
 
     $response->assertRedirect();
     expect($response->headers->get('Location'))->toContain('discord.com');
-    expect(session()->get('discord_oauth_intent'))->toBe('link');
+
+    parse_str((string) parse_url($response->headers->get('Location'), PHP_URL_QUERY), $query);
+    $payload = json_decode(Crypt::decryptString($query['state']), associative: true);
+
+    expect($payload['intent'])->toBe('link')
+        ->and($payload['link_user_id'])->toBe($user->id);
+
+    expect(session()->get('discord_link_user_id'))->toBeNull();
 });
 
 // ── Prepare link (guest) ──────────────────────────────────────────────────────
@@ -114,11 +147,12 @@ it('prepare link uses inertia location for inertia requests so oauth is not foll
     $this->assertGuest();
 });
 
-// ── Callback: invalid state ───────────────────────────────────────────────────
+// ── Callback: failure path ────────────────────────────────────────────────────
 
-it('redirects to login with an error when discord returns an invalid state', function () {
+it('redirects to login with an error when discord user retrieval fails', function () {
     $provider = Mockery::mock(\Laravel\Socialite\Two\AbstractProvider::class);
-    $provider->shouldReceive('user')->andThrow(\Laravel\Socialite\Two\InvalidStateException::class);
+    $provider->shouldReceive('stateless')->andReturnSelf();
+    $provider->shouldReceive('user')->andThrow(new \RuntimeException('discord exploded'));
 
     $socialite = Mockery::mock(\Laravel\Socialite\Contracts\Factory::class);
     $socialite->shouldReceive('driver')->with('discord')->andReturn($provider);
@@ -193,12 +227,7 @@ it('links discord and logs in when guest completed prepare link flow', function 
 
     $user = User::factory()->create(['email' => 'u@example.com', 'discord_id' => null]);
 
-    session([
-        'discord_link_user_id' => $user->id,
-        'discord_oauth_intent' => 'link',
-    ]);
-
-    $response = $this->get(route('discord.callback'));
+    $response = $this->get(route('discord.callback', ['state' => discordOAuthState('link', $user->id)]));
 
     $response->assertRedirect(route('dashboard', absolute: false));
     $this->assertAuthenticatedAs($user);
@@ -214,12 +243,7 @@ it('rejects guest link when discord is already linked to another user', function
     $account = User::factory()->create(['discord_id' => null]);
     User::factory()->create(['discord_id' => 'TAKEN_DISC']);
 
-    session([
-        'discord_link_user_id' => $account->id,
-        'discord_oauth_intent' => 'link',
-    ]);
-
-    $response = $this->get(route('discord.callback'));
+    $response = $this->get(route('discord.callback', ['state' => discordOAuthState('link', $account->id)]));
 
     $response->assertRedirect(route('discord.link-form'));
     $response->assertSessionHasErrors('link_email');
@@ -234,8 +258,7 @@ it('rejects guest link when discord is already linked to another user', function
 it('registers and logs in a new user when intent is register and discord email is new', function () {
     mockDiscordUser('NEW_DISCORD_1', 'Rookie#0001', 'rookie@example.com');
 
-    $this->get(route('discord.redirect', ['intent' => 'register']));
-    $response = $this->get(route('discord.callback'));
+    $response = $this->get(route('discord.callback', ['state' => discordOAuthState('register')]));
 
     $response->assertRedirect(route('dashboard', absolute: false));
 
@@ -256,8 +279,7 @@ it('logs in an existing user when intent is register but discord id already exis
         'discord_id' => 'EXISTING_DISC',
     ]);
 
-    $this->get(route('discord.redirect', ['intent' => 'register']));
-    $response = $this->get(route('discord.callback'));
+    $response = $this->get(route('discord.callback', ['state' => discordOAuthState('register')]));
 
     $response->assertRedirect(route('dashboard', absolute: false));
     $this->assertAuthenticatedAs($existing);
@@ -269,8 +291,7 @@ it('redirects to register with an error when intent is register but email is alr
 
     User::factory()->create(['email' => 'taken@example.com', 'discord_id' => null]);
 
-    $this->get(route('discord.redirect', ['intent' => 'register']));
-    $response = $this->get(route('discord.callback'));
+    $response = $this->get(route('discord.callback', ['state' => discordOAuthState('register')]));
 
     $response->assertRedirect(route('register'));
     $response->assertSessionHasErrors('email');
@@ -280,12 +301,72 @@ it('redirects to register with an error when intent is register but email is alr
 it('redirects to register with an error when intent is register but discord returns no email', function () {
     mockDiscordUser('NO_EMAIL_DISC', 'NoEmail#1', null);
 
-    $this->get(route('discord.redirect', ['intent' => 'register']));
-    $response = $this->get(route('discord.callback'));
+    $response = $this->get(route('discord.callback', ['state' => discordOAuthState('register')]));
 
     $response->assertRedirect(route('register'));
     $response->assertSessionHasErrors('email');
     $this->assertGuest();
+});
+
+// ── Callback: mobile resilience (no originating session) ─────────────────────
+
+it('completes register intent on the callback even when the originating session is gone', function () {
+    mockDiscordUser('MOBILE_DISCORD_1', 'Mobile#0001', 'mobile@example.com');
+
+    $state = discordOAuthState('register');
+    session()->flush();
+
+    $response = $this->get(route('discord.callback', ['state' => $state]));
+
+    $response->assertRedirect(route('dashboard', absolute: false));
+    $this->assertAuthenticated();
+    expect(User::query()->where('email', 'mobile@example.com')->exists())->toBeTrue();
+});
+
+it('completes guest discord link on the callback even when the originating session is gone', function () {
+    mockDiscordUser('MOBILE_LINK_DISC', 'Mobile#0002');
+
+    $user = User::factory()->create(['discord_id' => null]);
+
+    $state = discordOAuthState('link', $user->id);
+    session()->flush();
+
+    $response = $this->get(route('discord.callback', ['state' => $state]));
+
+    $response->assertRedirect(route('dashboard', absolute: false));
+    $this->assertAuthenticatedAs($user);
+
+    $user->refresh();
+    expect($user->discord_id)->toBe('MOBILE_LINK_DISC');
+});
+
+it('falls back to login intent when the callback state is missing, malformed, or expired', function () {
+    mockDiscordUser('NEW_USER', 'Nobody#0', 'new@example.com');
+
+    $response = $this->get(route('discord.callback', ['state' => 'not-a-real-state']));
+
+    $response->assertRedirect(route('discord.link-form'));
+    $response->assertSessionHasErrors('link_email');
+    $this->assertGuest();
+    expect(User::query()->where('email', 'new@example.com')->exists())->toBeFalse();
+});
+
+it('ignores expired oauth state and falls back to login intent', function () {
+    mockDiscordUser('NEW_USER_EXP', 'NobodyExp#0', 'expired@example.com');
+
+    $expiredState = Crypt::encryptString(json_encode([
+        'intent' => 'register',
+        'link_user_id' => null,
+        'expires_at' => now()->subMinute()->timestamp,
+        'nonce' => 'test',
+    ], JSON_THROW_ON_ERROR));
+
+    $response = $this->get(route('discord.callback', ['state' => $expiredState]));
+
+    $response->assertRedirect(route('discord.link-form'));
+    $response->assertSessionHasErrors('link_email');
+    $this->assertGuest();
+    expect(User::query()->where('email', 'expired@example.com')->exists())->toBeFalse();
 });
 
 // ── Link form ─────────────────────────────────────────────────────────────────

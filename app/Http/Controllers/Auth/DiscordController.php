@@ -6,23 +6,24 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\PrepareDiscordLinkRequest;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Laravel\Socialite\Facades\Socialite;
-use Laravel\Socialite\Two\InvalidStateException;
 use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 class DiscordController extends Controller
 {
-    private const string OAUTH_INTENT_KEY = 'discord_oauth_intent';
-
     private const string DISCORD_LINK_USER_ID_KEY = 'discord_link_user_id';
+
+    private const int OAUTH_STATE_TTL_MINUTES = 10;
 
     /**
      * Show the "link Discord to existing account" page.
@@ -36,27 +37,39 @@ class DiscordController extends Controller
 
     /**
      * Redirect the user to Discord's OAuth page.
-     * Works for linking (logged in), login (guest), registration (?intent=register),
-     * or guest link-after-password (?intent=link with session from prepare-link).
+     *
+     * Discord OAuth is driven statelessly so the round-trip survives mobile flows
+     * where the Discord app intercepts the authorize URL and the system browser
+     * loses the originating session cookie. All flow context (intent and the
+     * guest link user id) is carried through Discord via an encrypted, expiring
+     * `state` parameter that only this app can mint or verify.
      */
     public function redirect(Request $request): RedirectResponse
     {
-        if ($request->query('intent') === 'register') {
-            $request->session()->put(self::OAUTH_INTENT_KEY, 'register');
-            $request->session()->forget(self::DISCORD_LINK_USER_ID_KEY);
-        } elseif ($request->query('intent') === 'link') {
-            if (! $request->session()->has(self::DISCORD_LINK_USER_ID_KEY)) {
+        $queryIntent = $request->query('intent');
+        $intent = 'login';
+        $linkUserId = null;
+
+        if ($queryIntent === 'register') {
+            $intent = 'register';
+        } elseif ($queryIntent === 'link') {
+            $linkUserId = $request->session()->pull(self::DISCORD_LINK_USER_ID_KEY);
+
+            if ($linkUserId === null) {
                 return redirect()->route('discord.link-form')->withErrors([
                     'link_email' => 'Your Discord link session expired. Enter your email and password below, then try again.',
                 ]);
             }
-            $request->session()->put(self::OAUTH_INTENT_KEY, 'link');
-        } else {
-            $request->session()->forget(self::OAUTH_INTENT_KEY);
-            $request->session()->forget(self::DISCORD_LINK_USER_ID_KEY);
+
+            $intent = 'link';
         }
 
-        return Socialite::driver('discord')->redirect();
+        $state = $this->buildOAuthState($intent, $linkUserId === null ? null : (int) $linkUserId);
+
+        return Socialite::driver('discord')
+            ->stateless()
+            ->with(['state' => $state])
+            ->redirect();
     }
 
     /**
@@ -97,18 +110,21 @@ class DiscordController extends Controller
 
     /**
      * Handle the callback from Discord.
+     *
      * - Logged in: link the Discord account to the current user.
      * - Guest: link after prepare-link, log in by discord_id, register, or show an error.
      */
-    public function callback(): RedirectResponse
+    public function callback(Request $request): RedirectResponse
     {
         try {
-            $discordUser = Socialite::driver('discord')->user();
-        } catch (InvalidStateException) {
+            $discordUser = Socialite::driver('discord')->stateless()->user();
+        } catch (\Throwable) {
             return redirect()->route('login')->withErrors([
                 'email' => 'Discord authentication failed. Please try again.',
             ]);
         }
+
+        $stateData = $this->parseOAuthState($request->query('state'));
 
         if (Auth::check()) {
             $this->linkAccount(Auth::user(), $discordUser);
@@ -116,10 +132,8 @@ class DiscordController extends Controller
             return redirect()->route('profile.edit')->with('status', 'discord-linked');
         }
 
-        $intent = session()->pull(self::OAUTH_INTENT_KEY, 'login');
-
-        if ($intent === 'link') {
-            return $this->completeGuestDiscordLink($discordUser);
+        if ($stateData['intent'] === 'link') {
+            return $this->completeGuestDiscordLink($discordUser, $stateData['link_user_id']);
         }
 
         $user = User::where('discord_id', $discordUser->getId())->first();
@@ -130,7 +144,7 @@ class DiscordController extends Controller
             return redirect()->intended(route('dashboard'));
         }
 
-        if ($intent === 'register') {
+        if ($stateData['intent'] === 'register') {
             return $this->registerGuestFromDiscord($discordUser);
         }
 
@@ -139,18 +153,16 @@ class DiscordController extends Controller
         ]);
     }
 
-    private function completeGuestDiscordLink(\Laravel\Socialite\Contracts\User $discordUser): RedirectResponse
+    private function completeGuestDiscordLink(\Laravel\Socialite\Contracts\User $discordUser, ?int $linkUserId): RedirectResponse
     {
-        $userId = session()->pull(self::DISCORD_LINK_USER_ID_KEY);
-
-        if ($userId === null) {
+        if ($linkUserId === null) {
             return redirect()->route('discord.link-form')->withErrors([
                 'link_email' => 'Your Discord link session expired. Verify your email and password, then try again.',
             ]);
         }
 
         /** @var User|null $accountUser */
-        $accountUser = User::query()->find($userId);
+        $accountUser = User::query()->find($linkUserId);
 
         if ($accountUser === null) {
             return redirect()->route('discord.link-form')->withErrors([
@@ -222,5 +234,57 @@ class DiscordController extends Controller
         Auth::login($user, remember: true);
 
         return redirect()->intended(route('dashboard'));
+    }
+
+    /**
+     * @return non-empty-string
+     */
+    private function buildOAuthState(string $intent, ?int $linkUserId): string
+    {
+        return Crypt::encryptString(json_encode([
+            'intent' => $intent,
+            'link_user_id' => $linkUserId,
+            'expires_at' => now()->addMinutes(self::OAUTH_STATE_TTL_MINUTES)->timestamp,
+            'nonce' => Str::random(16),
+        ], JSON_THROW_ON_ERROR));
+    }
+
+    /**
+     * @return array{intent: 'login'|'register'|'link', link_user_id: ?int}
+     */
+    private function parseOAuthState(mixed $state): array
+    {
+        $default = ['intent' => 'login', 'link_user_id' => null];
+
+        if (! is_string($state) || $state === '') {
+            return $default;
+        }
+
+        try {
+            $payload = json_decode(Crypt::decryptString($state), true, flags: JSON_THROW_ON_ERROR);
+        } catch (DecryptException|\JsonException) {
+            return $default;
+        }
+
+        if (! is_array($payload)) {
+            return $default;
+        }
+
+        $expiresAt = (int) ($payload['expires_at'] ?? 0);
+
+        if ($expiresAt < now()->timestamp) {
+            return $default;
+        }
+
+        $intent = $payload['intent'] ?? 'login';
+
+        if (! in_array($intent, ['login', 'register', 'link'], strict: true)) {
+            $intent = 'login';
+        }
+
+        $linkUserId = $payload['link_user_id'] ?? null;
+        $linkUserId = is_int($linkUserId) ? $linkUserId : null;
+
+        return ['intent' => $intent, 'link_user_id' => $linkUserId];
     }
 }
