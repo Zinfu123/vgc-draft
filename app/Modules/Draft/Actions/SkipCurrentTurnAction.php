@@ -6,6 +6,7 @@ use App\Events\DraftDetailEvent;
 use App\Modules\Draft\Models\BanOrder;
 use App\Modules\Draft\Models\Draft;
 use App\Modules\Draft\Models\DraftOrder;
+use Carbon\Carbon;
 
 class SkipCurrentTurnAction
 {
@@ -59,6 +60,7 @@ class SkipCurrentTurnAction
         }
 
         $currentBanOrder->status = 0;
+        $currentBanOrder->skipped_at = Carbon::now();
         $currentBanOrder->save();
 
         activity()
@@ -98,6 +100,7 @@ class SkipCurrentTurnAction
         }
 
         $currentOrder->status = 0;
+        $currentOrder->skipped_at = Carbon::now();
         $currentOrder->save();
 
         activity()

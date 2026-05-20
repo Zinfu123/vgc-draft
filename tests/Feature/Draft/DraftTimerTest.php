@@ -611,7 +611,33 @@ it('shifts pending reminders forward during quiet hours so they stay aligned wit
     Carbon::setTestNow();
 });
 
-it('finalizes the draft when an entire round produces no picks', function () {
+it('keeps a solo draft alive across many consecutive skips', function () {
+    ['league' => $league] = makeTimerLeague(pickTimerSeconds: 60, teamCount: 1);
+
+    Carbon::setTestNow(Carbon::parse('2026-05-19 12:00:00', 'UTC'));
+    (new CreateEditDraftAction)(['league_id' => $league->id, 'command' => 'create']);
+    (new CreateEditDraftOrderAction)(['league_id' => $league->id]);
+
+    $skipAction = app(SkipCurrentTurnAction::class);
+
+    foreach (range(1, 10) as $_) {
+        $skipAction(['league_id' => $league->id]);
+    }
+
+    $draft = Draft::query()->where('league_id', $league->id)->first();
+    expect((int) $draft->status)->toBe(1);
+    expect((int) $draft->round_number)->toBeGreaterThan(1);
+
+    $pendingOrderExists = DraftOrder::query()
+        ->where('league_id', $league->id)
+        ->where('status', 1)
+        ->exists();
+    expect($pendingOrderExists)->toBeTrue();
+
+    Carbon::setTestNow();
+});
+
+it('keeps a multi-team draft alive across many consecutive empty rounds', function () {
     ['league' => $league] = makeTimerLeague(pickTimerSeconds: 60, teamCount: 2);
 
     Carbon::setTestNow(Carbon::parse('2026-05-19 12:00:00', 'UTC'));
@@ -620,13 +646,31 @@ it('finalizes the draft when an entire round produces no picks', function () {
 
     $skipAction = app(SkipCurrentTurnAction::class);
 
-    // Skip everyone in round 1 (two teams, two skips = round complete)
-    $skipAction(['league_id' => $league->id]);
-    $skipAction(['league_id' => $league->id]);
+    // Five rounds × two skips per round = 10 skips, every round empty.
+    foreach (range(1, 10) as $_) {
+        $skipAction(['league_id' => $league->id]);
+    }
 
-    // Round 2 begins with the same teams; skip them too — zero picks in round 2.
-    $skipAction(['league_id' => $league->id]);
-    $skipAction(['league_id' => $league->id]);
+    $draft = Draft::query()->where('league_id', $league->id)->first();
+    expect((int) $draft->status)->toBe(1);
+
+    Carbon::setTestNow();
+});
+
+it('finalizes the draft when every team has run out of draft points', function () {
+    ['league' => $league, 'teams' => $teams] = makeTimerLeague(pickTimerSeconds: 60, teamCount: 2);
+
+    Carbon::setTestNow(Carbon::parse('2026-05-19 12:00:00', 'UTC'));
+    (new CreateEditDraftAction)(['league_id' => $league->id, 'command' => 'create']);
+    (new CreateEditDraftOrderAction)(['league_id' => $league->id]);
+
+    foreach ($teams as $team) {
+        $team->draft_points = 0;
+        $team->save();
+    }
+
+    app(SkipCurrentTurnAction::class)(['league_id' => $league->id]);
+    app(SkipCurrentTurnAction::class)(['league_id' => $league->id]);
 
     $draft = Draft::query()->where('league_id', $league->id)->first();
     expect((int) $draft->status)->toBe(0);

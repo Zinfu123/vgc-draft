@@ -19,7 +19,7 @@ import { isReverbBroadcastClientConfigured } from '@/lib/broadcasting';
 import { type BreadcrumbItem } from '@/types';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { useEchoPublic } from '@laravel/echo-vue';
-import { ArrowUp, Ban, CheckCircle, Heart, ShieldBan, Swords } from 'lucide-vue-next';
+import { ArrowUp, Ban, CheckCircle, Heart, ShieldBan, SkipForward, Swords } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 
 interface League {
@@ -111,6 +111,7 @@ interface LastPick {
     id: number;
     round_number: number;
     pick_number: number;
+    created_at?: string | null;
     team: TeamSummary | null;
     league_pokemon: {
         id: number;
@@ -129,6 +130,8 @@ interface LastPick {
 interface LastBan {
     id: number;
     round_number: number;
+    created_at?: string | null;
+    updated_at?: string | null;
     team: TeamSummary | null;
     pokedex: {
         id: number;
@@ -137,6 +140,22 @@ interface LastBan {
         type1: string;
         type2: string;
     } | null;
+}
+
+interface LastSkip {
+    id: number;
+    round_number: number;
+    pick_number: number;
+    skipped_at: string | null;
+    team: (TeamSummary & { coach?: string | null }) | null;
+}
+
+interface LastBanSkip {
+    id: number;
+    round_number: number;
+    ban_number: number;
+    skipped_at: string | null;
+    team: (TeamSummary & { coach?: string | null }) | null;
 }
 
 interface Team {
@@ -194,6 +213,8 @@ interface Props {
     canManageDraftAsAdmin?: boolean;
     lastPick: LastPick | null;
     lastBan: LastBan | null;
+    lastSkip: LastSkip | null;
+    lastBanSkip: LastBanSkip | null;
     allBans: BanEntry[];
     wishlist_league_pokemon_ids?: number[];
 }
@@ -327,6 +348,41 @@ const minimumPicksRemaining = computed(() => {
     return Math.max(0, minimumDrafts - picksMade);
 });
 
+const toMillis = (value: string | null | undefined): number => {
+    if (!value) return 0;
+    const t = Date.parse(value);
+    return Number.isFinite(t) ? t : 0;
+};
+
+type LatestAction =
+    | { kind: 'pick'; at: number; data: LastPick }
+    | { kind: 'ban'; at: number; data: LastBan }
+    | { kind: 'draft_skip'; at: number; data: LastSkip }
+    | { kind: 'ban_skip'; at: number; data: LastBanSkip };
+
+const latestAction = computed<LatestAction | null>(() => {
+    const candidates: LatestAction[] = [];
+    if (props.lastPick) {
+        const at = toMillis(props.lastPick.created_at);
+        if (at > 0) candidates.push({ kind: 'pick', at, data: props.lastPick });
+    }
+    if (props.lastBan) {
+        const at = toMillis(props.lastBan.updated_at ?? props.lastBan.created_at);
+        if (at > 0) candidates.push({ kind: 'ban', at, data: props.lastBan });
+    }
+    if (props.lastSkip) {
+        const at = toMillis(props.lastSkip.skipped_at);
+        if (at > 0) candidates.push({ kind: 'draft_skip', at, data: props.lastSkip });
+    }
+    if (props.lastBanSkip) {
+        const at = toMillis(props.lastBanSkip.skipped_at);
+        if (at > 0) candidates.push({ kind: 'ban_skip', at, data: props.lastBanSkip });
+    }
+    if (candidates.length === 0) return null;
+    candidates.sort((a, b) => b.at - a.at);
+    return candidates[0];
+});
+
 const applyFilters = (pokemon: Pokemon[]) =>
     pokemon.filter((p) => {
         if (filters.value.name && !p.name.toLowerCase().includes(filters.value.name.toLowerCase())) return false;
@@ -364,6 +420,8 @@ const reloadKeys = [
     'currentPicker',
     'lastBan',
     'lastPick',
+    'lastSkip',
+    'lastBanSkip',
     'draft',
     'canManageDraftAsAdmin',
     'wishlist_league_pokemon_ids',
@@ -642,7 +700,7 @@ const submitAction = () => {
                     <DraftPicksPanel :teams="props.teams" :bans="props.allBans" />
                     <DraftTeamsPanel :teams="props.teams" :bans="props.allBans" />
                     <ButtonGroup v-if="props.canManageDraftAsAdmin === true && isDraftActive">
-                        <Button variant="outline" size="sm" @click="revertLastPick">Revert Last Pick</Button>
+                        <Button variant="outline" size="sm" @click="revertLastPick">Revert Last Action</Button>
                         <Button variant="destructive" size="sm" @click="abortDraft">Abort Draft</Button>
                     </ButtonGroup>
                 </div>
@@ -753,44 +811,78 @@ const submitAction = () => {
                             <div class="border-b border-gray-100 px-5 py-3 dark:border-white/10">
                                 <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Last Action</h2>
                             </div>
-                            <div v-if="isBanPhase && props.lastBan" class="flex items-center gap-4 px-5 py-4">
+                            <div v-if="latestAction?.kind === 'ban_skip'" class="flex items-center gap-4 px-5 py-4">
                                 <img
-                                    v-if="props.lastBan.team?.logo"
-                                    :src="props.lastBan.team.logo"
+                                    v-if="latestAction.data.team?.logo"
+                                    :src="latestAction.data.team.logo"
                                     class="size-12 rounded-full bg-gray-200 object-cover dark:bg-gray-700"
                                     alt=""
                                 />
                                 <div class="min-w-0 flex-1">
-                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-white">{{ props.lastBan.team?.name }}</p>
+                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-white">{{ latestAction.data.team?.name }}</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">was skipped</p>
+                                    <p class="font-semibold text-amber-600 dark:text-amber-400">Round {{ latestAction.data.round_number }} ban</p>
+                                </div>
+                                <div class="flex size-16 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+                                    <SkipForward class="size-8" />
+                                </div>
+                            </div>
+                            <div v-else-if="latestAction?.kind === 'ban'" class="flex items-center gap-4 px-5 py-4">
+                                <img
+                                    v-if="latestAction.data.team?.logo"
+                                    :src="latestAction.data.team.logo"
+                                    class="size-12 rounded-full bg-gray-200 object-cover dark:bg-gray-700"
+                                    alt=""
+                                />
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-white">{{ latestAction.data.team?.name }}</p>
                                     <p class="text-xs text-gray-500 dark:text-gray-400">banned</p>
-                                    <p class="font-semibold capitalize text-red-600 dark:text-red-400">{{ props.lastBan.pokedex?.name }}</p>
+                                    <p class="font-semibold capitalize text-red-600 dark:text-red-400">{{ latestAction.data.pokedex?.name }}</p>
                                 </div>
                                 <img
-                                    v-if="props.lastBan.pokedex"
-                                    :src="'https://raw.githubusercontent.com/Autumnchi/coloured-home-sprites/main/' + props.lastBan.pokedex.name + '.png'"
-                                    :alt="props.lastBan.pokedex.name"
+                                    v-if="latestAction.data.pokedex"
+                                    :src="'https://raw.githubusercontent.com/Autumnchi/coloured-home-sprites/main/' + latestAction.data.pokedex.name + '.png'"
+                                    :alt="latestAction.data.pokedex.name"
                                     class="size-16 rounded-lg bg-gray-100 object-contain dark:bg-gray-700"
                                 />
                             </div>
-                            <div v-else-if="!isBanPhase && props.lastPick" class="flex items-center gap-4 px-5 py-4">
+                            <div v-else-if="latestAction?.kind === 'draft_skip'" class="flex items-center gap-4 px-5 py-4">
                                 <img
-                                    v-if="props.lastPick.team?.logo"
-                                    :src="props.lastPick.team.logo"
+                                    v-if="latestAction.data.team?.logo"
+                                    :src="latestAction.data.team.logo"
                                     class="size-12 rounded-full bg-gray-200 object-cover dark:bg-gray-700"
                                     alt=""
                                 />
                                 <div class="min-w-0 flex-1">
-                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-white">{{ props.lastPick.team?.name }}</p>
+                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-white">{{ latestAction.data.team?.name }}</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">was skipped</p>
+                                    <p class="font-semibold text-amber-600 dark:text-amber-400">
+                                        Round {{ latestAction.data.round_number }}, pick {{ latestAction.data.pick_number }}
+                                    </p>
+                                </div>
+                                <div class="flex size-16 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+                                    <SkipForward class="size-8" />
+                                </div>
+                            </div>
+                            <div v-else-if="latestAction?.kind === 'pick'" class="flex items-center gap-4 px-5 py-4">
+                                <img
+                                    v-if="latestAction.data.team?.logo"
+                                    :src="latestAction.data.team.logo"
+                                    class="size-12 rounded-full bg-gray-200 object-cover dark:bg-gray-700"
+                                    alt=""
+                                />
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-white">{{ latestAction.data.team?.name }}</p>
                                     <p class="text-xs text-gray-500 dark:text-gray-400">picked</p>
                                     <p class="font-semibold capitalize text-blue-600 dark:text-blue-400">
-                                        {{ props.lastPick.league_pokemon.pokemon.name }}
+                                        {{ latestAction.data.league_pokemon.pokemon.name }}
                                     </p>
                                 </div>
                                 <div class="w-40 shrink-0">
                                     <PokemonCard
                                         :pokemon="{
-                                            ...props.lastPick.league_pokemon.pokemon,
-                                            cost: props.lastPick.league_pokemon.cost,
+                                            ...latestAction.data.league_pokemon.pokemon,
+                                            cost: latestAction.data.league_pokemon.cost,
                                         }"
                                     />
                                 </div>
@@ -978,7 +1070,7 @@ const submitAction = () => {
                     <DraftPicksPanel :teams="props.teams" :bans="props.allBans" />
                     <DraftTeamsPanel :teams="props.teams" :bans="props.allBans" />
                     <ButtonGroup v-if="props.canManageDraftAsAdmin === true && isDraftActive" class="flex flex-col gap-2 sm:flex-row">
-                        <Button variant="outline" size="sm" class="min-h-11 touch-manipulation" @click="revertLastPick">Revert Last Pick</Button>
+                        <Button variant="outline" size="sm" class="min-h-11 touch-manipulation" @click="revertLastPick">Revert Last Action</Button>
                         <Button variant="destructive" size="sm" class="min-h-11 touch-manipulation" @click="abortDraft">Abort Draft</Button>
                     </ButtonGroup>
                 </TabsContent>
@@ -1089,46 +1181,82 @@ const submitAction = () => {
                     <div class="border-b border-gray-100 px-5 py-3 dark:border-white/10">
                         <h2 class="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Last Action</h2>
                     </div>
-                    <!-- Last Ban -->
-                    <div v-if="isBanPhase && props.lastBan" class="flex items-center gap-4 px-5 py-4">
+                    <!-- Last Ban Skip -->
+                    <div v-if="latestAction?.kind === 'ban_skip'" class="flex items-center gap-4 px-5 py-4">
                         <img
-                            v-if="props.lastBan.team?.logo"
-                            :src="props.lastBan.team.logo"
+                            v-if="latestAction.data.team?.logo"
+                            :src="latestAction.data.team.logo"
                             class="size-12 rounded-full bg-gray-200 object-cover dark:bg-gray-700"
                             alt=""
                         />
                         <div class="min-w-0 flex-1">
-                            <p class="truncate text-sm font-medium text-gray-900 dark:text-white">{{ props.lastBan.team?.name }}</p>
+                            <p class="truncate text-sm font-medium text-gray-900 dark:text-white">{{ latestAction.data.team?.name }}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">was skipped</p>
+                            <p class="font-semibold text-amber-600 dark:text-amber-400">Round {{ latestAction.data.round_number }} ban</p>
+                        </div>
+                        <div class="flex size-16 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+                            <SkipForward class="size-8" />
+                        </div>
+                    </div>
+                    <!-- Last Ban -->
+                    <div v-else-if="latestAction?.kind === 'ban'" class="flex items-center gap-4 px-5 py-4">
+                        <img
+                            v-if="latestAction.data.team?.logo"
+                            :src="latestAction.data.team.logo"
+                            class="size-12 rounded-full bg-gray-200 object-cover dark:bg-gray-700"
+                            alt=""
+                        />
+                        <div class="min-w-0 flex-1">
+                            <p class="truncate text-sm font-medium text-gray-900 dark:text-white">{{ latestAction.data.team?.name }}</p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">banned</p>
-                            <p class="font-semibold capitalize text-red-600 dark:text-red-400">{{ props.lastBan.pokedex?.name }}</p>
+                            <p class="font-semibold capitalize text-red-600 dark:text-red-400">{{ latestAction.data.pokedex?.name }}</p>
                         </div>
                         <img
-                            v-if="props.lastBan.pokedex"
-                            :src="'https://raw.githubusercontent.com/Autumnchi/coloured-home-sprites/main/' + props.lastBan.pokedex.name + '.png'"
-                            :alt="props.lastBan.pokedex.name"
+                            v-if="latestAction.data.pokedex"
+                            :src="'https://raw.githubusercontent.com/Autumnchi/coloured-home-sprites/main/' + latestAction.data.pokedex.name + '.png'"
+                            :alt="latestAction.data.pokedex.name"
                             class="size-16 rounded-lg bg-gray-100 object-contain dark:bg-gray-700"
                         />
                     </div>
-                    <!-- Last Pick -->
-                    <div v-else-if="!isBanPhase && props.lastPick" class="flex items-center gap-4 px-5 py-4">
+                    <!-- Last Draft Skip -->
+                    <div v-else-if="latestAction?.kind === 'draft_skip'" class="flex items-center gap-4 px-5 py-4">
                         <img
-                            v-if="props.lastPick.team?.logo"
-                            :src="props.lastPick.team.logo"
+                            v-if="latestAction.data.team?.logo"
+                            :src="latestAction.data.team.logo"
                             class="size-12 rounded-full bg-gray-200 object-cover dark:bg-gray-700"
                             alt=""
                         />
                         <div class="min-w-0 flex-1">
-                            <p class="truncate text-sm font-medium text-gray-900 dark:text-white">{{ props.lastPick.team?.name }}</p>
+                            <p class="truncate text-sm font-medium text-gray-900 dark:text-white">{{ latestAction.data.team?.name }}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">was skipped</p>
+                            <p class="font-semibold text-amber-600 dark:text-amber-400">
+                                Round {{ latestAction.data.round_number }}, pick {{ latestAction.data.pick_number }}
+                            </p>
+                        </div>
+                        <div class="flex size-16 items-center justify-center rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+                            <SkipForward class="size-8" />
+                        </div>
+                    </div>
+                    <!-- Last Pick -->
+                    <div v-else-if="latestAction?.kind === 'pick'" class="flex items-center gap-4 px-5 py-4">
+                        <img
+                            v-if="latestAction.data.team?.logo"
+                            :src="latestAction.data.team.logo"
+                            class="size-12 rounded-full bg-gray-200 object-cover dark:bg-gray-700"
+                            alt=""
+                        />
+                        <div class="min-w-0 flex-1">
+                            <p class="truncate text-sm font-medium text-gray-900 dark:text-white">{{ latestAction.data.team?.name }}</p>
                             <p class="text-xs text-gray-500 dark:text-gray-400">picked</p>
                             <p class="font-semibold capitalize text-blue-600 dark:text-blue-400">
-                                {{ props.lastPick.league_pokemon.pokemon.name }}
+                                {{ latestAction.data.league_pokemon.pokemon.name }}
                             </p>
                         </div>
                         <div class="w-40 shrink-0">
                             <PokemonCard
                                 :pokemon="{
-                                    ...props.lastPick.league_pokemon.pokemon,
-                                    cost: props.lastPick.league_pokemon.cost,
+                                    ...latestAction.data.league_pokemon.pokemon,
+                                    cost: latestAction.data.league_pokemon.cost,
                                 }"
                             />
                         </div>

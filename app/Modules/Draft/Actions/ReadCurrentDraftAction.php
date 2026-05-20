@@ -144,6 +144,38 @@ class ReadCurrentDraftAction
                 });
 
             return $allBans;
+        } elseif ($data['command'] == 'lastskip') {
+            $lastSkip = DraftOrder::query()
+                ->where('league_id', $data['league_id'])
+                ->whereNotNull('skipped_at')
+                ->with('team.user')
+                ->orderBy('skipped_at', 'desc')
+                ->first();
+
+            if ($lastSkip !== null && $lastSkip->team !== null) {
+                if ($lastSkip->team->logo !== null) {
+                    $lastSkip->team->logo = str_replace('\\', '/', Storage::disk('s3-team-logos')->url($lastSkip->team->logo));
+                }
+                $lastSkip->team->coach = $lastSkip->team->user?->name;
+            }
+
+            return $lastSkip;
+        } elseif ($data['command'] == 'lastbanskip') {
+            $lastBanSkip = BanOrder::query()
+                ->where('league_id', $data['league_id'])
+                ->whereNotNull('skipped_at')
+                ->with('team.user')
+                ->orderBy('skipped_at', 'desc')
+                ->first();
+
+            if ($lastBanSkip !== null && $lastBanSkip->team !== null) {
+                if ($lastBanSkip->team->logo !== null) {
+                    $lastBanSkip->team->logo = str_replace('\\', '/', Storage::disk('s3-team-logos')->url($lastBanSkip->team->logo));
+                }
+                $lastBanSkip->team->coach = $lastBanSkip->team->user?->name;
+            }
+
+            return $lastBanSkip;
         } elseif ($data['command'] == 'lastpick') {
             $lastpick = DraftPick::where('league_id', $data['league_id'])->with('leaguePokemon.pokemon')->orderBy('round_number', 'desc')->orderBy('pick_number', 'desc')->first();
             if ($lastpick !== null) {

@@ -17,7 +17,18 @@ class DraftOrder extends Model
         'is_last_pick',
         'team_id',
         'round_number',
+        'skipped_at',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'skipped_at' => 'datetime',
+        ];
+    }
 
     public function team()
     {

@@ -58,21 +58,22 @@ class DraftController extends Controller
 
         $currentBanner = null;
         $banOrders = collect([]);
-        $lastBan = null;
         $draftorder = collect([]);
         $currentpicker = null;
-        $lastPick = null;
         $allBans = $readCurrentDraftAction(['league_id' => $league_id, 'command' => 'allbans']);
 
         if ($draft && $draft->status === 2) {
             $currentBanner = $readCurrentDraftAction(['league_id' => $league_id, 'command' => 'currentbanner']);
             $banOrders = $readCurrentDraftAction(['league_id' => $league_id, 'command' => 'banorder']);
-            $lastBan = $readCurrentDraftAction(['league_id' => $league_id, 'command' => 'lastban']);
         } else {
             $draftorder = $readCurrentDraftAction(['league_id' => $league_id, 'command' => 'draftorder']);
             $currentpicker = $readCurrentDraftAction(['league_id' => $league_id, 'command' => 'currentpicker']);
-            $lastPick = $readCurrentDraftAction(['league_id' => $league_id, 'command' => 'lastpick']);
         }
+
+        $lastPick = $draft ? $readCurrentDraftAction(['league_id' => $league_id, 'command' => 'lastpick']) : null;
+        $lastSkip = $draft ? $readCurrentDraftAction(['league_id' => $league_id, 'command' => 'lastskip']) : null;
+        $lastBan = $draft ? $readCurrentDraftAction(['league_id' => $league_id, 'command' => 'lastban']) : null;
+        $lastBanSkip = $draft ? $readCurrentDraftAction(['league_id' => $league_id, 'command' => 'lastbanskip']) : null;
 
         return Inertia::render('draft/DraftDetail', [
             'league' => fn () => $league,
@@ -85,6 +86,8 @@ class DraftController extends Controller
             'banOrders' => fn () => $banOrders,
             'lastPick' => fn () => $lastPick,
             'lastBan' => fn () => $lastBan,
+            'lastSkip' => fn () => $lastSkip,
+            'lastBanSkip' => fn () => $lastBanSkip,
             'allBans' => fn () => $allBans,
             'userTeam' => fn () => $userTeam,
             'canManageDraftAsAdmin' => fn () => $canManageDraftAsAdmin,
