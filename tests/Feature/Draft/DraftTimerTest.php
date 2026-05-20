@@ -9,9 +9,11 @@ use App\Modules\Draft\Actions\SkipCurrentTurnAction;
 use App\Modules\Draft\Models\Draft;
 use App\Modules\Draft\Models\DraftConfig;
 use App\Modules\Draft\Models\DraftOrder;
+use App\Modules\Draft\Models\DraftReminder;
 use App\Modules\League\Models\League;
 use App\Modules\Teams\Models\Team;
 use App\Notifications\DraftNextTurnNotification;
+use App\Notifications\DraftTurnReminderNotification;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Notification;
@@ -377,6 +379,236 @@ it('skip condition gates the schedule based on active timer-enabled drafts', fun
     Draft::query()->where('league_id', $league->id)->update(['status' => 0]);
 
     expect($shouldSkip())->toBeTrue();
+});
+
+it('schedules reminder rows when a turn starts and cancels them on the next turn', function () {
+    ['league' => $league] = makeTimerLeague(
+        pickTimerSeconds: 7200,
+        discordWebhookUrl: 'https://discord.example/hook',
+    );
+
+    Carbon::setTestNow(Carbon::parse('2026-05-19 12:00:00', 'UTC'));
+    (new CreateEditDraftAction)(['league_id' => $league->id, 'command' => 'create']);
+    (new CreateEditDraftOrderAction)(['league_id' => $league->id]);
+    (new DraftTimerAction)(['league_id' => $league->id, 'command' => DraftTimerAction::COMMAND_START_TURN]);
+
+    $pending = DraftReminder::query()
+        ->where('league_id', $league->id)
+        ->whereNull('sent_at')
+        ->whereNull('cancelled_at')
+        ->orderBy('threshold_seconds')
+        ->get();
+
+    expect($pending)->toHaveCount(3);
+    expect($pending->pluck('threshold_seconds')->all())->toBe([300, 600, 1800]);
+    expect($pending->firstWhere('threshold_seconds', 1800)->fire_at->toDateTimeString())
+        ->toBe('2026-05-19 13:30:00');
+    expect($pending->firstWhere('threshold_seconds', 600)->fire_at->toDateTimeString())
+        ->toBe('2026-05-19 13:50:00');
+    expect($pending->firstWhere('threshold_seconds', 300)->fire_at->toDateTimeString())
+        ->toBe('2026-05-19 13:55:00');
+
+    (new DraftTimerAction)(['league_id' => $league->id, 'command' => DraftTimerAction::COMMAND_START_TURN]);
+
+    expect(DraftReminder::query()->where('league_id', $league->id)->whereNotNull('cancelled_at')->count())
+        ->toBe(3);
+    expect(DraftReminder::query()
+        ->where('league_id', $league->id)
+        ->whereNull('sent_at')
+        ->whereNull('cancelled_at')
+        ->count())->toBe(3);
+
+    Carbon::setTestNow();
+});
+
+it('sends each reminder exactly once and marks the row sent', function () {
+    Notification::fake();
+
+    ['league' => $league] = makeTimerLeague(
+        pickTimerSeconds: 7200,
+        discordWebhookUrl: 'https://discord.example/hook',
+    );
+
+    Carbon::setTestNow(Carbon::parse('2026-05-19 12:00:00', 'UTC'));
+    (new CreateEditDraftAction)(['league_id' => $league->id, 'command' => 'create']);
+    (new CreateEditDraftOrderAction)(['league_id' => $league->id]);
+    (new DraftTimerAction)(['league_id' => $league->id, 'command' => DraftTimerAction::COMMAND_START_TURN]);
+
+    // Tick repeatedly across the entire turn; each threshold should fire exactly once.
+    foreach (range(1, 120) as $minute) {
+        Carbon::setTestNow(Carbon::parse('2026-05-19 12:00:00', 'UTC')->addMinutes($minute));
+        $this->artisan('draft:tick-timers')->assertSuccessful();
+    }
+
+    Notification::assertSentToTimes($league, DraftTurnReminderNotification::class, 3);
+    Notification::assertSentTo(
+        $league,
+        DraftTurnReminderNotification::class,
+        fn (DraftTurnReminderNotification $n) => $n->remainingSeconds === 1800 && $n->phase === 'pick',
+    );
+    Notification::assertSentTo(
+        $league,
+        DraftTurnReminderNotification::class,
+        fn (DraftTurnReminderNotification $n) => $n->remainingSeconds === 600,
+    );
+    Notification::assertSentTo(
+        $league,
+        DraftTurnReminderNotification::class,
+        fn (DraftTurnReminderNotification $n) => $n->remainingSeconds === 300,
+    );
+
+    $sent = DraftReminder::query()->where('league_id', $league->id)->whereNotNull('sent_at')->count();
+    expect($sent)->toBe(3);
+
+    Carbon::setTestNow();
+});
+
+it('does not schedule a reminder above the configured pick timer', function () {
+    ['league' => $league] = makeTimerLeague(
+        pickTimerSeconds: 1200,
+        discordWebhookUrl: 'https://discord.example/hook',
+    );
+
+    Carbon::setTestNow(Carbon::parse('2026-05-19 12:00:00', 'UTC'));
+    (new CreateEditDraftAction)(['league_id' => $league->id, 'command' => 'create']);
+    (new CreateEditDraftOrderAction)(['league_id' => $league->id]);
+    (new DraftTimerAction)(['league_id' => $league->id, 'command' => DraftTimerAction::COMMAND_START_TURN]);
+
+    $thresholds = DraftReminder::query()
+        ->where('league_id', $league->id)
+        ->whereNull('cancelled_at')
+        ->orderBy('threshold_seconds')
+        ->pluck('threshold_seconds')
+        ->all();
+
+    expect($thresholds)->toBe([300, 600]);
+
+    Carbon::setTestNow();
+});
+
+it('still sends nothing when no Discord webhook is configured', function () {
+    Notification::fake();
+
+    ['league' => $league] = makeTimerLeague(
+        pickTimerSeconds: 7200,
+        discordWebhookUrl: null,
+    );
+
+    Carbon::setTestNow(Carbon::parse('2026-05-19 12:00:00', 'UTC'));
+    (new CreateEditDraftAction)(['league_id' => $league->id, 'command' => 'create']);
+    (new CreateEditDraftOrderAction)(['league_id' => $league->id]);
+    (new DraftTimerAction)(['league_id' => $league->id, 'command' => DraftTimerAction::COMMAND_START_TURN]);
+
+    Carbon::setTestNow(Carbon::parse('2026-05-19 13:35:00', 'UTC'));
+    $this->artisan('draft:tick-timers')->assertSuccessful();
+
+    Notification::assertNotSentTo($league, DraftTurnReminderNotification::class);
+
+    Carbon::setTestNow();
+});
+
+it('only sends the most urgent reminder when several thresholds are due at once', function () {
+    Notification::fake();
+
+    ['league' => $league] = makeTimerLeague(
+        pickTimerSeconds: 7200,
+        discordWebhookUrl: 'https://discord.example/hook',
+    );
+
+    Carbon::setTestNow(Carbon::parse('2026-05-19 12:00:00', 'UTC'));
+    (new CreateEditDraftAction)(['league_id' => $league->id, 'command' => 'create']);
+    (new CreateEditDraftOrderAction)(['league_id' => $league->id]);
+    (new DraftTimerAction)(['league_id' => $league->id, 'command' => DraftTimerAction::COMMAND_START_TURN]);
+
+    // All three reminders are now overdue; we expect only the 5-minute ping plus
+    // the rest cancelled (no spam).
+    Carbon::setTestNow(Carbon::parse('2026-05-19 13:55:30', 'UTC'));
+    $this->artisan('draft:tick-timers')->assertSuccessful();
+
+    Notification::assertSentToTimes($league, DraftTurnReminderNotification::class, 1);
+    Notification::assertSentTo(
+        $league,
+        DraftTurnReminderNotification::class,
+        fn (DraftTurnReminderNotification $n) => $n->remainingSeconds === 300,
+    );
+
+    expect(DraftReminder::query()->where('league_id', $league->id)->whereNotNull('sent_at')->count())->toBe(1);
+    expect(DraftReminder::query()->where('league_id', $league->id)->whereNotNull('cancelled_at')->count())->toBe(2);
+
+    Carbon::setTestNow();
+});
+
+it('cancels reminders on pause and reschedules on resume', function () {
+    ['league' => $league] = makeTimerLeague(
+        pickTimerSeconds: 7200,
+        discordWebhookUrl: 'https://discord.example/hook',
+    );
+
+    Carbon::setTestNow(Carbon::parse('2026-05-19 12:00:00', 'UTC'));
+    (new CreateEditDraftAction)(['league_id' => $league->id, 'command' => 'create']);
+    (new CreateEditDraftOrderAction)(['league_id' => $league->id]);
+    (new DraftTimerAction)(['league_id' => $league->id, 'command' => DraftTimerAction::COMMAND_START_TURN]);
+
+    (new DraftTimerAction)(['league_id' => $league->id, 'command' => DraftTimerAction::COMMAND_PAUSE]);
+
+    expect(DraftReminder::query()
+        ->where('league_id', $league->id)
+        ->whereNull('sent_at')
+        ->whereNull('cancelled_at')
+        ->count())->toBe(0);
+
+    Carbon::setTestNow(Carbon::parse('2026-05-19 13:00:00', 'UTC'));
+    (new DraftTimerAction)(['league_id' => $league->id, 'command' => DraftTimerAction::COMMAND_RESUME]);
+
+    expect(DraftReminder::query()
+        ->where('league_id', $league->id)
+        ->whereNull('sent_at')
+        ->whereNull('cancelled_at')
+        ->count())->toBe(3);
+
+    Carbon::setTestNow();
+});
+
+it('shifts pending reminders forward during quiet hours so they stay aligned with the deadline', function () {
+    ['league' => $league] = makeTimerLeague(
+        pickTimerSeconds: 3600,
+        quietHoursEnabled: true,
+        quietHoursStart: '00:00',
+        quietHoursEnd: '08:00',
+        quietHoursTimezone: 'UTC',
+    );
+
+    // Turn starts 30 minutes before quiet hours begin.
+    Carbon::setTestNow(Carbon::parse('2026-05-19 23:30:00', 'UTC'));
+    (new CreateEditDraftAction)(['league_id' => $league->id, 'command' => 'create']);
+    (new CreateEditDraftOrderAction)(['league_id' => $league->id]);
+    (new DraftTimerAction)(['league_id' => $league->id, 'command' => DraftTimerAction::COMMAND_START_TURN]);
+
+    $beforeReminder = DraftReminder::query()
+        ->where('league_id', $league->id)
+        ->where('threshold_seconds', 300)
+        ->whereNull('sent_at')
+        ->whereNull('cancelled_at')
+        ->first();
+    expect($beforeReminder)->not->toBeNull();
+    $initialFireAt = $beforeReminder->fire_at->copy();
+
+    // Tick through every minute of quiet hours.
+    foreach (range(1, 480) as $minutesElapsed) {
+        Carbon::setTestNow(Carbon::parse('2026-05-20 00:00:00', 'UTC')->addMinutes($minutesElapsed));
+        $this->artisan('draft:tick-timers')->assertSuccessful();
+    }
+
+    $afterReminder = DraftReminder::query()
+        ->where('league_id', $league->id)
+        ->where('threshold_seconds', 300)
+        ->first();
+
+    expect($afterReminder->sent_at)->toBeNull();
+    expect($afterReminder->cancelled_at)->toBeNull();
+    expect($afterReminder->fire_at->gt($initialFireAt->copy()->addHours(7)))->toBeTrue();
+
+    Carbon::setTestNow();
 });
 
 it('finalizes the draft when an entire round produces no picks', function () {

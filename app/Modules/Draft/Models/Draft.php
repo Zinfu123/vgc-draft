@@ -32,4 +32,9 @@ class Draft extends Model
             'paused_remaining_seconds' => 'integer',
         ];
     }
+
+    public function reminders(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(DraftReminder::class);
+    }
 }

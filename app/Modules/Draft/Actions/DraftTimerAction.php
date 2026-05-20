@@ -4,6 +4,7 @@ namespace App\Modules\Draft\Actions;
 
 use App\Modules\Draft\Models\Draft;
 use App\Modules\Draft\Models\DraftConfig;
+use App\Modules\Draft\Models\DraftReminder;
 use Carbon\Carbon;
 use Carbon\CarbonImmutable;
 
@@ -20,6 +21,15 @@ class DraftTimerAction
     public const COMMAND_SHIELD_QUIET_HOURS = 'shield_during_quiet_hours';
 
     public const COMMAND_CLEAR = 'clear';
+
+    /**
+     * Discord reminder thresholds in seconds. Reminders are only scheduled for thresholds
+     * strictly smaller than the configured pick_timer_seconds, so a 20-minute timer
+     * never schedules a "30 minutes left" reminder.
+     *
+     * @var array<int, int>
+     */
+    public const REMINDER_THRESHOLDS = [1800, 600, 300];
 
     /**
      * @param  array{league_id:int, command:string, delta_seconds?:int}  $data
@@ -40,7 +50,7 @@ class DraftTimerAction
             self::COMMAND_START_TURN => $this->startTurn($draft, $config),
             self::COMMAND_PAUSE => $this->pause($draft),
             self::COMMAND_RESUME => $this->resume($draft, $config),
-            self::COMMAND_ADJUST => $this->adjust($draft, (int) ($data['delta_seconds'] ?? 0)),
+            self::COMMAND_ADJUST => $this->adjust($draft, $config, (int) ($data['delta_seconds'] ?? 0)),
             self::COMMAND_SHIELD_QUIET_HOURS => $this->shieldDuringQuietHours($draft, $config),
             self::COMMAND_CLEAR => $this->clear($draft),
             default => null,
@@ -89,6 +99,7 @@ class DraftTimerAction
         if ($config === null || ! $config->pick_timer_enabled || ! $config->pick_timer_seconds) {
             $draft->current_deadline_at = null;
             $draft->save();
+            $this->cancelPendingReminders($draft);
 
             return;
         }
@@ -96,6 +107,9 @@ class DraftTimerAction
         $seconds = (int) $config->pick_timer_seconds;
         $draft->current_deadline_at = Carbon::now()->addSeconds($seconds);
         $draft->save();
+
+        $this->cancelPendingReminders($draft);
+        $this->scheduleReminders($draft, $config);
     }
 
     private function pause(Draft $draft): void
@@ -112,6 +126,8 @@ class DraftTimerAction
         $draft->paused_at = Carbon::now();
         $draft->paused_remaining_seconds = (int) $remaining;
         $draft->save();
+
+        $this->cancelPendingReminders($draft);
     }
 
     private function resume(Draft $draft, ?DraftConfig $config): void
@@ -131,9 +147,13 @@ class DraftTimerAction
         $draft->paused_at = null;
         $draft->paused_remaining_seconds = null;
         $draft->save();
+
+        if ($config !== null && $config->pick_timer_enabled && $draft->current_deadline_at !== null) {
+            $this->scheduleReminders($draft, $config);
+        }
     }
 
-    private function adjust(Draft $draft, int $deltaSeconds): void
+    private function adjust(Draft $draft, ?DraftConfig $config, int $deltaSeconds): void
     {
         if ($deltaSeconds === 0) {
             return;
@@ -153,11 +173,16 @@ class DraftTimerAction
 
         $draft->current_deadline_at = $draft->current_deadline_at->copy()->addSeconds($deltaSeconds);
         $draft->save();
+
+        $this->cancelPendingReminders($draft);
+        if ($config !== null && $config->pick_timer_enabled) {
+            $this->scheduleReminders($draft, $config);
+        }
     }
 
     /**
-     * Advance the deadline so the next minute's tick cannot expire the turn while quiet
-     * hours are active. Clamps to at least `now + 60s` so missed ticks don't fall behind.
+     * Advance the deadline (and any unsent reminders) by 60 seconds so the clock effectively
+     * pauses while quiet hours are active.
      */
     private function shieldDuringQuietHours(Draft $draft, ?DraftConfig $config): void
     {
@@ -176,6 +201,16 @@ class DraftTimerAction
 
         $draft->current_deadline_at = $advanced->lt($floor) ? $floor : $advanced;
         $draft->save();
+
+        DraftReminder::query()
+            ->where('draft_id', $draft->id)
+            ->whereNull('sent_at')
+            ->whereNull('cancelled_at')
+            ->get()
+            ->each(function (DraftReminder $reminder): void {
+                $reminder->fire_at = $reminder->fire_at->copy()->addSeconds(60);
+                $reminder->save();
+            });
     }
 
     private function clear(Draft $draft): void
@@ -184,6 +219,50 @@ class DraftTimerAction
         $draft->paused_at = null;
         $draft->paused_remaining_seconds = null;
         $draft->save();
+
+        $this->cancelPendingReminders($draft);
+    }
+
+    private function cancelPendingReminders(Draft $draft): void
+    {
+        DraftReminder::query()
+            ->where('draft_id', $draft->id)
+            ->whereNull('sent_at')
+            ->whereNull('cancelled_at')
+            ->update(['cancelled_at' => Carbon::now()]);
+    }
+
+    private function scheduleReminders(Draft $draft, DraftConfig $config): void
+    {
+        if ($draft->current_deadline_at === null) {
+            return;
+        }
+
+        $pickTimerSeconds = (int) ($config->pick_timer_seconds ?? 0);
+        if ($pickTimerSeconds <= 0) {
+            return;
+        }
+
+        $deadline = $draft->current_deadline_at->copy();
+        $now = Carbon::now();
+
+        foreach (self::REMINDER_THRESHOLDS as $threshold) {
+            if ($threshold >= $pickTimerSeconds) {
+                continue;
+            }
+
+            $fireAt = $deadline->copy()->subSeconds($threshold);
+            if ($fireAt->lte($now)) {
+                continue;
+            }
+
+            DraftReminder::create([
+                'draft_id' => $draft->id,
+                'league_id' => $draft->league_id,
+                'threshold_seconds' => $threshold,
+                'fire_at' => $fireAt,
+            ]);
+        }
     }
 
     private function minutesFromTimeString(mixed $value): ?int
