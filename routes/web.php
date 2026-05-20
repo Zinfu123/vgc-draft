@@ -96,6 +96,7 @@ Route::prefix('leagues')->group(function () {
     Route::post('/{league}/start-playoffs', [LeagueController::class, 'startPlayoffs'])->middleware(['auth', 'verified'])->name('leagues.start-playoffs');
     Route::post('/{league}/finalize', [LeagueController::class, 'finalizeRegularSeason'])->middleware(['auth', 'verified'])->name('leagues.finalize');
     Route::patch('/{league}/trade-deadline', [LeagueController::class, 'updateTradeDeadline'])->middleware(['auth', 'verified'])->name('leagues.trade-deadline.update');
+    Route::patch('/{league}/free-trade-window', [LeagueController::class, 'updateFreeTradeWindow'])->middleware(['auth', 'verified'])->name('leagues.free-trade-window.update');
     Route::post('/{league}/discord-webhook', [LeagueController::class, 'updateDiscordWebhook'])->middleware(['auth', 'verified'])->name('leagues.discord-webhook');
     Route::get('/{league}/admin', [LeagueController::class, 'showAdmin'])->middleware(['auth', 'verified'])->name('leagues.admin');
     Route::get('/{league}/admin/match-config', [LeagueController::class, 'showAdminMatchConfig'])->middleware(['auth', 'verified'])->name('leagues.admin.match-config');

@@ -17,6 +17,7 @@ interface League {
     status: number;
     playoffs_enabled: boolean;
     trade_deadline_at: string | null;
+    free_trade_window_hours: number;
 }
 
 interface Team {
@@ -92,6 +93,16 @@ const clearDeadline = () => {
         .patch(route('leagues.trade-deadline.update', { league: props.league.id }), {
             preserveScroll: true,
         });
+};
+
+const freeTradeWindowForm = useForm({
+    free_trade_window_hours: props.league.free_trade_window_hours ?? 24,
+});
+
+const handleFreeTradeWindowSubmit = () => {
+    freeTradeWindowForm.patch(route('leagues.free-trade-window.update', { league: props.league.id }), {
+        preserveScroll: true,
+    });
 };
 </script>
 
@@ -190,6 +201,33 @@ const clearDeadline = () => {
                     >
                         Clear Deadline
                     </Button>
+                </form>
+            </section>
+
+            <!-- Free Trade Window -->
+            <section class="flex flex-col gap-6">
+                <div class="border-b border-border pb-3">
+                    <h2 class="text-xl font-semibold">Free Trade Window</h2>
+                    <p class="mt-0.5 text-sm text-muted-foreground">
+                        Hours after the draft ends during which teams can trade freely (no trade-slot or cost-balance restrictions). Set to 0 to disable.
+                    </p>
+                </div>
+
+                <form class="flex items-end gap-3" @submit.prevent="handleFreeTradeWindowSubmit">
+                    <div class="flex flex-col gap-1.5">
+                        <label class="text-sm font-medium" for="free_trade_window_hours">Window duration (hours)</label>
+                        <Input
+                            id="free_trade_window_hours"
+                            v-model="freeTradeWindowForm.free_trade_window_hours"
+                            type="number"
+                            min="0"
+                            class="w-32"
+                        />
+                        <p v-if="freeTradeWindowForm.errors.free_trade_window_hours" class="text-sm text-destructive">
+                            {{ freeTradeWindowForm.errors.free_trade_window_hours }}
+                        </p>
+                    </div>
+                    <Button type="submit" :disabled="freeTradeWindowForm.processing">Save Window</Button>
                 </form>
             </section>
         </div>

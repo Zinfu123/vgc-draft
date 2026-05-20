@@ -443,8 +443,10 @@ it('user can complete a free agency trade and creates an accepted audit trade', 
         ->and($trade->requestedPokemon)->toHaveCount(1);
 });
 
-it('rejects free agency trade when offered cost is lower than pool cost', function () {
+it('rejects free agency trade when offered cost is lower than pool cost and team lacks draft points', function () {
     [$owner, $league, $teamA, $teamB, $userA, $userB, $pikachuA, $charizardA, $gengarA, $blastoiseB] = createLeagueForTradeTests();
+
+    $teamA->update(['draft_points' => 5]);
 
     $pd = Pokedex::create(['nationaldex_id' => 249, 'name' => 'Lugia', 'type1' => 'Psychic']);
     $expensivePool = LeaguePokemon::create([
@@ -462,5 +464,124 @@ it('rejects free agency trade when offered cost is lower than pool cost', functi
         'requested_pokemon_ids' => [$expensivePool->id],
     ]);
 
-    $response->assertSessionHasErrors('offered_pokemon_ids');
+    $response->assertSessionHasErrors('requested_pokemon_ids');
+    expect($teamA->fresh()->draft_points)->toBe(5);
+});
+
+it('deducts draft points from the team when free agency trade requested cost exceeds offered cost', function () {
+    [$owner, $league, $teamA, $teamB, $userA, $userB, $pikachuA, $charizardA, $gengarA, $blastoiseB] = createLeagueForTradeTests();
+
+    $startingPoints = $teamA->draft_points;
+
+    $pd = Pokedex::create(['nationaldex_id' => 249, 'name' => 'Lugia', 'type1' => 'Psychic']);
+    $expensivePool = LeaguePokemon::create([
+        'league_id' => $league->id,
+        'pokedex_id' => $pd->id,
+        'name' => 'Lugia',
+        'cost' => 50,
+        'drafted_by' => null,
+        'is_drafted' => false,
+        'banned' => false,
+    ]);
+
+    $response = $this->actingAs($userA)->post(route('leagues.trades.free-agency', ['league' => $league->id]), [
+        'offered_pokemon_ids' => [$pikachuA->id],
+        'requested_pokemon_ids' => [$expensivePool->id],
+    ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHasNoErrors();
+
+    expect($teamA->fresh()->draft_points)->toBe($startingPoints - (50 - 10));
+});
+
+it('refunds draft points to the team when free agency trade offered cost exceeds requested cost', function () {
+    [$owner, $league, $teamA, $teamB, $userA, $userB, $pikachuA, $charizardA, $gengarA, $blastoiseB] = createLeagueForTradeTests();
+
+    $startingPoints = $teamA->draft_points;
+
+    $pd = Pokedex::create(['nationaldex_id' => 132, 'name' => 'Ditto', 'type1' => 'Normal']);
+    $cheapPool = LeaguePokemon::create([
+        'league_id' => $league->id,
+        'pokedex_id' => $pd->id,
+        'name' => 'Ditto',
+        'cost' => 5,
+        'drafted_by' => null,
+        'is_drafted' => false,
+        'banned' => false,
+    ]);
+
+    $response = $this->actingAs($userA)->post(route('leagues.trades.free-agency', ['league' => $league->id]), [
+        'offered_pokemon_ids' => [$charizardA->id],
+        'requested_pokemon_ids' => [$cheapPool->id],
+    ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHasNoErrors();
+
+    expect($teamA->fresh()->draft_points)->toBe($startingPoints + (20 - 5));
+});
+
+it('settles draft points during the free trade window as well', function () {
+    [$owner, $league, $teamA, $teamB, $userA, $userB, $pikachuA, $charizardA, $gengarA, $blastoiseB] = createLeagueForTradeTests();
+
+    $league->status = \App\Modules\League\Enums\LeagueStatus::Staging;
+    $league->staging_sub_status = \App\Modules\League\Enums\LeagueStagingStatus::FreeTradeWindow;
+    $league->free_trade_window_hours = 48;
+    $league->save();
+
+    $league->draftConfig()->update(['draft_ended_at' => now()->subHour()]);
+
+    $startingPoints = $teamA->draft_points;
+    $startingTrades = $teamA->trades;
+
+    $pd = Pokedex::create(['nationaldex_id' => 132, 'name' => 'Ditto', 'type1' => 'Normal']);
+    $cheapPool = LeaguePokemon::create([
+        'league_id' => $league->id,
+        'pokedex_id' => $pd->id,
+        'name' => 'Ditto',
+        'cost' => 5,
+        'drafted_by' => null,
+        'is_drafted' => false,
+        'banned' => false,
+    ]);
+
+    $response = $this->actingAs($userA)->post(route('leagues.trades.free-agency', ['league' => $league->id]), [
+        'offered_pokemon_ids' => [$charizardA->id],
+        'requested_pokemon_ids' => [$cheapPool->id],
+    ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHasNoErrors();
+
+    $teamA->refresh();
+    expect($teamA->draft_points)->toBe($startingPoints + (20 - 5));
+    expect($teamA->trades)->toBe($startingTrades);
+});
+
+it('does not change draft points when free agency trade costs are equal', function () {
+    [$owner, $league, $teamA, $teamB, $userA, $userB, $pikachuA, $charizardA, $gengarA, $blastoiseB] = createLeagueForTradeTests();
+
+    $startingPoints = $teamA->draft_points;
+
+    $pd = Pokedex::create(['nationaldex_id' => 133, 'name' => 'Eevee', 'type1' => 'Normal']);
+    $poolMon = LeaguePokemon::create([
+        'league_id' => $league->id,
+        'pokedex_id' => $pd->id,
+        'name' => 'Eevee',
+        'cost' => 10,
+        'drafted_by' => null,
+        'is_drafted' => false,
+        'banned' => false,
+    ]);
+
+    $response = $this->actingAs($userA)->post(route('leagues.trades.free-agency', ['league' => $league->id]), [
+        'offered_pokemon_ids' => [$pikachuA->id],
+        'requested_pokemon_ids' => [$poolMon->id],
+    ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHasNoErrors();
+
+    expect($teamA->fresh()->draft_points)->toBe($startingPoints);
 });

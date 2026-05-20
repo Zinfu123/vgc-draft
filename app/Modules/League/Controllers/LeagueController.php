@@ -743,6 +743,20 @@ class LeagueController extends Controller
         return back()->with('success', $deadline ? 'Trade deadline saved.' : 'Trade deadline cleared.');
     }
 
+    public function updateFreeTradeWindow(Request $request, League $league): RedirectResponse
+    {
+        $this->authorize('admin', $league);
+
+        $request->validate([
+            'free_trade_window_hours' => ['required', 'integer', 'min:0', 'max:8760'],
+        ]);
+
+        $league->free_trade_window_hours = $request->integer('free_trade_window_hours');
+        $league->save();
+
+        return back()->with('success', 'Free trade window updated.');
+    }
+
     public function cancelLeague(League $league): RedirectResponse
     {
         $this->authorize('admin', $league);

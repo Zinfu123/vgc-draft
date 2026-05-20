@@ -52,8 +52,12 @@ class ExecuteFreeAgencyTradeAction
         $this->validatePokemonOwnership($offeredIds, $requestingTeam->id, $leagueId, 'offered');
         $this->validateFreeAgencyPoolPokemon($requestedIds, $leagueId);
 
-        if (! $isFreeWindow) {
-            $this->validateCostBalance($offeredIds, $requestedIds, $leagueId);
+        $offeredSum = (int) LeaguePokemon::query()->whereIn('id', $offeredIds)->where('league_id', $leagueId)->sum('cost');
+        $requestedSum = (int) LeaguePokemon::query()->whereIn('id', $requestedIds)->where('league_id', $leagueId)->sum('cost');
+        $pointsDelta = $offeredSum - $requestedSum;
+
+        if ($pointsDelta < 0) {
+            $this->validateDraftPointsForShortfall($requestingTeam, abs($pointsDelta));
         }
 
         $tradeTokenCost = count($offeredIds) + count($requestedIds);
@@ -64,7 +68,7 @@ class ExecuteFreeAgencyTradeAction
 
         $this->validateMinimumRoster($requestingTeam, $leagueId, count($offeredIds), count($requestedIds));
 
-        return DB::transaction(function () use ($requestingTeam, $leagueId, $offeredIds, $requestedIds, $tradeTokenCost, $isFreeWindow): Trade {
+        return DB::transaction(function () use ($requestingTeam, $leagueId, $offeredIds, $requestedIds, $tradeTokenCost, $isFreeWindow, $pointsDelta): Trade {
             $trade = Trade::create([
                 'league_id' => $leagueId,
                 'requesting_team_id' => $requestingTeam->id,
@@ -101,6 +105,10 @@ class ExecuteFreeAgencyTradeAction
 
             if (! $isFreeWindow) {
                 $requestingTeam->decrement('trades', $tradeTokenCost);
+            }
+
+            if ($pointsDelta !== 0) {
+                $requestingTeam->increment('draft_points', $pointsDelta);
             }
 
             return $trade->fresh();
@@ -163,18 +171,11 @@ class ExecuteFreeAgencyTradeAction
         }
     }
 
-    /**
-     * @param  array<int>  $offeredIds
-     * @param  array<int>  $requestedIds
-     */
-    private function validateCostBalance(array $offeredIds, array $requestedIds, int $leagueId): void
+    private function validateDraftPointsForShortfall(Team $team, int $shortfall): void
     {
-        $offeredSum = (int) LeaguePokemon::query()->whereIn('id', $offeredIds)->where('league_id', $leagueId)->sum('cost');
-        $requestedSum = (int) LeaguePokemon::query()->whereIn('id', $requestedIds)->where('league_id', $leagueId)->sum('cost');
-
-        if ($offeredSum < $requestedSum) {
+        if ($team->draft_points < $shortfall) {
             throw ValidationException::withMessages([
-                'offered_pokemon_ids' => 'The total cost of Pokémon you offer must be greater than or equal to the total cost of Pokémon you take from the pool.',
+                'requested_pokemon_ids' => "Your team needs {$shortfall} draft points to cover this trade but has only {$team->draft_points}.",
             ]);
         }
     }
