@@ -85,11 +85,16 @@ it('sends a DraftStartedNotification when a draft is created', function () {
     Notification::fake();
     Event::fake();
 
-    [$owner, $league, $team1, $team2] = createLeagueForDiscordTests();
+    [$owner, $league, $team1, $team2, $user1] = createLeagueForDiscordTests();
 
     $this->actingAs($owner)->post('/draft/create', ['league_id' => $league->id]);
 
-    Notification::assertSentTo($league, DraftStartedNotification::class);
+    Notification::assertSentTo($league, DraftStartedNotification::class, function (DraftStartedNotification $notification) use ($league, $user1): bool {
+        return $notification->league->is($league)
+            && $notification->phase === 'pick'
+            && $notification->firstUser !== null
+            && $notification->firstUser->is($user1);
+    });
 });
 
 it('does not send a DraftStartedNotification when league has no webhook url', function () {
@@ -171,6 +176,51 @@ it('DraftStartedNotification toDiscord contains the league name', function () {
     $payload = $notification->toDiscord($league);
 
     expect($payload['embeds'][0]['description'])->toContain('VGC Championship');
+    expect($payload)->not->toHaveKey('content');
+});
+
+it('DraftStartedNotification toDiscord mentions the first user and links to the draft', function () {
+    $owner = User::factory()->create();
+    $league = League::create([
+        'name' => 'VGC Championship',
+        'status' => \App\Modules\League\Enums\LeagueStatus::Staging->value,
+        'open' => true,
+        'league_owner' => $owner->id,
+    ]);
+
+    $firstUser = User::factory()->create([
+        'name' => 'Coach',
+        'discord_id' => '987654321098765432',
+    ]);
+
+    $notification = new DraftStartedNotification($league, $firstUser, 'pick');
+    $payload = $notification->toDiscord($league);
+
+    expect($payload['content'])->toBe('<@987654321098765432>')
+        ->and($payload['embeds'][0]['description'])->toContain("You're first up!")
+        ->and($payload['embeds'][0]['description'])->toContain('/draft/'.$league->id);
+});
+
+it('DraftStartedNotification toDiscord falls back to the user name when discord_id is missing', function () {
+    $owner = User::factory()->create();
+    $league = League::create([
+        'name' => 'VGC Championship',
+        'status' => \App\Modules\League\Enums\LeagueStatus::Staging->value,
+        'open' => true,
+        'league_owner' => $owner->id,
+    ]);
+
+    $firstUser = User::factory()->create([
+        'name' => 'Banner',
+        'discord_id' => null,
+    ]);
+
+    $notification = new DraftStartedNotification($league, $firstUser, 'ban');
+    $payload = $notification->toDiscord($league);
+
+    expect($payload['content'])->toBe('Banner')
+        ->and($payload['embeds'][0]['description'])->toContain("You're first up!")
+        ->and($payload['embeds'][0]['description'])->toContain('/draft/'.$league->id);
 });
 
 it('DraftEndedNotification toDiscord contains the league name', function () {

@@ -144,6 +144,39 @@ it('updates pick order when no draft exists', function () {
         ->and(Team::find($team1->id)->pick_position)->toBe(2);
 });
 
+it('updates pick order after a team has been dropped', function () {
+    [$league, $team1, $team2, $owner] = createLeagueWithOwnerAndTwoTeams();
+
+    $team2->dropped_at = now();
+    $team2->user_id = null;
+    $team2->save();
+
+    $this->actingAs($owner)
+        ->patch(route('leagues.admin.draft-pick-order.update', ['league' => $league->id]), [
+            'team_ids' => [$team1->id],
+        ])
+        ->assertRedirect()
+        ->assertSessionHasNoErrors();
+
+    expect(Team::find($team1->id)->pick_position)->toBe(1);
+});
+
+it('rejects pick order updates that include a dropped team id', function () {
+    [$league, $team1, $team2, $owner] = createLeagueWithOwnerAndTwoTeams();
+
+    $team2->dropped_at = now();
+    $team2->user_id = null;
+    $team2->save();
+
+    $this->actingAs($owner)
+        ->patch(route('leagues.admin.draft-pick-order.update', ['league' => $league->id]), [
+            'team_ids' => [$team2->id, $team1->id],
+        ])
+        ->assertSessionHasErrors('team_ids.0');
+
+    expect(Team::find($team1->id)->pick_position)->toBe(1);
+});
+
 it('rejects pick order updates when a draft row exists', function () {
     [$league, $team1, $team2, $owner] = createLeagueWithOwnerAndTwoTeams();
 

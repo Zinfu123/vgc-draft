@@ -31,7 +31,9 @@ class UpdateDraftPickOrderRequest extends FormRequest
             'team_ids' => ['required', 'array'],
             'team_ids.*' => [
                 'integer',
-                Rule::exists('teams', 'id')->where('league_id', $league->id),
+                Rule::exists('teams', 'id')
+                    ->where('league_id', $league->id)
+                    ->whereNull('dropped_at'),
             ],
         ];
     }
@@ -64,6 +66,7 @@ class UpdateDraftPickOrderRequest extends FormRequest
 
             $expectedIds = Team::query()
                 ->where('league_id', $league->id)
+                ->whereNull('dropped_at')
                 ->pluck('id')
                 ->map(fn ($id) => (int) $id)
                 ->all();
