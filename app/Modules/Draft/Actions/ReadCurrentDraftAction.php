@@ -117,7 +117,7 @@ class ReadCurrentDraftAction
             $lastBan = Bans::where('league_id', $data['league_id'])
                 ->whereNotNull('pokedex_id')
                 ->with(['team', 'pokedex'])
-                ->orderBy('round_number', 'desc')
+                ->orderBy('updated_at', 'desc')
                 ->orderBy('id', 'desc')
                 ->first();
 
