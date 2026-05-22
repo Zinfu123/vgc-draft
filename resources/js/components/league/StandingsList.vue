@@ -2,7 +2,7 @@
 import { router } from '@inertiajs/vue3';
 
 interface Standings {
-    [key: number]: {
+    [key: string]: {
         id: number;
         name: string;
         logo: string;
@@ -28,7 +28,7 @@ const props = defineProps<props>();
             <div class="flex w-full flex-col items-stretch justify-center gap-8 md:flex-row md:flex-wrap md:items-start md:justify-center md:gap-x-5">
                 <div v-for="(standing, key) in standings" :key="key" class="min-w-0 w-full max-w-full md:max-w-md md:shrink-0">
                     <div class="flex flex-col items-center justify-center">
-                        <span class="mb-2 text-sm font-medium text-muted-foreground">Pool: {{ key }}</span>
+                        <span class="mb-2 text-sm font-medium text-muted-foreground">{{ key }}</span>
                         <div class="w-full overflow-hidden rounded-md border border-border bg-card shadow-sm">
                             <ul role="list" class="divide-y divide-border">
                                 <li

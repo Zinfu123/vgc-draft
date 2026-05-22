@@ -81,6 +81,11 @@ class Team extends Model
         return $this->belongsTo(\App\Modules\League\Models\League::class, 'league_id');
     }
 
+    public function pool()
+    {
+        return $this->belongsTo(Pool::class, 'pool_id');
+    }
+
     public function user()
     {
         return $this->belongsTo(\App\Models\User::class, 'user_id');

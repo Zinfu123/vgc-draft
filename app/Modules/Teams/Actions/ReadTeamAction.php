@@ -55,7 +55,7 @@ class ReadTeamAction
             $standings = Team::query()->where('league_id', $data['league_id'])
                 ->notDropped()
                 ->select('id', 'league_id', 'name', 'logo', 'user_id', 'set_wins', 'set_losses', 'victory_points', 'pool_id')
-                ->with('user')
+                ->with(['user', 'pool:id,name'])
                 ->orderBy('victory_points', 'desc')
                 ->get();
             $standings = $standings->map(function ($team) {
@@ -68,7 +68,7 @@ class ReadTeamAction
 
                 return $team;
             });
-            $standings = $standings->groupBy('pool_id');
+            $standings = $standings->groupBy(fn ($team) => $team->pool?->name ?? 'Unassigned');
 
             return $standings;
         }

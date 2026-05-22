@@ -33,6 +33,7 @@ class CreateEditPoolAction
                 $pool = Pool::create([
                     'match_config_id' => $match_config_id,
                     'league_id' => $data['league_id'],
+                    'name' => 'Pool '.($poolcount + $i + 1),
                 ]);
                 $pools[] = $pool;
             }

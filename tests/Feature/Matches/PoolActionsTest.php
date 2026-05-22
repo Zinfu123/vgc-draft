@@ -54,6 +54,20 @@ it('creates additional pools up to the configured number_of_pools', function () 
     expect(Pool::where('league_id', $league->id)->count())->toBe(3);
 });
 
+it('names new pools sequentially based on the existing pool count for the league', function () {
+    [$league] = createLeagueWithMatchConfig(numberOfPools: 3);
+
+    (new CreateEditPoolAction)(['league_id' => $league->id, 'command' => 'create']);
+
+    $newNames = Pool::where('league_id', $league->id)
+        ->whereNotNull('name')
+        ->orderBy('id')
+        ->pluck('name')
+        ->all();
+
+    expect($newNames)->toBe(['Pool 2', 'Pool 3']);
+});
+
 it('throws when all pools are already created', function () {
     [$league] = createLeagueWithMatchConfig(numberOfPools: 1);
 
