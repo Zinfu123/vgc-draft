@@ -416,6 +416,7 @@ const reloadKeys = [
     'pokemon',
     'costHeaders',
     'teams',
+    'allBans',
     'currentBanner',
     'currentPicker',
     'lastBan',
