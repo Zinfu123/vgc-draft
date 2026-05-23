@@ -325,7 +325,7 @@ it('preserves saved match pokepaste details when re-importing the same six speci
 
     $this->actingAs($data['coach1'])
         ->put(route('pokepaste.update', ['pokepaste' => $paste1->public_id]), ['slots' => $slots])
-        ->assertRedirect(route('pokepaste.show', ['pokepaste' => $paste1->public_id]));
+        ->assertRedirect(route('pokepaste.show', ['pokepaste' => $paste1->public_id, 'edit' => 1]));
 
     $this->actingAs($data['coach1'])->post(route('sets.import-replay-teams'), [
         'set_id' => $data['set']->id,

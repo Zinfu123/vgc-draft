@@ -88,6 +88,7 @@ const breadcrumbs = computed<BreadcrumbItemType[]>(() => {
                 :held-items="held_items"
                 :all-tera-types="all_tera_types"
                 :natures="natures"
+                :showdown-export="showdown_export"
             />
         </div>
     </AppLayout>

@@ -415,6 +415,28 @@ it('defaults owner to view mode when the paste already has pokemon', function ()
         );
 });
 
+it('stays in edit mode with showdown export after save', function () {
+    $data = createLeagueTeamWithSixDraftedPokemonAndMatch();
+    $slots = buildValidSlots($data['leaguePokemon'], $data['heldItems']);
+    $pokepaste = coachPokepasteRecord($data);
+
+    $this->actingAs($data['coach'])
+        ->put(route('pokepaste.update', ['pokepaste' => $pokepaste->public_id]), ['slots' => $slots])
+        ->assertRedirect(route('pokepaste.show', ['pokepaste' => $pokepaste->public_id, 'edit' => 1]));
+
+    $this->actingAs($data['coach'])
+        ->get(route('pokepaste.show', ['pokepaste' => $pokepaste->public_id, 'edit' => 1]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('pokepaste/PokepasteShow')
+            ->where('edit_mode', true)
+            ->where('showdown_export', fn ($text) => is_string($text)
+                && str_contains($text, 'Pastemon1')
+                && str_contains($text, 'Ability: Keen Eye')
+                && str_contains($text, '- Tackle'))
+        );
+});
+
 it('lets the owner open edit mode with a query flag', function () {
     $data = createLeagueTeamWithSixDraftedPokemonAndMatch();
     $slots = buildValidSlots($data['leaguePokemon'], $data['heldItems']);
@@ -467,7 +489,7 @@ it('accepts showdown ability labels that differ only in title casing from import
 
     $this->actingAs($data['coach'])
         ->put(route('pokepaste.update', ['pokepaste' => $pokepaste->public_id]), ['slots' => $slots])
-        ->assertRedirect(route('pokepaste.show', ['pokepaste' => $pokepaste->public_id]));
+        ->assertRedirect(route('pokepaste.show', ['pokepaste' => $pokepaste->public_id, 'edit' => 1]));
 
     $row = SetTeamPokepasteSlot::query()
         ->where('set_team_pokepaste_id', $pokepaste->id)
@@ -484,7 +506,7 @@ it('saves a valid six-mon paste for the match and team', function () {
 
     $this->actingAs($data['coach'])
         ->put(route('pokepaste.update', ['pokepaste' => $pokepaste->public_id]), ['slots' => $slots])
-        ->assertRedirect(route('pokepaste.show', ['pokepaste' => $pokepaste->public_id]));
+        ->assertRedirect(route('pokepaste.show', ['pokepaste' => $pokepaste->public_id, 'edit' => 1]));
 
     $saved = SetTeamPokepaste::query()
         ->where('matchable_type', Set::class)
@@ -504,7 +526,7 @@ it('saves a partial paste with empty slots', function () {
 
     $this->actingAs($data['coach'])
         ->put(route('pokepaste.update', ['pokepaste' => $pokepaste->public_id]), ['slots' => $slots])
-        ->assertRedirect(route('pokepaste.show', ['pokepaste' => $pokepaste->public_id]));
+        ->assertRedirect(route('pokepaste.show', ['pokepaste' => $pokepaste->public_id, 'edit' => 1]));
 
     $rows = SetTeamPokepasteSlot::query()
         ->where('set_team_pokepaste_id', $pokepaste->id)
@@ -926,7 +948,7 @@ it('accepts champions league slots without a tera_type', function () {
 
     $this->actingAs($data['coach'])
         ->put(route('pokepaste.update', ['pokepaste' => $paste->public_id]), ['slots' => $slots])
-        ->assertRedirect(route('pokepaste.show', ['pokepaste' => $paste->public_id]));
+        ->assertRedirect(route('pokepaste.show', ['pokepaste' => $paste->public_id, 'edit' => 1]));
 
     $saved = SetTeamPokepasteSlot::query()
         ->where('set_team_pokepaste_id', $paste->id)

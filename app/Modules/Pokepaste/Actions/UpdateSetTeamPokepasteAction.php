@@ -41,7 +41,7 @@ class UpdateSetTeamPokepasteAction
         });
 
         return redirect()
-            ->route('pokepaste.show', $pokepaste)
+            ->route('pokepaste.show', ['pokepaste' => $pokepaste, 'edit' => 1])
             ->with('success', 'Match team paste saved.');
     }
 }

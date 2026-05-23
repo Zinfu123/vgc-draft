@@ -17,6 +17,7 @@ const props = defineProps<{
     heldItems: HeldItemOption[];
     allTeraTypes: string[];
     natures: NatureOption[];
+    showdownExport: string;
 }>();
 
 const saveBanner = ref(false);
@@ -62,13 +63,23 @@ const exportFromSlots = computed(() =>
     buildShowdownExport(form.slots, rosterMap.value, heldItemLabelById.value, natureLabelByValue.value),
 );
 
-watch(
-    () => form.slots,
-    () => {
+function syncShowdownFieldText(): void {
+    if (form.isDirty) {
         showdownFieldText.value = exportFromSlots.value;
-    },
-    { deep: true, immediate: true },
-);
+        return;
+    }
+
+    const saved = props.showdownExport.trim();
+    showdownFieldText.value = saved || exportFromSlots.value;
+}
+
+watch(() => form.slots, syncShowdownFieldText, { deep: true });
+watch(() => props.showdownExport, syncShowdownFieldText);
+watch(() => props.slots, syncShowdownFieldText, { deep: true });
+watch(exportFromSlots, syncShowdownFieldText);
+watch(() => form.isDirty, syncShowdownFieldText);
+
+syncShowdownFieldText();
 
 // Per-slot helpers
 function excludedPokemonIds(slotIndex: number): number[] {
@@ -95,6 +106,7 @@ function submit(): void {
     form.put(route('pokepaste.update', { pokepaste: props.pokepastePublicId }), {
         preserveScroll: true,
         onSuccess: () => {
+            syncShowdownFieldText();
             saveBanner.value = true;
             setTimeout(() => { saveBanner.value = false; }, 4000);
         },
