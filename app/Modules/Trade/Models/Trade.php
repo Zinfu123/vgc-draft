@@ -7,9 +7,11 @@ use App\Events\LeagueTransactionEvent;
 use App\Events\TradePendingEvent;
 use App\Modules\League\Models\League;
 use App\Modules\Teams\Models\Team;
+use Illuminate\Broadcasting\BroadcastException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 use Spatie\Activitylog\Models\Concerns\LogsActivity;
 use Spatie\Activitylog\Support\LogOptions;
 
@@ -30,16 +32,43 @@ class Trade extends Model
     protected static function booted(): void
     {
         static::created(function (Trade $trade): void {
-            if ($trade->target_team_id !== null) {
-                TradePendingEvent::dispatch($trade->target_team_id);
-            }
+            self::afterDatabaseCommit(function () use ($trade): void {
+                if ($trade->target_team_id !== null) {
+                    TradePendingEvent::dispatch($trade->target_team_id);
+                }
+
+                if ($trade->status === 'accepted') {
+                    LeagueTransactionEvent::dispatch($trade->league_id);
+                }
+            });
         });
 
         static::updated(function (Trade $trade): void {
             if ($trade->wasChanged('status') && $trade->status === 'accepted') {
-                LeagueTransactionEvent::dispatch($trade->league_id);
+                self::afterDatabaseCommit(function () use ($trade): void {
+                    LeagueTransactionEvent::dispatch($trade->league_id);
+                });
             }
         });
+    }
+
+    private static function afterDatabaseCommit(callable $callback): void
+    {
+        $run = function () use ($callback): void {
+            try {
+                $callback();
+            } catch (BroadcastException $exception) {
+                report($exception);
+            }
+        };
+
+        if (DB::transactionLevel() > 0) {
+            DB::afterCommit($run);
+
+            return;
+        }
+
+        $run();
     }
 
     public function getActivitylogOptions(): LogOptions
