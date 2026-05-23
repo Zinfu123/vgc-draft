@@ -187,6 +187,7 @@ class LeagueController extends Controller
             'leagueTeamsForTrades' => $leagueTeamsForTrades,
             'trades' => $userTrades,
             'freeAgencyPool' => $freeAgencyPool,
+            'freeTradeWindowEndsAt' => $league->freeTradeWindowEndsAt()?->toIso8601String(),
             'nextSet' => $nextSetData,
             'leagueTransactions' => $leagueTransactions,
         ]);

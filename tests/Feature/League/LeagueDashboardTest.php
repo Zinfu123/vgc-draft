@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\User;
+use App\Modules\Draft\Models\DraftConfig;
+use App\Modules\League\Enums\LeagueStagingStatus;
 use App\Modules\League\Enums\LeagueStatus;
 use App\Modules\League\Models\League;
 use App\Modules\Matches\Enums\ScheduleRequestStatus;
@@ -180,5 +182,48 @@ it('returns null for pending_schedule_request when no pending request exists', f
     $response->assertInertia(fn ($page) => $page
         ->component('league/LeagueDashboard')
         ->where('nextSet.pending_schedule_request', null)
+    );
+});
+
+it('returns null freeTradeWindowEndsAt when the league is not in the free trade window', function () {
+    ['user1' => $user1, 'league' => $league] = makeDashboardFixture();
+
+    $response = $this->actingAs($user1)->get(route('leagues.dashboard', ['league' => $league->id]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('league/LeagueDashboard')
+        ->where('freeTradeWindowEndsAt', null)
+    );
+});
+
+it('includes freeTradeWindowEndsAt when the league is in the post-draft free trade window', function () {
+    ['user1' => $user1, 'league' => $league] = makeDashboardFixture();
+
+    $draftEndedAt = now()->subHour();
+
+    $league->update([
+        'status' => LeagueStatus::Staging->value,
+        'staging_sub_status' => LeagueStagingStatus::FreeTradeWindow->value,
+        'free_trade_window_hours' => 24,
+    ]);
+
+    DraftConfig::create([
+        'league_id' => $league->id,
+        'draft_date' => now()->subDay(),
+        'draft_points' => 80,
+        'ban_enabled' => false,
+        'minimum_drafts' => 2,
+        'draft_ended_at' => $draftEndedAt,
+    ]);
+
+    $expectedEndsAt = $draftEndedAt->copy()->addHours(24)->toIso8601String();
+
+    $response = $this->actingAs($user1)->get(route('leagues.dashboard', ['league' => $league->id]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('league/LeagueDashboard')
+        ->where('freeTradeWindowEndsAt', $expectedEndsAt)
     );
 });

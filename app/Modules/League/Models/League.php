@@ -123,7 +123,29 @@ class League extends Model
             return false;
         }
 
-        return Carbon::now()->lt($draftEndedAt->addHours($this->free_trade_window_hours));
+        return Carbon::now()->lt($draftEndedAt->copy()->addHours($this->free_trade_window_hours));
+    }
+
+    /**
+     * When the post-draft free trade window closes, or null if not applicable.
+     */
+    public function freeTradeWindowEndsAt(): ?Carbon
+    {
+        if ($this->status !== LeagueStatus::Staging) {
+            return null;
+        }
+
+        if ($this->staging_sub_status !== LeagueStagingStatus::FreeTradeWindow) {
+            return null;
+        }
+
+        $draftEndedAt = $this->draftConfig?->draft_ended_at;
+
+        if ($draftEndedAt === null || $this->free_trade_window_hours <= 0) {
+            return null;
+        }
+
+        return $draftEndedAt->copy()->addHours($this->free_trade_window_hours);
     }
 
     public function teams(): \Illuminate\Database\Eloquent\Relations\HasMany

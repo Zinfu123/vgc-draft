@@ -15,7 +15,7 @@ import {
 import { isReverbBroadcastClientConfigured } from '@/lib/broadcasting';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/vue3';
 import { useEchoPublic } from '@laravel/echo-vue';
-import { ArrowRight, Bell, CalendarClock, Clock, MessageSquare, RadioTower, Swords } from 'lucide-vue-next';
+import { ArrowRight, Bell, CalendarClock, Clock, Flag, MessageSquare, RadioTower, Swords } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
 interface League {
@@ -157,6 +157,7 @@ const props = defineProps<{
     leagueTeamsForTrades: TradesTeam[];
     trades: Trade[];
     freeAgencyPool: PoolMon[];
+    freeTradeWindowEndsAt: string | null;
     nextSet: NextSet | null;
     leagueTransactions: Trade[];
 }>(); 
@@ -172,6 +173,14 @@ const tradeDeadlinePassed = computed(() => {
     return new Date(props.league.trade_deadline_at) <= new Date();
 });
 
+const freeTradeWindowPassed = computed(() => {
+    if (!props.freeTradeWindowEndsAt) {
+        return false;
+    }
+
+    return new Date(props.freeTradeWindowEndsAt) <= new Date();
+});
+
 function formatDeadline(dateStr: string): string {
     return new Date(dateStr).toLocaleString(undefined, {
         month: 'short',
@@ -179,6 +188,18 @@ function formatDeadline(dateStr: string): string {
         year: 'numeric',
         hour: 'numeric',
         minute: '2-digit',
+    });
+}
+
+function formatDeadlineEastern(dateStr: string): string {
+    return new Date(dateStr).toLocaleString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        timeZone: 'America/New_York',
+        timeZoneName: 'short',
     });
 }
 
@@ -965,6 +986,50 @@ if (isReverbBroadcastClientConfigured) {
                             </span>
                         </div>
                     </Link>
+
+                    <!-- Free trade window badge -->
+                    <div v-if="freeTradeWindowEndsAt">
+                        <div
+                            :class="[
+                                'flex items-start gap-2.5 rounded-xl border px-4 py-3',
+                                freeTradeWindowPassed
+                                    ? 'border-muted-foreground/30 bg-muted/40 dark:border-muted-foreground/40 dark:bg-muted/30'
+                                    : 'border-sky-200 bg-sky-50 dark:border-sky-800 dark:bg-sky-950/30',
+                            ]"
+                        >
+                            <Flag
+                                :class="[
+                                    'mt-0.5 size-4 shrink-0',
+                                    freeTradeWindowPassed ? 'text-muted-foreground' : 'text-sky-600 dark:text-sky-400',
+                                ]"
+                            />
+                            <div>
+                                <p
+                                    :class="[
+                                        'text-sm font-semibold',
+                                        freeTradeWindowPassed ? 'text-muted-foreground' : 'text-sky-800 dark:text-sky-200',
+                                    ]"
+                                >
+                                    {{ freeTradeWindowPassed ? 'Free Trade Window Closed' : 'Free Trade Window' }}
+                                </p>
+                                <p
+                                    :class="[
+                                        'mt-0.5 text-xs',
+                                        freeTradeWindowPassed ? 'text-muted-foreground' : 'text-sky-700 dark:text-sky-300',
+                                    ]"
+                                >
+                                    {{
+                                        freeTradeWindowPassed
+                                            ? `No-cost trades ended ${formatDeadlineEastern(freeTradeWindowEndsAt)}`
+                                            : `No-cost trades end ${formatDeadlineEastern(freeTradeWindowEndsAt)}`
+                                    }}
+                                </p>
+                                <p v-if="!freeTradeWindowPassed" class="mt-1 text-xs text-sky-700 dark:text-sky-300">
+                                    Complete free agency and team trades before the window closes. Times shown in Eastern Time.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- Trade Deadline badge -->
                     <div v-if="league.trade_deadline_at">
