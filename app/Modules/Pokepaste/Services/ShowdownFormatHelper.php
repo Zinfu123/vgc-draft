@@ -12,9 +12,21 @@ class ShowdownFormatHelper
      * @var array<string, string>
      */
     private const SPECIES_MATCH_KEY_ALIASES = [
+        'greninja-ash' => 'greninja',
         'tatsugiri-curly' => 'tatsugiri',
         'tatsugiri-droopy' => 'tatsugiri',
         'tatsugiri-stretchy' => 'tatsugiri',
+        'aegislash-blade' => 'aegislash',
+        'aegislash-shield' => 'aegislash',
+        'rotom-wash' => 'rotom',
+        'rotom-heat' => 'rotom',
+        'rotom-frost' => 'rotom',
+        'rotom-mow' => 'rotom',
+        'rotom-fan' => 'rotom',
+        'meowstic-f' => 'meowstic',
+        'tauros-paldea-aqua' => 'tauros-paldea',
+        'tauros-paldea-blaze' => 'tauros-paldea',
+        'tauros-paldea-combat' => 'tauros-paldea',
     ];
 
     public static function moveSlugToDisplay(string $slug): string

@@ -81,16 +81,7 @@ class PikalyticsChampionsUsageService
             }
 
             // Keep the highest usage when the same slug appears multiple times.
-            if (! isset($map[$slug]) || $usage > $map[$slug]) {
-                $map[$slug] = $usage;
-            }
-
-            // Add form-base aliases so lookups against the base pokedex name succeed.
-            foreach ($this->baseAliases($slug, $usage) as $alias) {
-                if (! isset($map[$alias]) || $usage > $map[$alias]) {
-                    $map[$alias] = $usage;
-                }
-            }
+            $this->storeUsage($map, $slug, $usage);
         }
 
         fclose($handle);
@@ -160,7 +151,7 @@ class PikalyticsChampionsUsageService
                 $slug = $this->normalizeToSlug($name);
 
                 if ($slug !== '') {
-                    $usageMap[$slug] = $usage;
+                    $this->storeUsage($usageMap, $slug, $usage);
                 }
             }
         }
@@ -171,6 +162,22 @@ class PikalyticsChampionsUsageService
         }
 
         return $usageMap;
+    }
+
+    /**
+     * @param  array<string, float>  $usageMap
+     */
+    private function storeUsage(array &$usageMap, string $slug, float $usage): void
+    {
+        if (! isset($usageMap[$slug]) || $usage > $usageMap[$slug]) {
+            $usageMap[$slug] = $usage;
+        }
+
+        foreach ($this->baseAliases($slug) as $alias) {
+            if (! isset($usageMap[$alias]) || $usage > $usageMap[$alias]) {
+                $usageMap[$alias] = $usage;
+            }
+        }
     }
 
     /**
@@ -205,7 +212,7 @@ class PikalyticsChampionsUsageService
 
             $slug = $this->normalizeToSlug($name);
             if ($slug !== '') {
-                $usageMap[$slug] = $usage;
+                $this->storeUsage($usageMap, $slug, $usage);
             }
         }
 
@@ -225,14 +232,14 @@ class PikalyticsChampionsUsageService
     }
 
     /**
-     * Return additional base-form slugs to alias this slug under in the usage map.
-     * Handles cases where Pikalytics names a specific form (e.g. "rotom-wash") but
-     * the pokedex only has the base entry (e.g. "rotom").
-     *
      * @return list<string>
      */
-    private function baseAliases(string $slug, float $usage): array
+    private function baseAliases(string $slug): array
     {
+        if ($slug === 'greninja-ash') {
+            return ['greninja'];
+        }
+
         // Rotom appliance forms → alias to "rotom".
         if (preg_match('/^rotom-(wash|heat|frost|mow|fan|spin)$/', $slug)) {
             return ['rotom'];

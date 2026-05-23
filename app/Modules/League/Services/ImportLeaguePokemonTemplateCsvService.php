@@ -4,8 +4,8 @@ namespace App\Modules\League\Services;
 
 use App\Modules\League\Models\LeaguePokemonTemplate;
 use App\Modules\League\Models\LeaguePokemonTemplateRow;
-use App\Modules\Pokedex\Models\Pokedex;
 use App\Modules\Pokedex\Models\VersionGroup;
+use App\Modules\Pokedex\Services\DraftPoolPokedexResolver;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -14,6 +14,7 @@ class ImportLeaguePokemonTemplateCsvService
 {
     public function __construct(
         private NationaldexCostCsvReader $csvReader,
+        private DraftPoolPokedexResolver $pokedexResolver,
     ) {}
 
     /**
@@ -74,7 +75,7 @@ class ImportLeaguePokemonTemplateCsvService
             $skipped = 0;
 
             foreach ($parsedRows as [$nationaldexId, $cost]) {
-                $pokemon = Pokedex::query()->where('nationaldex_id', $nationaldexId)->first();
+                $pokemon = $this->pokedexResolver->resolveByNationaldexId($nationaldexId);
                 if ($pokemon === null) {
                     $skipped++;
 

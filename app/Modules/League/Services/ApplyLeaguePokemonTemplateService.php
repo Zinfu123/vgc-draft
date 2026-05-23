@@ -6,6 +6,7 @@ use App\Modules\League\Models\League;
 use App\Modules\League\Models\LeaguePokemon;
 use App\Modules\League\Models\LeaguePokemonTemplate;
 use App\Modules\Pokedex\Models\Pokedex;
+use App\Modules\Pokedex\Services\DraftPoolPokedexResolver;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -13,6 +14,7 @@ class ApplyLeaguePokemonTemplateService
 {
     public function __construct(
         private LeaguePokemonPoolReplaceEvaluator $replaceEvaluator,
+        private DraftPoolPokedexResolver $pokedexResolver,
     ) {}
 
     /**
@@ -39,16 +41,37 @@ class ApplyLeaguePokemonTemplateService
             }
 
             $template->loadMissing('rows');
-            $pokedexIds = $template->rows->pluck('pokedex_id')->unique()->all();
-            $names = Pokedex::query()->whereIn('id', $pokedexIds)->pluck('name', 'id');
+
+            /** @var array<int, array{pokedex_id: int, name: string, cost: int}> $poolRowsByPokedexId */
+            $poolRowsByPokedexId = [];
 
             foreach ($template->rows as $row) {
-                $name = $names[$row->pokedex_id] ?? 'Unknown';
+                $source = Pokedex::query()->find($row->pokedex_id);
+                if ($source === null) {
+                    continue;
+                }
+
+                $pokemon = $this->pokedexResolver->resolvePokedex($source);
+                if ($pokemon === null) {
+                    continue;
+                }
+
+                $existing = $poolRowsByPokedexId[(int) $pokemon->id] ?? null;
+                if ($existing === null || $row->cost > $existing['cost']) {
+                    $poolRowsByPokedexId[(int) $pokemon->id] = [
+                        'pokedex_id' => (int) $pokemon->id,
+                        'name' => (string) $pokemon->name,
+                        'cost' => (int) $row->cost,
+                    ];
+                }
+            }
+
+            foreach ($poolRowsByPokedexId as $poolRow) {
                 LeaguePokemon::query()->create([
                     'league_id' => $league->id,
-                    'pokedex_id' => $row->pokedex_id,
-                    'name' => $name,
-                    'cost' => $row->cost,
+                    'pokedex_id' => $poolRow['pokedex_id'],
+                    'name' => $poolRow['name'],
+                    'cost' => $poolRow['cost'],
                 ]);
             }
         });

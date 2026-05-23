@@ -3,7 +3,7 @@
 namespace App\Modules\League\Services;
 
 use App\Modules\League\Models\LeaguePokemon;
-use App\Modules\Pokedex\Models\Pokedex;
+use App\Modules\Pokedex\Services\DraftPoolPokedexResolver;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 
@@ -11,6 +11,7 @@ class ImportLeaguePokemonToLeagueFromCsvService
 {
     public function __construct(
         private NationaldexCostCsvReader $csvReader,
+        private DraftPoolPokedexResolver $pokedexResolver,
     ) {}
 
     /**
@@ -25,7 +26,7 @@ class ImportLeaguePokemonToLeagueFromCsvService
             $skipped = 0;
 
             foreach ($rows as [$nationaldexId, $cost]) {
-                $pokemon = Pokedex::query()->where('nationaldex_id', $nationaldexId)->first();
+                $pokemon = $this->pokedexResolver->resolveByNationaldexId($nationaldexId);
                 if ($pokemon === null) {
                     $skipped++;
 

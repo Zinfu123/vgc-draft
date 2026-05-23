@@ -7,6 +7,39 @@ use App\Modules\Pokedex\Models\VersionGroup;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
+it('imports greninja-ash nationaldex rows as base greninja', function () {
+    $base = Pokedex::query()->create([
+        'nationaldex_id' => 658,
+        'name' => 'greninja',
+        'type1' => 'Water',
+        'type2' => 'Dark',
+        'sprite_url' => null,
+    ]);
+
+    Pokedex::query()->create([
+        'nationaldex_id' => 658.001,
+        'name' => 'greninja-ash',
+        'type1' => 'Water',
+        'type2' => 'Dark',
+        'sprite_url' => null,
+    ]);
+
+    $path = tempnam(sys_get_temp_dir(), 'tplcsv');
+    file_put_contents($path, "nationaldex_id,cost\n658.001,10\n");
+
+    $this->artisan('league:pokemon-template-import', [
+        'path' => $path,
+        'name' => 'Greninja Fix',
+        '--replace' => true,
+    ])->assertSuccessful();
+
+    $template = LeaguePokemonTemplate::query()->where('slug', 'greninja-fix')->firstOrFail();
+    $row = LeaguePokemonTemplateRow::query()->where('league_pokemon_template_id', $template->id)->firstOrFail();
+
+    expect((int) $row->pokedex_id)->toBe((int) $base->id)
+        ->and((int) $row->cost)->toBe(10);
+});
+
 it('imports a template from csv with display name', function () {
     $dex = Pokedex::query()->create([
         'nationaldex_id' => 25,

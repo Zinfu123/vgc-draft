@@ -10,6 +10,7 @@ it('collapses showdown tatsugiri forms to a single match key', function (string 
     'curly form' => ['Tatsugiri-Curly', 'tatsugiri'],
     'droopy form' => ['Tatsugiri-Droopy', 'tatsugiri'],
     'lowercase stretchy' => ['tatsugiri-stretchy', 'tatsugiri'],
+    'ash greninja form' => ['Greninja-Ash', 'greninja'],
 ]);
 
 it('does not change unrelated species keys', function () {

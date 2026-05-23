@@ -6,6 +6,7 @@ use App\Modules\League\Models\LeaguePokemonTemplate;
 use App\Modules\League\Models\LeaguePokemonTemplateRow;
 use App\Modules\Pokedex\Models\Pokedex;
 use App\Modules\Pokedex\Models\VersionGroup;
+use App\Modules\Pokedex\Services\DraftPoolPokedexResolver;
 use App\Modules\Pokedex\Services\PikalyticsChampionsUsageService;
 use App\Modules\Pokedex\Services\SerebiiChampionsAvailableRosterService;
 use App\Modules\Pokedex\Services\SerebiiChampionsImporter;
@@ -31,6 +32,7 @@ class GenerateChampionsPokemonTemplateCommand extends Command
         SerebiiChampionsAvailableRosterService $rosterService,
         SerebiiChampionsImporter $importer,
         PikalyticsChampionsUsageService $pikalytics,
+        DraftPoolPokedexResolver $pokedexResolver,
     ): int {
         $versionGroup = VersionGroup::query()->where('slug', self::VERSION_GROUP_SLUG)->first();
 
@@ -64,7 +66,9 @@ class GenerateChampionsPokemonTemplateCommand extends Command
         $skippedNoDex = [];
 
         foreach ($rosterRows as $row) {
-            $pokedexName = $rosterService->resolveRowToPokedexName($row, $importer);
+            $pokedexName = $pokedexResolver->canonicalName(
+                $rosterService->resolveRowToPokedexName($row, $importer),
+            );
 
             // Mega forms are excluded — they are the same Pokemon as the base form
             // and Mega Evolution is a battle mechanic, not a separate draft pick.
@@ -73,7 +77,7 @@ class GenerateChampionsPokemonTemplateCommand extends Command
             }
 
             /** @var Pokedex|null $pokemon */
-            $pokemon = Pokedex::query()->where('name', $pokedexName)->first();
+            $pokemon = $pokedexResolver->resolveByName($pokedexName);
 
             if ($pokemon === null) {
                 $skippedNoDex[] = $pokedexName;
