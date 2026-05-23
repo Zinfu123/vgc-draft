@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasColumn('trades', 'counterparty')) {
+            return;
+        }
+
         Schema::table('trades', function (Blueprint $table) {
             $table->dropForeign(['target_team_id']);
         });
