@@ -631,16 +631,16 @@ const offensiveRows = computed((): OffensiveRow[] => {
                 <CardContent class="flex flex-wrap items-end gap-4 pt-6">
                     <div class="flex flex-col gap-1">
                         <Label for="vg-slug">Version</Label>
-                        <select id="vg-slug" v-model="selectedVersionSlug" class="border-input bg-background h-9 w-full rounded-md border px-2 text-sm shadow-xs sm:w-72 dark:bg-transparent">
-                            <option v-for="g in versionGroups" :key="g.slug" :value="g.slug">{{ g.name }}</option>
+                        <select id="vg-slug" v-model="selectedVersionSlug" class="border-input bg-background text-foreground h-9 w-full rounded-md border px-2 text-sm shadow-xs sm:w-72">
+                            <option v-for="g in versionGroups" :key="g.slug" :value="g.slug" class="bg-background text-foreground">{{ g.name }}</option>
                         </select>
                     </div>
                     <div v-if="myTeams.length" class="flex flex-col gap-1">
                         <Label for="import-team">Import drafted team</Label>
                         <div class="flex items-center gap-2">
-                            <select id="import-team" v-model="importTeamId" class="border-input bg-background h-9 min-w-[12rem] rounded-md border px-2 text-sm shadow-xs dark:bg-transparent">
-                                <option value="">— Select team —</option>
-                                <option v-for="t in myTeams" :key="t.id" :value="t.id">{{ t.league_name }} — {{ t.name }}</option>
+                            <select id="import-team" v-model="importTeamId" class="border-input bg-background text-foreground h-9 min-w-[12rem] rounded-md border px-2 text-sm shadow-xs">
+                                <option value="" class="bg-background text-foreground">— Select team —</option>
+                                <option v-for="t in myTeams" :key="t.id" :value="t.id" class="bg-background text-foreground">{{ t.league_name }} — {{ t.name }}</option>
                             </select>
                             <Button type="button" variant="secondary" size="sm" :disabled="importTeamId === '' || rosterLoading" @click="loadRoster">
                                 {{ rosterLoading ? 'Loading...' : 'Load' }}
@@ -792,9 +792,9 @@ const offensiveRows = computed((): OffensiveRow[] => {
                         <div v-if="activeAllySlot.pokedexId" class="grid grid-cols-2 gap-3">
                             <div>
                                 <Label class="text-muted-foreground text-xs">Tera type</Label>
-                                <select v-model="activeAllySlot.teraType" class="border-input bg-background mt-1 h-9 w-full rounded-md border px-2 text-sm shadow-xs dark:bg-transparent">
-                                    <option value="">— None —</option>
-                                    <option v-for="t in typeOptions" :key="t" :value="t">{{ t }}</option>
+                                <select v-model="activeAllySlot.teraType" class="border-input bg-background text-foreground mt-1 h-9 w-full rounded-md border px-2 text-sm shadow-xs">
+                                    <option value="" class="bg-background text-foreground">— None —</option>
+                                    <option v-for="t in typeOptions" :key="t" :value="t" class="bg-background text-foreground">{{ t }}</option>
                                 </select>
                             </div>
                             <div class="flex flex-col justify-end pb-1">
@@ -814,9 +814,9 @@ const offensiveRows = computed((): OffensiveRow[] => {
                         <div v-if="activeAllySlot.pokedexId && !activeAllySlot.loadingLearnset" class="grid grid-cols-2 gap-2">
                             <div v-for="mi in 4" :key="mi" class="flex flex-col gap-1">
                                 <Label class="text-muted-foreground text-xs">Move {{ mi }}</Label>
-                                <select v-model="activeAllySlot.moveIds[mi - 1]" class="border-input bg-background h-9 w-full rounded-md border px-2 text-sm shadow-xs dark:bg-transparent">
-                                    <option :value="null">—</option>
-                                    <option v-for="mv in moveOptions(activeAllySlot)" :key="mv.move_id" :value="mv.move_id">{{ mv.move_name }} ({{ mv.type_slug }})</option>
+                                <select v-model="activeAllySlot.moveIds[mi - 1]" class="border-input bg-background text-foreground h-9 w-full rounded-md border px-2 text-sm shadow-xs">
+                                    <option :value="null" class="bg-background text-foreground">—</option>
+                                    <option v-for="mv in moveOptions(activeAllySlot)" :key="mv.move_id" :value="mv.move_id" class="bg-background text-foreground">{{ mv.move_name }} ({{ mv.type_slug }})</option>
                                 </select>
                             </div>
                         </div>
@@ -909,9 +909,9 @@ const offensiveRows = computed((): OffensiveRow[] => {
                         <div v-if="activeEnemySlot.pokedexId" class="grid grid-cols-2 gap-3">
                             <div>
                                 <Label class="text-muted-foreground text-xs">Tera type</Label>
-                                <select v-model="activeEnemySlot.teraType" class="border-input bg-background mt-1 h-9 w-full rounded-md border px-2 text-sm shadow-xs dark:bg-transparent">
-                                    <option value="">— None —</option>
-                                    <option v-for="t in typeOptions" :key="'et-' + t" :value="t">{{ t }}</option>
+                                <select v-model="activeEnemySlot.teraType" class="border-input bg-background text-foreground mt-1 h-9 w-full rounded-md border px-2 text-sm shadow-xs">
+                                    <option value="" class="bg-background text-foreground">— None —</option>
+                                    <option v-for="t in typeOptions" :key="'et-' + t" :value="t" class="bg-background text-foreground">{{ t }}</option>
                                 </select>
                             </div>
                             <div class="flex flex-col justify-end pb-1">
