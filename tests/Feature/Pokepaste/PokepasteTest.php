@@ -254,6 +254,30 @@ it('returns forbidden when user is not a participant in the match', function () 
         ->assertForbidden();
 });
 
+it('includes showdown export text on public paste view after save', function () {
+    $data = createLeagueTeamWithSixDraftedPokemonAndMatch();
+    $slots = buildValidSlots($data['leaguePokemon'], $data['heldItems']);
+    $pokepaste = coachPokepasteRecord($data);
+
+    $this->actingAs($data['coach'])
+        ->put(route('pokepaste.update', ['pokepaste' => $pokepaste->public_id]), ['slots' => $slots])
+        ->assertRedirect();
+
+    $this->post('/logout');
+
+    $this->get(route('pokepaste.show', ['pokepaste' => $pokepaste->public_id]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('pokepaste/PokepasteShow')
+            ->where('is_owner', false)
+            ->where('edit_mode', false)
+            ->where('showdown_export', fn ($text) => is_string($text)
+                && str_contains($text, 'Pastemon1')
+                && str_contains($text, 'Ability: Keen Eye')
+                && str_contains($text, '- Tackle'))
+        );
+});
+
 it('allows any signed-in user to view another teams paste in read-only layout', function () {
     $data = createLeagueTeamWithSixDraftedPokemonAndMatch();
     $stranger = User::factory()->create();
@@ -671,7 +695,7 @@ it('exports showdown text containing species names', function () {
     $slots = buildValidSlots($data['leaguePokemon'], $data['heldItems']);
     $text = (new ShowdownTeamExporter)->export($slots, $data['versionGroup']);
 
-    expect($text)->toContain('PasteMon1');
+    expect($text)->toContain('Pastemon1');
     expect($text)->toContain('Ability: Keen Eye');
     expect($text)->toContain('- Tackle');
     expect($text)->toContain('Leftovers 1');

@@ -30,7 +30,7 @@ class ShowdownTeamExporter
 
             /** @var Pokedex $pokedex */
             $pokedex = $leaguePokemon->pokemon;
-            $species = (string) $pokedex->name;
+            $species = ShowdownFormatHelper::pokemonDisplayLabel((string) $pokedex->name);
             $item = $this->resolveItemLabel($slot, $versionGroup);
 
             $lines = [];

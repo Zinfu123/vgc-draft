@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import MatchPokepasteSection from '@/components/pokepaste/MatchPokepasteSection.vue';
+import PokepastePastePanel from '@/components/pokepaste/PokepastePastePanel.vue';
 import PokepastePublicTeamGrid, { type PokepasteViewCard } from '@/components/pokepaste/PokepastePublicTeamGrid.vue';
 import type { HeldItemOption, NatureOption, RosterOption } from '@/components/pokepaste/PokepasteSlotCard.vue';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ const props = defineProps<{
     all_tera_types: string[];
     natures: NatureOption[];
     view_cards: PokepasteViewCard[];
+    showdown_export: string;
 }>();
 
 const pageTitle = computed(() => {
@@ -138,7 +140,13 @@ const breadcrumbs = computed<BreadcrumbItemType[]>(() => {
             </div>
         </header>
 
-        <main class="mx-auto max-w-6xl px-4 py-10">
+        <main class="mx-auto max-w-6xl px-4 py-10 space-y-8">
+            <PokepastePastePanel
+                v-if="showdown_export.trim()"
+                :model-value="showdown_export"
+                :pokepaste-public-id="pokepaste_public_id"
+                readonly
+            />
             <PokepastePublicTeamGrid :cards="view_cards" />
         </main>
 

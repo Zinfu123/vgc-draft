@@ -6,6 +6,7 @@ use App\Enums\PokemonNature;
 use App\Enums\PokemonTeraType;
 use App\Modules\Pokepaste\Models\SetTeamPokepaste;
 use App\Modules\Pokepaste\Services\EnsureSetTeamPokepasteSlotRows;
+use App\Modules\Pokepaste\Services\ShowdownTeamExporter;
 use App\Modules\Pokepaste\Support\PokepasteSlotDefaults;
 
 class ReadPokepastePageAction
@@ -14,6 +15,7 @@ class ReadPokepastePageAction
         private BuildPokepasteRosterPayloadAction $buildRoster,
         private EnsureSetTeamPokepasteSlotRows $ensureSlotRows,
         private BuildPokepasteViewCardsAction $buildViewCards,
+        private ShowdownTeamExporter $showdownTeamExporter,
     ) {}
 
     /**
@@ -41,6 +43,7 @@ class ReadPokepastePageAction
                 'all_tera_types' => [],
                 'natures' => PokemonNature::optionsForFrontend(),
                 'view_cards' => $viewCards,
+                'showdown_export' => '',
             ];
         }
 
@@ -111,6 +114,7 @@ class ReadPokepastePageAction
             'all_tera_types' => $allTeraTypes,
             'natures' => PokemonNature::optionsForFrontend(),
             'view_cards' => $viewCards,
+            'showdown_export' => $this->showdownTeamExporter->export($slots, $versionGroup),
         ];
     }
 }

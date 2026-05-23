@@ -81,6 +81,7 @@ class PokepasteController extends Controller
                 'league' => $pageData['league'],
                 'team' => $pageData['team'],
                 'view_cards' => $pageData['view_cards'],
+                'showdown_export' => $pageData['showdown_export'] ?? '',
                 'roster' => [],
                 'slots' => PokepasteSlotDefaults::sixEmptySlots(),
                 'held_items' => [],

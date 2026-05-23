@@ -62,7 +62,13 @@ const exportFromSlots = computed(() =>
     buildShowdownExport(form.slots, rosterMap.value, heldItemLabelById.value, natureLabelByValue.value),
 );
 
-watch(exportFromSlots, (t) => { showdownFieldText.value = t; }, { immediate: true });
+watch(
+    () => form.slots,
+    () => {
+        showdownFieldText.value = exportFromSlots.value;
+    },
+    { deep: true, immediate: true },
+);
 
 // Per-slot helpers
 function excludedPokemonIds(slotIndex: number): number[] {
@@ -82,7 +88,7 @@ function excludedItemIds(slotIndex: number): number[] {
 }
 
 function updateSlot(index: number, slot: PokepasteSlot): void {
-    form.slots[index] = { ...slot };
+    form.slots = form.slots.map((s, i) => (i === index ? { ...slot } : s));
 }
 
 function submit(): void {

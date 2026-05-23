@@ -8,6 +8,7 @@ import { computed, ref } from 'vue';
 const props = defineProps<{
     pokepastePublicId: string;
     modelValue: string;
+    readonly?: boolean;
 }>();
 
 const emit = defineEmits<{
@@ -98,14 +99,23 @@ const textareaClass = cn(
         <div>
             <Label for="pokepaste-showdown-field">Showdown team text</Label>
             <p class="text-muted-foreground mt-1 text-xs">
-                Reflects your slots below; paste a 6-Pokémon Showdown export and use <strong>Parse into slots</strong>, or copy to
-                <a href="https://pokepast.es/" class="text-primary underline" target="_blank" rel="noopener noreferrer">pokepast.es</a>.
+                <template v-if="readonly">
+                    Copy this paste into
+                    <a href="https://play.pokemonshowdown.com/teambuilder" class="text-primary underline" target="_blank" rel="noopener noreferrer">Pokémon Showdown</a>
+                    or
+                    <a href="https://pokepast.es/" class="text-primary underline" target="_blank" rel="noopener noreferrer">pokepast.es</a>.
+                </template>
+                <template v-else>
+                    Reflects your slots below; paste a 6-Pokémon Showdown export and use <strong>Parse into slots</strong>, or copy to
+                    <a href="https://pokepast.es/" class="text-primary underline" target="_blank" rel="noopener noreferrer">pokepast.es</a>.
+                </template>
             </p>
         </div>
         <textarea
             id="pokepaste-showdown-field"
             v-model="text"
             :class="textareaClass"
+            :readonly="readonly"
             placeholder="Paste a Showdown team here or build your team in the slots below…"
             aria-label="Showdown team text"
         />
@@ -113,10 +123,10 @@ const textareaClass = cn(
             <p v-for="(e, i) in errors" :key="i">{{ e }}</p>
         </div>
         <div class="flex flex-wrap gap-2">
-            <Button type="button" size="sm" :disabled="loading" @click="parsePaste">
+            <Button v-if="!readonly" type="button" size="sm" :disabled="loading" @click="parsePaste">
                 {{ loading ? 'Parsing…' : 'Parse into slots' }}
             </Button>
-            <Button type="button" size="sm" variant="secondary" :disabled="!modelValue.trim()" @click="copy">
+            <Button type="button" size="sm" :variant="readonly ? 'default' : 'secondary'" :disabled="!modelValue.trim()" @click="copy">
                 {{ copied ? 'Copied' : 'Copy' }}
             </Button>
         </div>
