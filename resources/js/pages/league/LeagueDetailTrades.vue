@@ -93,6 +93,7 @@ const props = defineProps<{
     userTeam: Team | null;
     leagueTeams: Team[];
     trades: Trade[];
+    leagueTradeHistory: Trade[];
     freeAgencyPool: PoolMon[];
 }>();
 
@@ -129,18 +130,47 @@ const outgoingTrades = computed(() =>
     ),
 );
 
-const completedTrades = computed(() =>
-    props.trades.filter((t) => t.status !== 'pending'),
-);
-
-const statusClass = (status: Trade['status']) => {
-    switch (status) {
-        case 'accepted': return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
-        case 'declined': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400';
-        case 'cancelled': return 'bg-muted text-muted-foreground';
-        default: return 'border border-border text-muted-foreground';
+function tradeTransactionLabel(trade: Trade): string {
+    if (trade.counterparty === 'free_agency') {
+        const offered = trade.offered_pokemon.map((tp) => tp.league_pokemon?.name).filter(Boolean).join(', ');
+        const taken = trade.requested_pokemon.map((tp) => tp.league_pokemon?.name).filter(Boolean).join(', ');
+        const parts: string[] = [];
+        if (offered) {
+            parts.push(`dropped ${offered}`);
+        }
+        if (taken) {
+            parts.push(`picked up ${taken}`);
+        }
+        return parts.join('; ');
     }
-};
+
+    const offered = trade.offered_pokemon.map((tp) => tp.league_pokemon?.name).filter(Boolean).join(', ');
+    const received = trade.requested_pokemon.map((tp) => tp.league_pokemon?.name).filter(Boolean).join(', ');
+    if (offered && received) {
+        return `${offered} ↔ ${received}`;
+    }
+    if (offered) {
+        return `offered ${offered}`;
+    }
+    return received ? `received ${received}` : '—';
+}
+
+function relativeTime(dateStr: string): string {
+    const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
+    if (diff < 60) {
+        return 'just now';
+    }
+    if (diff < 3600) {
+        return `${Math.floor(diff / 60)}m ago`;
+    }
+    if (diff < 86400) {
+        return `${Math.floor(diff / 3600)}h ago`;
+    }
+    if (diff < 604800) {
+        return `${Math.floor(diff / 86400)}d ago`;
+    }
+    return new Date(dateStr).toLocaleDateString();
+}
 
 const toggleOffered = (id: number) => {
     const idx = tradeForm.offered_pokemon_ids.indexOf(id);
@@ -218,13 +248,6 @@ const submitFaTrade = () => {
         },
     });
 };
-
-function tradePartnerLabel(trade: Trade): string {
-    if (trade.counterparty === 'free_agency') {
-        return 'Free agency pool';
-    }
-    return trade.target_team?.name ?? '—';
-}
 
 const respondToTrade = (trade: Trade, response: 'accepted' | 'declined' | 'cancelled') => {
     router.put(route('leagues.trades.respond', { league: props.league.id, trade: trade.id }), {
@@ -477,7 +500,7 @@ const respondToTrade = (trade: Trade, response: 'accepted' | 'declined' | 'cance
                 <div class="space-y-3">
                     <div v-for="trade in outgoingTrades" :key="trade.id" class="rounded-lg border border-border bg-card p-4">
                         <div class="mb-3 flex items-center justify-between">
-                            <span class="text-sm font-medium">To {{ trade.target_team.name }}</span>
+                            <span class="text-sm font-medium">To {{ trade.target_team?.name ?? '—' }}</span>
                             <span class="rounded-full border border-border px-2.5 py-0.5 text-xs text-muted-foreground">Pending</span>
                         </div>
                         <div class="mb-4 grid gap-4 sm:grid-cols-2">
@@ -514,31 +537,34 @@ const respondToTrade = (trade: Trade, response: 'accepted' | 'declined' | 'cance
             </div>
 
             <!-- Trade History -->
-            <div v-if="completedTrades.length > 0">
+            <div v-if="leagueTradeHistory.length > 0">
                 <h3 class="mb-3 text-base font-semibold">Trade History</h3>
                 <div class="space-y-2">
-                    <div v-for="trade in completedTrades" :key="trade.id" class="rounded-lg border border-border bg-card p-4">
-                        <div class="flex items-start justify-between gap-4">
-                            <div class="flex-1 text-sm">
-                                <span class="font-medium">{{ trade.requesting_team.name }}</span>
-                                <span class="text-muted-foreground"> ↔ </span>
-                                <span class="font-medium">{{ tradePartnerLabel(trade) }}</span>
-                                <div class="mt-1.5 flex flex-wrap gap-3 text-xs text-muted-foreground">
-                                    <span>
-                                        {{ trade.offered_pokemon.map((tp) => tp.league_pokemon?.name).join(', ') }}
-                                        →
-                                        {{ trade.requested_pokemon.map((tp) => tp.league_pokemon?.name).join(', ') }}
-                                    </span>
-                                </div>
+                    <div
+                        v-for="trade in leagueTradeHistory"
+                        :key="trade.id"
+                        class="flex items-start justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3"
+                    >
+                        <div class="min-w-0 flex-1">
+                            <div class="flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-sm font-medium">
+                                <span>{{ trade.requesting_team?.name ?? '—' }}</span>
+                                <template v-if="trade.counterparty === 'team' && trade.target_team">
+                                    <span class="text-muted-foreground">↔</span>
+                                    <span>{{ trade.target_team.name }}</span>
+                                </template>
+                                <template v-else>
+                                    <span class="font-normal text-muted-foreground">via free agency</span>
+                                </template>
                             </div>
-                            <span :class="['shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium capitalize', statusClass(trade.status)]">{{ trade.status }}</span>
+                            <p class="mt-1 text-xs text-muted-foreground">{{ tradeTransactionLabel(trade) }}</p>
                         </div>
+                        <span class="shrink-0 whitespace-nowrap text-xs text-muted-foreground">{{ relativeTime(trade.created_at) }}</span>
                     </div>
                 </div>
             </div>
 
             <!-- Empty state -->
-            <div v-if="!userTeam && incomingTrades.length === 0 && outgoingTrades.length === 0 && completedTrades.length === 0" class="py-12 text-center text-muted-foreground">
+            <div v-if="!userTeam && incomingTrades.length === 0 && outgoingTrades.length === 0 && leagueTradeHistory.length === 0" class="py-12 text-center text-muted-foreground">
                 No trades yet.
             </div>
 

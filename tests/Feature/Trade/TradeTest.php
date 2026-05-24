@@ -585,3 +585,32 @@ it('does not change draft points when free agency trade costs are equal', functi
 
     expect($teamA->fresh()->draft_points)->toBe($startingPoints);
 });
+
+it('includes all league accepted trades in trade history on the trades page', function () {
+    [$owner, $league, $teamA, $teamB, $userA, $userB] = createLeagueForTradeTests();
+
+    Trade::create([
+        'league_id' => $league->id,
+        'requesting_team_id' => $teamA->id,
+        'target_team_id' => null,
+        'counterparty' => TradeCounterparty::FreeAgency,
+        'status' => 'accepted',
+    ]);
+
+    Trade::create([
+        'league_id' => $league->id,
+        'requesting_team_id' => $teamB->id,
+        'target_team_id' => null,
+        'counterparty' => TradeCounterparty::FreeAgency,
+        'status' => 'accepted',
+    ]);
+
+    $response = $this->actingAs($userA)->get(route('leagues.trades', ['league' => $league->id]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('league/LeagueDetailTrades')
+        ->has('leagueTradeHistory', 2)
+        ->where('trades', fn ($trades) => count($trades) === 1)
+    );
+});

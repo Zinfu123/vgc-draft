@@ -9,6 +9,7 @@ use App\Modules\League\Models\League;
 use App\Modules\Teams\Models\Team;
 use App\Modules\Trade\Actions\CreateTradeAction;
 use App\Modules\Trade\Actions\ExecuteFreeAgencyTradeAction;
+use App\Modules\Trade\Actions\ReadLeagueTradeHistoryAction;
 use App\Modules\Trade\Actions\ReadTradesAction;
 use App\Modules\Trade\Actions\RespondToTradeAction;
 use App\Modules\Trade\Models\Trade;
@@ -24,6 +25,7 @@ class TradeController extends Controller
         League $league,
         LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction,
         ReadTradesAction $readTradesAction,
+        ReadLeagueTradeHistoryAction $readLeagueTradeHistoryAction,
         ReadLeaguePokemonAction $readLeaguePokemonAction,
     ): Response {
         $userTeam = Team::query()
@@ -52,12 +54,15 @@ class TradeController extends Controller
 
         $freeAgencyPool = $readLeaguePokemonAction(['league_id' => $league->id, 'command' => 'available']);
 
+        $leagueTradeHistory = $readLeagueTradeHistoryAction($league->id);
+
         return Inertia::render('league/LeagueDetailTrades', [
             ...$leagueDetailLayoutDataAction($league),
             'section' => 'trades',
             'userTeam' => $userTeam,
             'leagueTeams' => $leagueTeams,
             'trades' => $trades,
+            'leagueTradeHistory' => $leagueTradeHistory,
             'freeAgencyPool' => $freeAgencyPool,
         ]);
     }

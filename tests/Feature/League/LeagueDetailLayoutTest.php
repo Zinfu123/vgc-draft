@@ -184,6 +184,7 @@ it('renders the trades tab', function () {
         ->assertInertia(fn ($page) => $page
             ->component('league/LeagueDetailTrades')
             ->where('section', 'trades')
+            ->has('leagueTradeHistory')
         );
 });
 
