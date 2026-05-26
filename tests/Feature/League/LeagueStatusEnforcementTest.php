@@ -226,14 +226,14 @@ it('blocks score submission during Registration', function () {
     [$league, $owner, , $team, $targetTeam] = makeEnforcementLeague(LeagueStatus::Registration);
     $set = makeSetForLeague($league, $team, $targetTeam);
 
-    $this->actingAs($owner)->put('/match', [
+    $this->actingAs($owner)->from(route('sets.show', ['set_id' => $set->id]))->put('/match', [
         'set_id' => $set->id,
         'team1_id' => $team->id,
         'team2_id' => $targetTeam->id,
         'team1_score' => 2,
         'team2_score' => 0,
         'command' => 'update',
-    ])->assertRedirect();
+    ])->assertSessionHasErrors('set_result');
 
     expect($set->fresh()->status)->toBe(1);
 });

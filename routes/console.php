@@ -30,6 +30,11 @@ Schedule::command('draft:start-scheduled')
     ->everyFiveMinutes()
     ->withoutOverlapping(5);
 
+Schedule::command('leagues:start-scheduled-regular-season')
+    ->name('leagues-start-scheduled-regular-season')
+    ->everyFiveMinutes()
+    ->withoutOverlapping(5);
+
 Schedule::command('draft:tick-timers')
     ->name('draft-tick-timers')
     ->everyMinute()

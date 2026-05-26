@@ -779,8 +779,10 @@ const breadcrumbs: BreadcrumbItem[] = [
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="mb-1.5 block text-sm font-medium">{{ set.team1.name }}</label>
+                        <label for="team1_score" class="mb-1.5 block text-sm font-medium">{{ set.team1.name }}</label>
                         <select
+                            id="team1_score"
+                            name="team1_score"
                             v-model="scoreForm.team1_score"
                             :disabled="disableScoreForm"
                             class="border-input bg-background text-foreground focus:ring-ring block w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:outline-none disabled:opacity-50"
@@ -791,8 +793,10 @@ const breadcrumbs: BreadcrumbItem[] = [
                         </select>
                     </div>
                     <div>
-                        <label class="mb-1.5 block text-sm font-medium">{{ set.team2.name }}</label>
+                        <label for="team2_score" class="mb-1.5 block text-sm font-medium">{{ set.team2.name }}</label>
                         <select
+                            id="team2_score"
+                            name="team2_score"
                             v-model="scoreForm.team2_score"
                             :disabled="disableScoreForm"
                             class="border-input bg-background text-foreground focus:ring-ring block w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:outline-none disabled:opacity-50"

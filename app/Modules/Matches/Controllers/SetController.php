@@ -26,6 +26,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 class SetController extends Controller
@@ -86,7 +87,7 @@ class SetController extends Controller
             'matchPokepaste' => fn () => $matchPokepaste,
             'matchPokepasteSides' => fn () => $readMatchPokepasteSideSummariesAction($set),
             'isLeagueAdmin' => fn () => $isLeagueAdmin,
-            'requireTeamMatchPokepasteBeforeResults' => fn () => true,
+            'requireTeamMatchPokepasteBeforeResults' => fn () => (bool) ($league?->matchConfig?->require_team_match_pokepaste_before_results ?? false),
             'requireReplaysBeforeResults' => fn () => (bool) ($league?->matchConfig?->require_replays_before_results ?? false),
             'autoCompleteFromReplays' => fn () => (bool) ($league?->matchConfig?->auto_complete_set_from_replays ?? false),
             'matchMessages' => Inertia::defer(function () use ($set): array {
@@ -129,9 +130,15 @@ class SetController extends Controller
         ]);
     }
 
-    public function update(UpdateSetRequest $request, CreateEditSetsAction $createEditSetsAction)
+    public function update(UpdateSetRequest $request, CreateEditSetsAction $createEditSetsAction): RedirectResponse
     {
-        $createEditSetsAction($request->validated());
+        $result = $createEditSetsAction($request->validated());
+
+        if ($result !== true) {
+            throw ValidationException::withMessages([
+                'set_result' => 'The match result could not be saved. Please try again.',
+            ]);
+        }
 
         return redirect()->route('sets.show', ['set_id' => $request->set_id]);
     }

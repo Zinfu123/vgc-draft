@@ -375,6 +375,9 @@ const submit = () => {
                             <div class="grid gap-2">
                                 <Label for="set_start_date">Season start</Label>
                                 <Input id="set_start_date" v-model="form.set_start_date" type="date" required />
+                                <p class="text-muted-foreground text-xs dark:text-neutral-500">
+                                    The regular season will start automatically on this date once the draft is complete.
+                                </p>
                                 <InputError :message="form.errors.set_start_date" />
                             </div>
                             <div class="grid gap-2">

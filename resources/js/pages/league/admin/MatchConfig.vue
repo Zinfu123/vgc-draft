@@ -5,6 +5,9 @@ import LeagueDetailLayout from '@/components/league/LeagueDetailLayout.vue';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Head, router, useForm } from '@inertiajs/vue3';
+import { computed } from 'vue';
+
+const LEAGUE_STATUS_STAGING = 3;
 
 interface League {
     id: number;
@@ -73,6 +76,14 @@ const teamsToPools = () => {
 const createSets = () => {
     router.post(route('sets.create', { league: props.league.id }), { league_id: props.league.id });
 };
+
+const isStaging = computed(() => props.league.status === LEAGUE_STATUS_STAGING);
+
+const startRegularSeasonForm = useForm({});
+
+const handleStartRegularSeason = (): void => {
+    startRegularSeasonForm.post(route('leagues.start-regular-season', { league: props.league.id }));
+};
 </script>
 
 <template>
@@ -126,6 +137,24 @@ const createSets = () => {
                         </Button>
                     </div>
                 </form>
+            </section>
+
+            <section v-if="isStaging" class="flex flex-col gap-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-4 dark:border-amber-900 dark:bg-amber-950/40">
+                <div>
+                    <h2 class="text-lg font-semibold">Start regular season</h2>
+                    <p class="mt-1 text-sm text-muted-foreground">
+                        This league is still in staging. Match results cannot be submitted until the regular season begins.
+                        It will start automatically on {{ league.set_start_date }} if the draft is complete, or you can start it now.
+                    </p>
+                    <p v-if="startRegularSeasonForm.errors.league" class="mt-2 text-sm text-destructive">
+                        {{ startRegularSeasonForm.errors.league }}
+                    </p>
+                </div>
+                <div>
+                    <Button :disabled="startRegularSeasonForm.processing" @click="handleStartRegularSeason">
+                        {{ startRegularSeasonForm.processing ? 'Starting…' : 'Start regular season now' }}
+                    </Button>
+                </div>
             </section>
 
             <section class="flex flex-col gap-4">

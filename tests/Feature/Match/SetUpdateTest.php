@@ -381,7 +381,7 @@ test('updating a completed set does not update team statistics again', function 
     $initialTeam1VictoryPoints = $team1->victory_points;
     $initialTeam2VictoryPoints = $team2->victory_points;
 
-    $response = $this->actingAs($user1)->put('/match', [
+    $response = $this->actingAs($user1)->from(route('sets.show', ['set_id' => $set->id]))->put('/match', [
         'set_id' => $set->id,
         'team1_id' => $team1->id,
         'team2_id' => $team2->id,
@@ -390,7 +390,7 @@ test('updating a completed set does not update team statistics again', function 
         'command' => 'update',
     ]);
 
-    $response->assertRedirect(route('sets.show', ['set_id' => $set->id]));
+    $response->assertSessionHasErrors('set_result');
 
     $team1->refresh();
     $team2->refresh();
@@ -937,6 +937,85 @@ test('league admin can submit set result when team pokepaste is required but mis
     expect($set->status)->toBe(0)
         ->and($set->team1_score)->toBe(2)
         ->and($set->team2_score)->toBe(1);
+});
+
+test('submitting a result for an already completed set returns a validation error', function () {
+    Event::fake();
+
+    $user1 = User::factory()->create();
+    $user2 = User::factory()->create();
+
+    $league = League::create([
+        'name' => 'Test League',
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
+        'draft_points' => 100,
+        'league_owner' => $user1->id,
+    ]);
+
+    $matchConfig = MatchConfig::create([
+        'league_id' => $league->id,
+        'number_of_pools' => 1,
+        'status' => 1,
+    ]);
+
+    $pool = Pool::create([
+        'league_id' => $league->id,
+        'match_config_id' => $matchConfig->id,
+        'status' => 1,
+    ]);
+
+    $team1 = Team::create([
+        'name' => 'Team 1',
+        'league_id' => $league->id,
+        'user_id' => $user1->id,
+        'pick_position' => 1,
+        'seed' => 1,
+        'pool_id' => $pool->id,
+        'draft_points' => 100,
+        'victory_points' => 3,
+        'set_wins' => 1,
+        'set_losses' => 0,
+        'game_wins' => 2,
+        'game_losses' => 0,
+    ]);
+
+    $team2 = Team::create([
+        'name' => 'Team 2',
+        'league_id' => $league->id,
+        'user_id' => $user2->id,
+        'pick_position' => 2,
+        'seed' => 2,
+        'pool_id' => $pool->id,
+        'draft_points' => 100,
+        'victory_points' => 0,
+        'set_wins' => 0,
+        'set_losses' => 1,
+        'game_wins' => 0,
+        'game_losses' => 2,
+    ]);
+
+    $set = Set::create([
+        'league_id' => $league->id,
+        'pool_id' => $pool->id,
+        'round' => 1,
+        'team1_id' => $team1->id,
+        'team2_id' => $team2->id,
+        'team1_score' => 2,
+        'team2_score' => 0,
+        'winner_id' => $team1->id,
+        'status' => 0,
+    ]);
+
+    $this->actingAs($user1)->from(route('sets.show', ['set_id' => $set->id]))->put('/match', [
+        'set_id' => $set->id,
+        'team1_id' => $team1->id,
+        'team2_id' => $team2->id,
+        'team1_score' => 2,
+        'team2_score' => 1,
+        'command' => 'update',
+    ])->assertSessionHasErrors('set_result');
+
+    expect($set->fresh()->team2_score)->toBe(0);
 });
 
 test('non-participant who is not a league admin cannot submit set result', function () {

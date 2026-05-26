@@ -15,11 +15,11 @@ use App\Jobs\EnforceTradeDeadlineJob;
 use App\Modules\Draft\Actions\ReadCurrentDraftAction;
 use App\Modules\Draft\Models\Draft;
 use App\Modules\Draft\Models\DraftConfig;
-use App\Modules\League\Actions\CreateEditLeagueAction;
 use App\Modules\League\Actions\LeagueDetailLayoutDataAction;
 use App\Modules\League\Actions\ReadLeagueAction;
 use App\Modules\League\Actions\ReadLeagueKillLeadersAction;
 use App\Modules\League\Actions\ReadLeaguePokemonAction;
+use App\Modules\League\Actions\StartRegularSeasonAction;
 use App\Modules\League\Enums\LeagueStatus;
 use App\Modules\League\Models\League;
 use App\Modules\League\Services\DropTeamFromLeagueService;
@@ -772,7 +772,7 @@ class LeagueController extends Controller
         return redirect()->route('leagues.index')->with('success', 'League has been cancelled.');
     }
 
-    public function startRegularSeason(League $league): RedirectResponse
+    public function startRegularSeason(League $league, StartRegularSeasonAction $startRegularSeasonAction): RedirectResponse
     {
         $this->authorize('admin', $league);
 
@@ -780,9 +780,9 @@ class LeagueController extends Controller
             return back()->withErrors(['league' => 'The league must be in the Staging phase to start the regular season.']);
         }
 
-        $league->status = LeagueStatus::RegularSeason;
-        $league->staging_sub_status = null;
-        $league->save();
+        if (! ($startRegularSeasonAction)($league)) {
+            return back()->withErrors(['league' => 'The draft must be completed before the regular season can start.']);
+        }
 
         return back()->with('success', 'Regular season has started.');
     }

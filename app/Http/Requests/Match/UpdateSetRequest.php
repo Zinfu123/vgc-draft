@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Match;
 
+use App\Modules\League\Enums\LeagueStatus;
 use App\Modules\League\Models\League;
 use App\Modules\Matches\Models\Set;
 use App\Modules\Pokepaste\Services\EnforceTeamMatchPokepasteChecker;
@@ -115,7 +116,35 @@ class UpdateSetRequest extends FormRequest
                 return;
             }
 
+            if ((int) $set->status === 0) {
+                $validator->errors()->add(
+                    'set_result',
+                    'This match is already complete.'
+                );
+
+                return;
+            }
+
+            if ($set->team2_id === null) {
+                $validator->errors()->add(
+                    'set_result',
+                    'This match cannot accept a result because there is no opponent assigned.'
+                );
+
+                return;
+            }
+
             $league = League::query()->with('matchConfig')->find($set->league_id);
+
+            if ($league !== null && ! in_array($league->status, [LeagueStatus::RegularSeason, LeagueStatus::Playoffs], true)) {
+                $validator->errors()->add(
+                    'set_result',
+                    'Match results can only be submitted while the league is in the regular season or playoffs.'
+                );
+
+                return;
+            }
+
             $isLeagueAdmin = $league !== null && $this->user()?->can('admin', $league) === true;
             $canBypassRequirements = $isLeagueAdmin && ! $this->userIsSetParticipant($set);
 
