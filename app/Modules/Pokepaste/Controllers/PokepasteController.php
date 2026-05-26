@@ -4,12 +4,14 @@ namespace App\Modules\Pokepaste\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Pokepaste\ParseShowdownPasteRequest;
+use App\Http\Requests\Pokepaste\UpdatePokepasteDetailsVisibleRequest;
 use App\Http\Requests\Pokepaste\UpdateTeamPokepasteRequest;
 use App\Modules\Matches\Models\Set;
 use App\Modules\Playoffs\Models\PlayoffMatch;
 use App\Modules\Pokepaste\Actions\BuildPokepasteViewCardsAction;
 use App\Modules\Pokepaste\Actions\ParseShowdownPasteAction;
 use App\Modules\Pokepaste\Actions\ReadPokepastePageAction;
+use App\Modules\Pokepaste\Actions\UpdatePokepasteDetailsVisibleAction;
 use App\Modules\Pokepaste\Actions\UpdateSetTeamPokepasteAction;
 use App\Modules\Pokepaste\Models\SetTeamPokepaste;
 use App\Modules\Pokepaste\Services\EnsureSetTeamPokepasteSlotRows;
@@ -121,6 +123,17 @@ class PokepasteController extends Controller
             $pokepaste,
             $league,
             $request->validated('slots'),
+            $request->boolean('details_visible'),
+        );
+    }
+
+    public function updateDetailsVisible(
+        UpdatePokepasteDetailsVisibleRequest $request,
+        SetTeamPokepaste $pokepaste,
+        UpdatePokepasteDetailsVisibleAction $updatePokepasteDetailsVisibleAction,
+    ) {
+        return $updatePokepasteDetailsVisibleAction(
+            $pokepaste,
             $request->boolean('details_visible'),
         );
     }

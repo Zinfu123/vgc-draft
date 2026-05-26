@@ -180,6 +180,7 @@ Route::get('/pokepaste/{pokepaste}', [PokepasteController::class, 'show'])->name
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('/pokepaste/{pokepaste}', [PokepasteController::class, 'update'])->name('pokepaste.update');
+    Route::patch('/pokepaste/{pokepaste}/details-visible', [PokepasteController::class, 'updateDetailsVisible'])->name('pokepaste.update-details-visible');
     Route::post('/pokepaste/{pokepaste}/parse', [PokepasteController::class, 'parse'])->name('pokepaste.parse');
 });
 

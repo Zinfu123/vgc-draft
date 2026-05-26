@@ -24,6 +24,7 @@ const props = defineProps<{
 
 const saveBanner = ref(false);
 const saving = ref(false);
+const savingVisibility = ref(false);
 const activeSlot = ref(0);
 const detailsVisible = ref(props.detailsVisible);
 
@@ -114,7 +115,21 @@ function updateSlot(index: number, slot: PokepasteSlot): void {
 }
 
 function onDetailsVisibleChange(checked: boolean | 'indeterminate'): void {
-    detailsVisible.value = checked === true;
+    const value = checked === true;
+    detailsVisible.value = value;
+    savingVisibility.value = true;
+
+    router.patch(
+        route('pokepaste.update-details-visible', { pokepaste: props.pokepastePublicId }),
+        { details_visible: value },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onFinish: () => {
+                savingVisibility.value = false;
+            },
+        },
+    );
 }
 
 function submit(): void {
@@ -222,7 +237,7 @@ const completedCount = computed(() => form.slots.filter(isSlotComplete).length);
             <Checkbox
                 id="pokepaste-details-visible"
                 :checked="detailsVisible"
-                :disabled="saving"
+                :disabled="saving || savingVisibility"
                 @update:checked="onDetailsVisibleChange"
             />
             <div class="min-w-0 flex-1 space-y-0.5">
@@ -231,8 +246,9 @@ const completedCount = computed(() => form.slots.filter(isSlotComplete).length);
                 </label>
                 <p class="text-muted-foreground text-xs">
                     When off, viewers only see which Pokémon you brought and each Tera type—not moves, items, EVs, or
-                    abilities.
+                    abilities. This saves immediately when toggled.
                 </p>
+                <p v-if="savingVisibility" class="text-muted-foreground text-xs">Saving visibility…</p>
             </div>
         </div>
 
