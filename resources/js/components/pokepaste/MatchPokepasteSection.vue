@@ -5,7 +5,7 @@ import type { HeldItemOption, NatureOption, RosterOption } from '@/components/po
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { buildShowdownExport, type PokepasteSlot } from '@/lib/pokepaste/showdownExport';
-import { useForm } from '@inertiajs/vue3';
+import { router, useForm } from '@inertiajs/vue3';
 import { CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-vue-next';
 import { computed, ref, watch } from 'vue';
 
@@ -23,6 +23,7 @@ const props = defineProps<{
 }>();
 
 const saveBanner = ref(false);
+const saving = ref(false);
 const activeSlot = ref(0);
 const detailsVisible = ref(props.detailsVisible);
 
@@ -112,20 +113,36 @@ function updateSlot(index: number, slot: PokepasteSlot): void {
     form.slots = form.slots.map((s, i) => (i === index ? { ...slot } : s));
 }
 
+function onDetailsVisibleChange(checked: boolean | 'indeterminate'): void {
+    detailsVisible.value = checked === true;
+}
+
 function submit(): void {
-    form
-        .transform((data) => ({
-            slots: data.slots,
+    saving.value = true;
+
+    router.put(
+        route('pokepaste.update', { pokepaste: props.pokepastePublicId }),
+        {
+            slots: form.slots,
             details_visible: detailsVisible.value,
-        }))
-        .put(route('pokepaste.update', { pokepaste: props.pokepastePublicId }), {
+        },
+        {
             preserveScroll: true,
             onSuccess: () => {
                 syncShowdownFieldText();
                 saveBanner.value = true;
-                setTimeout(() => { saveBanner.value = false; }, 4000);
+                setTimeout(() => {
+                    saveBanner.value = false;
+                }, 4000);
             },
-        });
+            onError: (errors) => {
+                form.clearErrors().setError(errors);
+            },
+            onFinish: () => {
+                saving.value = false;
+            },
+        },
+    );
 }
 
 function onPasteApplied(slots: PokepasteSlot[]): void {
@@ -184,8 +201,8 @@ const completedCount = computed(() => form.slots.filter(isSlotComplete).length);
             </div>
             <div class="flex items-center gap-2">
                 <span class="text-muted-foreground text-sm">{{ completedCount }}/6 complete</span>
-                <Button type="button" :disabled="form.processing" @click="submit">
-                    {{ form.processing ? 'Saving…' : 'Save paste' }}
+                <Button type="button" :disabled="saving" @click="submit">
+                    {{ saving ? 'Saving…' : 'Save paste' }}
                 </Button>
             </div>
         </div>
@@ -205,8 +222,8 @@ const completedCount = computed(() => form.slots.filter(isSlotComplete).length);
             <Checkbox
                 id="pokepaste-details-visible"
                 :checked="detailsVisible"
-                :disabled="form.processing"
-                @update:checked="(checked) => (detailsVisible = checked === true)"
+                :disabled="saving"
+                @update:checked="onDetailsVisibleChange"
             />
             <div class="min-w-0 flex-1 space-y-0.5">
                 <label for="pokepaste-details-visible" class="cursor-pointer text-sm font-medium">

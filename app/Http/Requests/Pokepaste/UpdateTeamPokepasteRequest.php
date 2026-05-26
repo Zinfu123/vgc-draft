@@ -12,9 +12,9 @@ class UpdateTeamPokepasteRequest extends FormRequest
 {
     protected function prepareForValidation(): void
     {
-        if (! $this->exists('details_visible')) {
-            $this->merge(['details_visible' => false]);
-        }
+        $this->merge([
+            'details_visible' => $this->boolean('details_visible'),
+        ]);
 
         $slots = $this->input('slots');
         if (! is_array($slots)) {

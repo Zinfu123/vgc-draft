@@ -43,7 +43,9 @@ class UpdateSetTeamPokepasteAction
                 );
             }
 
-            $pokepaste->update(['details_visible' => $detailsVisible]);
+            SetTeamPokepaste::query()
+                ->whereKey($pokepaste->id)
+                ->update(['details_visible' => $detailsVisible]);
         });
 
         return redirect()

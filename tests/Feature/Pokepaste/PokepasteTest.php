@@ -254,6 +254,21 @@ it('returns forbidden when user is not a participant in the match', function () 
         ->assertForbidden();
 });
 
+it('persists details_visible from a json put like inertia sends', function () {
+    $data = createLeagueTeamWithSixDraftedPokemonAndMatch();
+    $slots = buildValidSlots($data['leaguePokemon'], $data['heldItems']);
+    $pokepaste = coachPokepasteRecord($data);
+
+    $this->actingAs($data['coach'])
+        ->putJson(route('pokepaste.update', ['pokepaste' => $pokepaste->public_id]), [
+            'slots' => $slots,
+            'details_visible' => true,
+        ])
+        ->assertRedirect();
+
+    expect($pokepaste->fresh()->details_visible)->toBeTrue();
+});
+
 it('persists details_visible when saving from the editor', function () {
     $data = createLeagueTeamWithSixDraftedPokemonAndMatch();
     $slots = buildValidSlots($data['leaguePokemon'], $data['heldItems']);

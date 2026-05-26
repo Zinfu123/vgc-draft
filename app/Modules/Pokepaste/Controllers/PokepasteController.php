@@ -117,13 +117,11 @@ class PokepasteController extends Controller
         $league = $pokepaste->resolveLeague();
         abort_if($league === null, 404);
 
-        $validated = $request->validated();
-
         return $updateSetTeamPokepasteAction(
             $pokepaste,
             $league,
-            $validated['slots'],
-            (bool) $validated['details_visible'],
+            $request->validated('slots'),
+            $request->boolean('details_visible'),
         );
     }
 
