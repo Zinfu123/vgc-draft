@@ -66,7 +66,17 @@ class CreateEditSetsAction
                     return false;
                 }
                 $leagueForPaste = League::with('matchConfig')->find($set->league_id);
-                if ($leagueForPaste?->matchConfig?->require_team_match_pokepaste_before_results === true) {
+                $user = Auth::user();
+                $isLeagueAdmin = $leagueForPaste !== null
+                    && $user !== null
+                    && $user->can('admin', $leagueForPaste);
+                $isSetParticipant = $user !== null && Team::query()
+                    ->where('user_id', $user->id)
+                    ->where('league_id', $set->league_id)
+                    ->whereIn('id', [$set->team1_id, $set->team2_id])
+                    ->exists();
+                $canBypassRequirements = $isLeagueAdmin && ! $isSetParticipant;
+                if (! $canBypassRequirements && $leagueForPaste?->matchConfig?->require_team_match_pokepaste_before_results === true) {
                     if (! app(EnforceTeamMatchPokepasteChecker::class)->poolSetBothSidesHaveData($set)) {
                         return false;
                     }

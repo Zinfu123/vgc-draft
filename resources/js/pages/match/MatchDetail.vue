@@ -286,6 +286,7 @@ const isUserInSet = computed(() => {
     if (!props.currentUserTeam) return false;
     return props.set.team1.id === props.currentUserTeam.id || props.set.team2.id === props.currentUserTeam.id;
 });
+const canManageSetResult = computed(() => isUserInSet.value || props.isLeagueAdmin);
 const bothSidesPasteReady = computed(() => !!(props.matchPokepasteSides.team1?.has_data && props.matchPokepasteSides.team2?.has_data));
 const hasServerSavedReplay = computed(() => !!(props.set.replay1?.trim() || props.set.replay2?.trim() || props.set.replay3?.trim()));
 const canSubmitSetResult = computed(() => {
@@ -294,7 +295,8 @@ const canSubmitSetResult = computed(() => {
     return (a === 2 && b <= 1) || (b === 2 && a <= 1);
 });
 const disableScoreForm = computed(() => {
-    if (isSetCompleted.value || !isUserInSet.value) return true;
+    if (isSetCompleted.value || !canManageSetResult.value) return true;
+    if (props.isLeagueAdmin && !isUserInSet.value) return false;
     if (props.requireTeamMatchPokepasteBeforeResults && !bothSidesPasteReady.value) return true;
     if (props.requireReplaysBeforeResults && !hasServerSavedReplay.value) return true;
     return false;
@@ -767,10 +769,13 @@ const breadcrumbs: BreadcrumbItem[] = [
                 </div>
             </div>
 
-            <!-- Set result (active matches, participants only) -->
-            <div v-if="!isSetCompleted && isUserInSet" class="border-border bg-card rounded-xl border p-6">
+            <!-- Set result (active matches, participants and league admins) -->
+            <div v-if="!isSetCompleted && canManageSetResult" class="border-border bg-card rounded-xl border p-6">
                 <h2 class="mb-1 font-semibold">Set Result</h2>
-                <p class="text-muted-foreground mb-4 text-sm">Results are calculated automatically when replays are saved. You can also enter them manually here.</p>
+                <p class="text-muted-foreground mb-4 text-sm">
+                    Results are calculated automatically when replays are saved. You can also enter them manually here.
+                    <span v-if="isLeagueAdmin && !isUserInSet"> As league admin, you can submit on behalf of the players.</span>
+                </p>
 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
@@ -800,12 +805,12 @@ const breadcrumbs: BreadcrumbItem[] = [
                 </div>
 
                 <p v-if="(scoreForm.errors as any).set_result" class="text-destructive mt-2 text-sm">{{ (scoreForm.errors as any).set_result }}</p>
-                <p v-else-if="requireTeamMatchPokepasteBeforeResults && !bothSidesPasteReady" class="mt-2 text-sm text-amber-700 dark:text-amber-400">
+                <p v-else-if="!(isLeagueAdmin && !isUserInSet) && requireTeamMatchPokepasteBeforeResults && !bothSidesPasteReady" class="mt-2 text-sm text-amber-700 dark:text-amber-400">
                     Both teams must submit their match paste before results can be entered.
                     <span v-if="!matchPokepasteSides.team1?.has_data" class="block">Missing: {{ set.team1.name }}</span>
                     <span v-if="!matchPokepasteSides.team2?.has_data" class="block">Missing: {{ set.team2.name }}</span>
                 </p>
-                <p v-else-if="requireReplaysBeforeResults && !hasServerSavedReplay" class="mt-2 text-sm text-amber-700 dark:text-amber-400">
+                <p v-else-if="!(isLeagueAdmin && !isUserInSet) && requireReplaysBeforeResults && !hasServerSavedReplay" class="mt-2 text-sm text-amber-700 dark:text-amber-400">
                     At least one replay must be saved before submitting results for this league.
                 </p>
                 <p v-else-if="!canSubmitSetResult" class="text-muted-foreground mt-2 text-sm">

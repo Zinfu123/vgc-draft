@@ -5,6 +5,7 @@ namespace App\Http\Requests\Match;
 use App\Modules\League\Models\League;
 use App\Modules\Matches\Models\Set;
 use App\Modules\Pokepaste\Services\EnforceTeamMatchPokepasteChecker;
+use App\Modules\Teams\Models\Team;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -13,11 +14,23 @@ class UpdateSetRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        if ($this->user() === null) {
+        $user = $this->user();
+        if ($user === null) {
             return false;
         }
 
-        if ($this->input('command') !== 'reopen') {
+        if ($this->input('command') === 'reopen') {
+            $set = Set::query()->find((int) $this->input('set_id'));
+            if ($set === null) {
+                return true;
+            }
+
+            $league = League::query()->find($set->league_id);
+
+            return $league !== null && $user->can('admin', $league);
+        }
+
+        if ($this->input('command') !== 'update') {
             return true;
         }
 
@@ -27,8 +40,15 @@ class UpdateSetRequest extends FormRequest
         }
 
         $league = League::query()->find($set->league_id);
+        if ($league !== null && $user->can('admin', $league)) {
+            return true;
+        }
 
-        return $league !== null && $this->user()->can('admin', $league);
+        return Team::query()
+            ->where('user_id', $user->id)
+            ->where('league_id', $set->league_id)
+            ->whereIn('id', [$set->team1_id, $set->team2_id])
+            ->exists();
     }
 
     /**
@@ -96,8 +116,10 @@ class UpdateSetRequest extends FormRequest
             }
 
             $league = League::query()->with('matchConfig')->find($set->league_id);
+            $isLeagueAdmin = $league !== null && $this->user()?->can('admin', $league) === true;
+            $canBypassRequirements = $isLeagueAdmin && ! $this->userIsSetParticipant($set);
 
-            if ($league?->matchConfig?->require_team_match_pokepaste_before_results === true) {
+            if (! $canBypassRequirements && $league?->matchConfig?->require_team_match_pokepaste_before_results === true) {
                 if (! app(EnforceTeamMatchPokepasteChecker::class)->poolSetBothSidesHaveData($set)) {
                     $validator->errors()->add(
                         'set_result',
@@ -108,7 +130,7 @@ class UpdateSetRequest extends FormRequest
                 }
             }
 
-            if ($league?->matchConfig?->require_replays_before_results === true) {
+            if (! $canBypassRequirements && $league?->matchConfig?->require_replays_before_results === true) {
                 if ($set->replay1 === null && $set->replay2 === null && $set->replay3 === null) {
                     $validator->errors()->add(
                         'set_result',
@@ -117,5 +139,19 @@ class UpdateSetRequest extends FormRequest
                 }
             }
         });
+    }
+
+    private function userIsSetParticipant(Set $set): bool
+    {
+        $user = $this->user();
+        if ($user === null) {
+            return false;
+        }
+
+        return Team::query()
+            ->where('user_id', $user->id)
+            ->where('league_id', $set->league_id)
+            ->whereIn('id', [$set->team1_id, $set->team2_id])
+            ->exists();
     }
 }
