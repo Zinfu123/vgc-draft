@@ -7,6 +7,7 @@ use App\Http\Requests\Pokepaste\ParseShowdownPasteRequest;
 use App\Http\Requests\Pokepaste\UpdateTeamPokepasteRequest;
 use App\Modules\Matches\Models\Set;
 use App\Modules\Playoffs\Models\PlayoffMatch;
+use App\Modules\Pokepaste\Actions\BuildPokepasteViewCardsAction;
 use App\Modules\Pokepaste\Actions\ParseShowdownPasteAction;
 use App\Modules\Pokepaste\Actions\ReadPokepastePageAction;
 use App\Modules\Pokepaste\Actions\UpdateSetTeamPokepasteAction;
@@ -28,6 +29,7 @@ class PokepasteController extends Controller
         Request $request,
         SetTeamPokepaste $pokepaste,
         ReadPokepastePageAction $readPokepastePageAction,
+        BuildPokepasteViewCardsAction $buildPokepasteViewCardsAction,
     ): Response {
         $pokepaste->loadMissing(['team', 'matchable']);
         abort_if(
@@ -73,6 +75,13 @@ class PokepasteController extends Controller
         }
 
         $pageData = $readPokepastePageAction($pokepaste);
+        $detailsVisible = (bool) $pokepaste->details_visible;
+
+        if (! $editMode && ! $detailsVisible) {
+            $pageData['view_cards'] = $buildPokepasteViewCardsAction
+                ->redactForLimitedPublicView($pageData['view_cards']);
+            $pageData['showdown_export'] = '';
+        }
 
         if (! $isOwner) {
             $pageData = [
@@ -95,6 +104,8 @@ class PokepasteController extends Controller
             'is_owner' => $isOwner,
             'edit_mode' => $editMode,
             'paste_has_data' => $hasData,
+            'details_visible' => $detailsVisible,
+            'show_limited_public_view' => ! $editMode && ! $detailsVisible,
         ]));
     }
 
@@ -106,7 +117,16 @@ class PokepasteController extends Controller
         $league = $pokepaste->resolveLeague();
         abort_if($league === null, 404);
 
-        return $updateSetTeamPokepasteAction($pokepaste, $league, $request->validated('slots'));
+        $validated = $request->validated();
+
+        return $updateSetTeamPokepasteAction(
+            $pokepaste,
+            $league,
+            $validated['slots'],
+            array_key_exists('details_visible', $validated)
+                ? (bool) $validated['details_visible']
+                : null,
+        );
     }
 
     public function parse(

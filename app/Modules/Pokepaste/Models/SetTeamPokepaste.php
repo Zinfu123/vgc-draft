@@ -21,6 +21,7 @@ class SetTeamPokepaste extends Model
         'matchable_id',
         'team_id',
         'public_id',
+        'details_visible',
     ];
 
     protected static function booted(): void
@@ -39,6 +40,7 @@ class SetTeamPokepaste extends Model
     {
         return [
             'public_id' => 'integer',
+            'details_visible' => 'boolean',
         ];
     }
 

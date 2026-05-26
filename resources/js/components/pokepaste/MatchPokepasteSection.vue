@@ -3,6 +3,7 @@ import PokepastePastePanel from '@/components/pokepaste/PokepastePastePanel.vue'
 import PokepasteSlotCard from '@/components/pokepaste/PokepasteSlotCard.vue';
 import type { HeldItemOption, NatureOption, RosterOption } from '@/components/pokepaste/PokepasteSlotCard.vue';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { buildShowdownExport, type PokepasteSlot } from '@/lib/pokepaste/showdownExport';
 import { useForm } from '@inertiajs/vue3';
 import { CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-vue-next';
@@ -18,6 +19,7 @@ const props = defineProps<{
     allTeraTypes: string[];
     natures: NatureOption[];
     showdownExport: string;
+    detailsVisible: boolean;
 }>();
 
 const saveBanner = ref(false);
@@ -25,6 +27,7 @@ const activeSlot = ref(0);
 
 const form = useForm({
     slots: [...props.slots] as PokepasteSlot[],
+    details_visible: props.detailsVisible,
 });
 
 watch(
@@ -33,6 +36,13 @@ watch(
         form.slots = [...next] as PokepasteSlot[];
     },
     { deep: true },
+);
+
+watch(
+    () => props.detailsVisible,
+    (next) => {
+        form.details_visible = next;
+    },
 );
 
 const rosterMap = computed(() => {
@@ -181,6 +191,27 @@ const completedCount = computed(() => form.slots.filter(isSlotComplete).length);
         <!-- Errors -->
         <div v-if="Object.keys(form.errors).length" class="text-destructive space-y-1 text-sm">
             <p v-for="(msg, key) in form.errors" :key="key">{{ Array.isArray(msg) ? msg.join(' ') : msg }}</p>
+        </div>
+
+        <!-- Public visibility -->
+        <div
+            class="border-border/60 bg-muted/20 flex flex-wrap items-start gap-3 rounded-lg border px-4 py-3 dark:border-zinc-700 dark:bg-zinc-900/40"
+        >
+            <Checkbox
+                id="pokepaste-details-visible"
+                :checked="form.details_visible"
+                :disabled="form.processing"
+                @update:checked="(checked) => (form.details_visible = checked === true)"
+            />
+            <div class="min-w-0 flex-1 space-y-0.5">
+                <label for="pokepaste-details-visible" class="cursor-pointer text-sm font-medium">
+                    Show full team details on public paste
+                </label>
+                <p class="text-muted-foreground text-xs">
+                    When off, viewers only see which Pokémon you brought and each Tera type—not moves, items, EVs, or
+                    abilities.
+                </p>
+            </div>
         </div>
 
         <!-- Import from Showdown text -->

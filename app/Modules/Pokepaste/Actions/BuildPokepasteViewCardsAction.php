@@ -33,6 +33,35 @@ class BuildPokepasteViewCardsAction
     }
 
     /**
+     * Public paste view when full details are hidden: species and Tera only.
+     *
+     * @param  list<array<string, mixed>>  $cards
+     * @return list<array<string, mixed>>
+     */
+    public function redactForLimitedPublicView(array $cards): array
+    {
+        return array_map(function (array $card): array {
+            if (! ($card['filled'] ?? false)) {
+                return $card;
+            }
+
+            return [
+                'filled' => true,
+                'species_label' => $card['species_label'] ?? null,
+                'nickname_label' => null,
+                'sprite_url' => $card['sprite_url'] ?? null,
+                'item_label' => null,
+                'item_sprite_url' => null,
+                'ability' => null,
+                'tera_type' => $card['tera_type'] ?? null,
+                'nature_label' => null,
+                'evs_line' => null,
+                'moves' => ['', '', '', ''],
+            ];
+        }, $cards);
+    }
+
+    /**
      * @return array<string, mixed>
      */
     private function cardFromSlot(SetTeamPokepasteSlot $row): array

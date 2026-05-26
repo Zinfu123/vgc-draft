@@ -20,15 +20,19 @@ class UpdateSetTeamPokepasteAction
     /**
      * @param  array<int, array<string, mixed>>  $slots
      */
-    public function __invoke(SetTeamPokepaste $pokepaste, League $league, array $slots): RedirectResponse
-    {
+    public function __invoke(
+        SetTeamPokepaste $pokepaste,
+        League $league,
+        array $slots,
+        ?bool $detailsVisible = null,
+    ): RedirectResponse {
         $pokepaste->loadMissing('team');
         $team = $pokepaste->team;
         $normalized = $this->slotValidator->validateAndNormalize($team, $league, $slots, allowPartialSave: true);
 
         ($this->ensureSlotRows)($pokepaste);
 
-        DB::transaction(function () use ($pokepaste, $normalized): void {
+        DB::transaction(function () use ($pokepaste, $normalized, $detailsVisible): void {
             foreach ($normalized as $index => $slot) {
                 SetTeamPokepasteSlot::query()->updateOrCreate(
                     [
@@ -37,6 +41,10 @@ class UpdateSetTeamPokepasteAction
                     ],
                     SetTeamPokepasteSlot::attributesFromNormalizedSlot($slot)
                 );
+            }
+
+            if ($detailsVisible !== null) {
+                $pokepaste->update(['details_visible' => $detailsVisible]);
             }
         });
 

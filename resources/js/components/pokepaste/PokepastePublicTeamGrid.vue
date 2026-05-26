@@ -13,12 +13,16 @@ export interface PokepasteViewCard {
     moves: string[];
 }
 
-defineProps<{
+const props = defineProps<{
     cards: PokepasteViewCard[];
+    limitedView?: boolean;
 }>();
 
 function titleLine(card: PokepasteViewCard): string {
     const species = card.species_label ?? 'Pokémon';
+    if (props.limitedView) {
+        return species;
+    }
     const nick = card.nickname_label;
     const item = card.item_label;
     const core = nick ? `${nick} (${species})` : species;
@@ -55,7 +59,7 @@ function titleLine(card: PokepasteViewCard): string {
                                 {{ titleLine(card) }}
                             </h2>
                             <img
-                                v-if="card.item_sprite_url"
+                                v-if="!limitedView && card.item_sprite_url"
                                 :src="card.item_sprite_url"
                                 alt=""
                                 class="mt-0.5 size-6 shrink-0 object-contain opacity-90"
@@ -63,7 +67,7 @@ function titleLine(card: PokepasteViewCard): string {
                             />
                         </div>
                         <dl class="text-muted-foreground space-y-1 text-sm dark:text-zinc-400">
-                            <div v-if="card.ability" class="flex gap-2">
+                            <div v-if="!limitedView && card.ability" class="flex gap-2">
                                 <dt class="shrink-0 font-medium text-zinc-500 dark:text-zinc-500">Ability</dt>
                                 <dd class="text-foreground min-w-0 dark:text-zinc-200">{{ card.ability }}</dd>
                             </div>
@@ -71,10 +75,10 @@ function titleLine(card: PokepasteViewCard): string {
                                 <dt class="shrink-0 font-medium text-zinc-500 dark:text-zinc-500">Tera</dt>
                                 <dd class="text-foreground capitalize dark:text-zinc-200">{{ card.tera_type }}</dd>
                             </div>
-                            <div v-if="card.evs_line" class="font-mono text-xs">
+                            <div v-if="!limitedView && card.evs_line" class="font-mono text-xs">
                                 {{ card.evs_line }}
                             </div>
-                            <div v-if="card.nature_label" class="flex gap-2">
+                            <div v-if="!limitedView && card.nature_label" class="flex gap-2">
                                 <dt class="shrink-0 font-medium text-zinc-500 dark:text-zinc-500">Nature</dt>
                                 <dd class="text-foreground dark:text-zinc-200">{{ card.nature_label }}</dd>
                             </div>
@@ -82,6 +86,7 @@ function titleLine(card: PokepasteViewCard): string {
                     </div>
                 </div>
                 <ul
+                    v-if="!limitedView"
                     class="border-border/50 text-foreground divide-border/50 border-t px-4 py-3 text-sm dark:border-zinc-800 dark:text-zinc-200"
                 >
                     <li v-for="(move, mi) in card.moves" :key="mi" class="flex gap-2 py-0.5">

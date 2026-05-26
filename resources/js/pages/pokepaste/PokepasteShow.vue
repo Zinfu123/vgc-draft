@@ -25,6 +25,8 @@ const props = defineProps<{
     natures: NatureOption[];
     view_cards: PokepasteViewCard[];
     showdown_export: string;
+    details_visible: boolean;
+    show_limited_public_view: boolean;
 }>();
 
 const pageTitle = computed(() => {
@@ -89,6 +91,7 @@ const breadcrumbs = computed<BreadcrumbItemType[]>(() => {
                 :all-tera-types="all_tera_types"
                 :natures="natures"
                 :showdown-export="showdown_export"
+                :details-visible="details_visible"
             />
         </div>
     </AppLayout>
@@ -142,13 +145,20 @@ const breadcrumbs = computed<BreadcrumbItemType[]>(() => {
         </header>
 
         <main class="mx-auto max-w-6xl px-4 py-10 space-y-8">
+            <p
+                v-if="show_limited_public_view"
+                class="text-muted-foreground rounded-lg border border-dashed px-4 py-3 text-sm dark:border-zinc-700 dark:text-zinc-400"
+            >
+                This paste only shows Pokémon brought and Tera types. Full set details are hidden until the owner makes
+                them visible.
+            </p>
             <PokepastePastePanel
                 v-if="showdown_export.trim()"
                 :model-value="showdown_export"
                 :pokepaste-public-id="pokepaste_public_id"
                 readonly
             />
-            <PokepastePublicTeamGrid :cards="view_cards" />
+            <PokepastePublicTeamGrid :cards="view_cards" :limited-view="show_limited_public_view" />
         </main>
 
         <footer class="text-muted-foreground mx-auto max-w-6xl px-4 py-8 text-center text-xs dark:text-zinc-600">

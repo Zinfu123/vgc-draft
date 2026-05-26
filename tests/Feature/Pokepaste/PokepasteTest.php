@@ -254,13 +254,16 @@ it('returns forbidden when user is not a participant in the match', function () 
         ->assertForbidden();
 });
 
-it('includes showdown export text on public paste view after save', function () {
+it('hides full paste details from public viewers by default', function () {
     $data = createLeagueTeamWithSixDraftedPokemonAndMatch();
     $slots = buildValidSlots($data['leaguePokemon'], $data['heldItems']);
     $pokepaste = coachPokepasteRecord($data);
 
     $this->actingAs($data['coach'])
-        ->put(route('pokepaste.update', ['pokepaste' => $pokepaste->public_id]), ['slots' => $slots])
+        ->put(route('pokepaste.update', ['pokepaste' => $pokepaste->public_id]), [
+            'slots' => $slots,
+            'details_visible' => false,
+        ])
         ->assertRedirect();
 
     $this->post('/logout');
@@ -271,10 +274,44 @@ it('includes showdown export text on public paste view after save', function () 
             ->component('pokepaste/PokepasteShow')
             ->where('is_owner', false)
             ->where('edit_mode', false)
+            ->where('details_visible', false)
+            ->where('show_limited_public_view', true)
+            ->where('showdown_export', '')
+            ->where('view_cards.0.species_label', 'Pastemon1')
+            ->where('view_cards.0.tera_type', 'Fire')
+            ->where('view_cards.0.ability', null)
+            ->where('view_cards.0.item_label', null)
+            ->where('view_cards.0.moves', ['', '', '', ''])
+        );
+});
+
+it('includes showdown export text on public paste view when details are visible', function () {
+    $data = createLeagueTeamWithSixDraftedPokemonAndMatch();
+    $slots = buildValidSlots($data['leaguePokemon'], $data['heldItems']);
+    $pokepaste = coachPokepasteRecord($data);
+
+    $this->actingAs($data['coach'])
+        ->put(route('pokepaste.update', ['pokepaste' => $pokepaste->public_id]), [
+            'slots' => $slots,
+            'details_visible' => true,
+        ])
+        ->assertRedirect();
+
+    $this->post('/logout');
+
+    $this->get(route('pokepaste.show', ['pokepaste' => $pokepaste->public_id]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('pokepaste/PokepasteShow')
+            ->where('is_owner', false)
+            ->where('edit_mode', false)
+            ->where('details_visible', true)
+            ->where('show_limited_public_view', false)
             ->where('showdown_export', fn ($text) => is_string($text)
                 && str_contains($text, 'Pastemon1')
                 && str_contains($text, 'Ability: Keen Eye')
                 && str_contains($text, '- Tackle'))
+            ->where('view_cards.0.ability', 'Keen Eye')
         );
 });
 

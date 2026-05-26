@@ -51,6 +51,7 @@ class UpdateTeamPokepasteRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'details_visible' => ['sometimes', 'boolean'],
             'slots' => ['required', 'array', 'size:6'],
             'slots.*.league_pokemon_id' => ['nullable', 'integer', Rule::exists('league_pokemon', 'id')],
             'slots.*.ability' => ['nullable', 'string', 'max:120'],
