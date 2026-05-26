@@ -3,11 +3,10 @@ import PokepastePastePanel from '@/components/pokepaste/PokepastePastePanel.vue'
 import PokepasteSlotCard from '@/components/pokepaste/PokepasteSlotCard.vue';
 import type { HeldItemOption, NatureOption, RosterOption } from '@/components/pokepaste/PokepasteSlotCard.vue';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import { buildShowdownExport, type PokepasteSlot } from '@/lib/pokepaste/showdownExport';
-import { router, useForm } from '@inertiajs/vue3';
+import { useForm } from '@inertiajs/vue3';
 import { CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-vue-next';
-import { computed, nextTick, onMounted, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const showdownFieldText = ref('');
 
@@ -23,13 +22,11 @@ const props = defineProps<{
 }>();
 
 const saveBanner = ref(false);
-const saving = ref(false);
-const savingVisibility = ref(false);
 const activeSlot = ref(0);
-const detailsVisible = ref(props.detailsVisible);
 
 const form = useForm({
     slots: [...props.slots] as PokepasteSlot[],
+    details_visible: Boolean(props.detailsVisible),
 });
 
 watch(
@@ -40,29 +37,12 @@ watch(
     { deep: true },
 );
 
-const skipVisibilityPatch = ref(true);
-
-onMounted(() => {
-    skipVisibilityPatch.value = false;
-});
-
 watch(
-    () => props.detailsVisible,
-    (next) => {
-        skipVisibilityPatch.value = true;
-        detailsVisible.value = next;
-        nextTick(() => {
-            skipVisibilityPatch.value = false;
-        });
+    () => props.pokepastePublicId,
+    () => {
+        form.details_visible = Boolean(props.detailsVisible);
     },
 );
-
-watch(detailsVisible, (value) => {
-    if (skipVisibilityPatch.value) {
-        return;
-    }
-    persistDetailsVisible(value);
-});
 
 const rosterMap = computed(() => {
     const m: Record<number, { pokedex_name: string }> = {};
@@ -131,48 +111,17 @@ function updateSlot(index: number, slot: PokepasteSlot): void {
     form.slots = form.slots.map((s, i) => (i === index ? { ...slot } : s));
 }
 
-function persistDetailsVisible(value: boolean): void {
-    savingVisibility.value = true;
-
-    router.patch(
-        route('pokepaste.update-details-visible', { pokepaste: props.pokepastePublicId }),
-        { details_visible: value },
-        {
-            preserveScroll: true,
-            preserveState: true,
-            onFinish: () => {
-                savingVisibility.value = false;
-            },
-        },
-    );
-}
-
 function submit(): void {
-    saving.value = true;
-
-    router.put(
-        route('pokepaste.update', { pokepaste: props.pokepastePublicId }),
-        {
-            slots: form.slots,
-            details_visible: detailsVisible.value === true,
+    form.put(route('pokepaste.update', { pokepaste: props.pokepastePublicId }), {
+        preserveScroll: true,
+        onSuccess: () => {
+            syncShowdownFieldText();
+            saveBanner.value = true;
+            setTimeout(() => {
+                saveBanner.value = false;
+            }, 4000);
         },
-        {
-            preserveScroll: true,
-            onSuccess: () => {
-                syncShowdownFieldText();
-                saveBanner.value = true;
-                setTimeout(() => {
-                    saveBanner.value = false;
-                }, 4000);
-            },
-            onError: (errors) => {
-                form.clearErrors().setError(errors);
-            },
-            onFinish: () => {
-                saving.value = false;
-            },
-        },
-    );
+    });
 }
 
 function onPasteApplied(slots: PokepasteSlot[]): void {
@@ -231,8 +180,8 @@ const completedCount = computed(() => form.slots.filter(isSlotComplete).length);
             </div>
             <div class="flex items-center gap-2">
                 <span class="text-muted-foreground text-sm">{{ completedCount }}/6 complete</span>
-                <Button type="button" :disabled="saving" @click="submit">
-                    {{ saving ? 'Saving…' : 'Save paste' }}
+                <Button type="button" :disabled="form.processing" @click="submit">
+                    {{ form.processing ? 'Saving…' : 'Save paste' }}
                 </Button>
             </div>
         </div>
@@ -245,21 +194,22 @@ const completedCount = computed(() => form.slots.filter(isSlotComplete).length);
             <p v-for="(msg, key) in form.errors" :key="key">{{ Array.isArray(msg) ? msg.join(' ') : msg }}</p>
         </div>
 
-        <!-- Public visibility (checkbox inside label so clicks stay in sync with v-model) -->
+        <!-- Public visibility -->
         <div class="border-border/60 bg-muted/20 rounded-lg border px-4 py-3 dark:border-zinc-700 dark:bg-zinc-900/40">
-            <label class="flex cursor-pointer items-start gap-3">
-                <Checkbox
-                    v-model:checked="detailsVisible"
-                    class="mt-0.5"
-                    :disabled="saving || savingVisibility"
+            <label for="pokepaste-details-visible" class="flex cursor-pointer items-start gap-3">
+                <input
+                    id="pokepaste-details-visible"
+                    v-model="form.details_visible"
+                    type="checkbox"
+                    class="mt-0.5 size-4 shrink-0 rounded border-input accent-primary"
+                    :disabled="form.processing"
                 />
                 <span class="min-w-0 flex-1 space-y-0.5">
                     <span class="text-sm font-medium">Show full team details on public paste</span>
                     <span class="text-muted-foreground block text-xs">
                         When off, viewers only see which Pokémon you brought and each Tera type—not moves, items, EVs,
-                        or abilities. This saves immediately when toggled.
+                        or abilities.
                     </span>
-                    <span v-if="savingVisibility" class="text-muted-foreground block text-xs">Saving visibility…</span>
                 </span>
             </label>
         </div>
