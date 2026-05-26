@@ -24,7 +24,7 @@ class UpdateSetTeamPokepasteAction
         SetTeamPokepaste $pokepaste,
         League $league,
         array $slots,
-        ?bool $detailsVisible = null,
+        bool $detailsVisible,
     ): RedirectResponse {
         $pokepaste->loadMissing('team');
         $team = $pokepaste->team;
@@ -43,9 +43,7 @@ class UpdateSetTeamPokepasteAction
                 );
             }
 
-            if ($detailsVisible !== null) {
-                $pokepaste->update(['details_visible' => $detailsVisible]);
-            }
+            $pokepaste->update(['details_visible' => $detailsVisible]);
         });
 
         return redirect()

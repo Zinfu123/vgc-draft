@@ -12,6 +12,10 @@ class UpdateTeamPokepasteRequest extends FormRequest
 {
     protected function prepareForValidation(): void
     {
+        if (! $this->exists('details_visible')) {
+            $this->merge(['details_visible' => false]);
+        }
+
         $slots = $this->input('slots');
         if (! is_array($slots)) {
             return;
@@ -51,7 +55,7 @@ class UpdateTeamPokepasteRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'details_visible' => ['sometimes', 'boolean'],
+            'details_visible' => ['required', 'boolean'],
             'slots' => ['required', 'array', 'size:6'],
             'slots.*.league_pokemon_id' => ['nullable', 'integer', Rule::exists('league_pokemon', 'id')],
             'slots.*.ability' => ['nullable', 'string', 'max:120'],

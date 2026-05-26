@@ -123,9 +123,7 @@ class PokepasteController extends Controller
             $pokepaste,
             $league,
             $validated['slots'],
-            array_key_exists('details_visible', $validated)
-                ? (bool) $validated['details_visible']
-                : null,
+            (bool) $validated['details_visible'],
         );
     }
 

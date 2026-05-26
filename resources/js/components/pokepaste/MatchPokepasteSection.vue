@@ -24,10 +24,10 @@ const props = defineProps<{
 
 const saveBanner = ref(false);
 const activeSlot = ref(0);
+const detailsVisible = ref(props.detailsVisible);
 
 const form = useForm({
     slots: [...props.slots] as PokepasteSlot[],
-    details_visible: props.detailsVisible,
 });
 
 watch(
@@ -41,7 +41,7 @@ watch(
 watch(
     () => props.detailsVisible,
     (next) => {
-        form.details_visible = next;
+        detailsVisible.value = next;
     },
 );
 
@@ -113,14 +113,19 @@ function updateSlot(index: number, slot: PokepasteSlot): void {
 }
 
 function submit(): void {
-    form.put(route('pokepaste.update', { pokepaste: props.pokepastePublicId }), {
-        preserveScroll: true,
-        onSuccess: () => {
-            syncShowdownFieldText();
-            saveBanner.value = true;
-            setTimeout(() => { saveBanner.value = false; }, 4000);
-        },
-    });
+    form
+        .transform((data) => ({
+            slots: data.slots,
+            details_visible: detailsVisible.value,
+        }))
+        .put(route('pokepaste.update', { pokepaste: props.pokepastePublicId }), {
+            preserveScroll: true,
+            onSuccess: () => {
+                syncShowdownFieldText();
+                saveBanner.value = true;
+                setTimeout(() => { saveBanner.value = false; }, 4000);
+            },
+        });
 }
 
 function onPasteApplied(slots: PokepasteSlot[]): void {
@@ -199,9 +204,9 @@ const completedCount = computed(() => form.slots.filter(isSlotComplete).length);
         >
             <Checkbox
                 id="pokepaste-details-visible"
-                :checked="form.details_visible"
+                :checked="detailsVisible"
                 :disabled="form.processing"
-                @update:checked="(checked) => (form.details_visible = checked === true)"
+                @update:checked="(checked) => (detailsVisible = checked === true)"
             />
             <div class="min-w-0 flex-1 space-y-0.5">
                 <label for="pokepaste-details-visible" class="cursor-pointer text-sm font-medium">

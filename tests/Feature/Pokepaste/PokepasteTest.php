@@ -254,6 +254,23 @@ it('returns forbidden when user is not a participant in the match', function () 
         ->assertForbidden();
 });
 
+it('persists details_visible when saving from the editor', function () {
+    $data = createLeagueTeamWithSixDraftedPokemonAndMatch();
+    $slots = buildValidSlots($data['leaguePokemon'], $data['heldItems']);
+    $pokepaste = coachPokepasteRecord($data);
+
+    expect($pokepaste->fresh()->details_visible)->toBeFalse();
+
+    $this->actingAs($data['coach'])
+        ->put(route('pokepaste.update', ['pokepaste' => $pokepaste->public_id]), [
+            'slots' => $slots,
+            'details_visible' => true,
+        ])
+        ->assertRedirect();
+
+    expect($pokepaste->fresh()->details_visible)->toBeTrue();
+});
+
 it('hides full paste details from public viewers by default', function () {
     $data = createLeagueTeamWithSixDraftedPokemonAndMatch();
     $slots = buildValidSlots($data['leaguePokemon'], $data['heldItems']);
