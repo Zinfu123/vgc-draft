@@ -7,7 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { buildShowdownExport, type PokepasteSlot } from '@/lib/pokepaste/showdownExport';
 import { router, useForm } from '@inertiajs/vue3';
 import { CheckCircle2, ChevronLeft, ChevronRight } from 'lucide-vue-next';
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, ref, watch } from 'vue';
 
 const showdownFieldText = ref('');
 
@@ -40,12 +40,29 @@ watch(
     { deep: true },
 );
 
+const skipVisibilityPatch = ref(true);
+
+onMounted(() => {
+    skipVisibilityPatch.value = false;
+});
+
 watch(
     () => props.detailsVisible,
     (next) => {
+        skipVisibilityPatch.value = true;
         detailsVisible.value = next;
+        nextTick(() => {
+            skipVisibilityPatch.value = false;
+        });
     },
 );
+
+watch(detailsVisible, (value) => {
+    if (skipVisibilityPatch.value) {
+        return;
+    }
+    persistDetailsVisible(value);
+});
 
 const rosterMap = computed(() => {
     const m: Record<number, { pokedex_name: string }> = {};
@@ -114,9 +131,7 @@ function updateSlot(index: number, slot: PokepasteSlot): void {
     form.slots = form.slots.map((s, i) => (i === index ? { ...slot } : s));
 }
 
-function onDetailsVisibleChange(checked: boolean | 'indeterminate'): void {
-    const value = checked === true;
-    detailsVisible.value = value;
+function persistDetailsVisible(value: boolean): void {
     savingVisibility.value = true;
 
     router.patch(
@@ -139,7 +154,7 @@ function submit(): void {
         route('pokepaste.update', { pokepaste: props.pokepastePublicId }),
         {
             slots: form.slots,
-            details_visible: detailsVisible.value,
+            details_visible: detailsVisible.value === true,
         },
         {
             preserveScroll: true,
@@ -230,26 +245,23 @@ const completedCount = computed(() => form.slots.filter(isSlotComplete).length);
             <p v-for="(msg, key) in form.errors" :key="key">{{ Array.isArray(msg) ? msg.join(' ') : msg }}</p>
         </div>
 
-        <!-- Public visibility -->
-        <div
-            class="border-border/60 bg-muted/20 flex flex-wrap items-start gap-3 rounded-lg border px-4 py-3 dark:border-zinc-700 dark:bg-zinc-900/40"
-        >
-            <Checkbox
-                id="pokepaste-details-visible"
-                :checked="detailsVisible"
-                :disabled="saving || savingVisibility"
-                @update:checked="onDetailsVisibleChange"
-            />
-            <div class="min-w-0 flex-1 space-y-0.5">
-                <label for="pokepaste-details-visible" class="cursor-pointer text-sm font-medium">
-                    Show full team details on public paste
-                </label>
-                <p class="text-muted-foreground text-xs">
-                    When off, viewers only see which Pokémon you brought and each Tera type—not moves, items, EVs, or
-                    abilities. This saves immediately when toggled.
-                </p>
-                <p v-if="savingVisibility" class="text-muted-foreground text-xs">Saving visibility…</p>
-            </div>
+        <!-- Public visibility (checkbox inside label so clicks stay in sync with v-model) -->
+        <div class="border-border/60 bg-muted/20 rounded-lg border px-4 py-3 dark:border-zinc-700 dark:bg-zinc-900/40">
+            <label class="flex cursor-pointer items-start gap-3">
+                <Checkbox
+                    v-model:checked="detailsVisible"
+                    class="mt-0.5"
+                    :disabled="saving || savingVisibility"
+                />
+                <span class="min-w-0 flex-1 space-y-0.5">
+                    <span class="text-sm font-medium">Show full team details on public paste</span>
+                    <span class="text-muted-foreground block text-xs">
+                        When off, viewers only see which Pokémon you brought and each Tera type—not moves, items, EVs,
+                        or abilities. This saves immediately when toggled.
+                    </span>
+                    <span v-if="savingVisibility" class="text-muted-foreground block text-xs">Saving visibility…</span>
+                </span>
+            </label>
         </div>
 
         <!-- Import from Showdown text -->
