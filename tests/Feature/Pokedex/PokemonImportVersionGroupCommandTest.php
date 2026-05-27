@@ -54,3 +54,40 @@ it('still imports a row when only-missing and game data is absent', function () 
         ->expectsOutputToContain('Importing 1 species')
         ->assertExitCode(0);
 });
+
+it('re-imports only ogerpon mask form pokedex rows when ogerpon-mask-forms is set', function () {
+    $maskNames = \App\Console\Commands\PokemonImportVersionGroupCommand::OGERPON_MASK_POKEDEX_NAMES;
+
+    foreach ($maskNames as $name) {
+        DB::table('pokedex')->insert([
+            'nationaldex_id' => 1017,
+            'name' => $name,
+            'type1' => 'Grass',
+            'type2' => null,
+            'sprite_url' => null,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    DB::table('pokedex')->insert([
+        'nationaldex_id' => 1017,
+        'name' => 'ogerpon',
+        'type1' => 'Grass',
+        'type2' => null,
+        'sprite_url' => null,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $this->partialMock(\App\Modules\Pokedex\Services\PokeApiPokemonGameDataImporter::class, function ($mock) {
+        $mock->shouldReceive('import')->times(3)->andReturn(true);
+    });
+
+    $this->artisan('pokemon:import-version-group', [
+        'slug' => 'scarlet-violet',
+        '--ogerpon-mask-forms' => true,
+    ])
+        ->expectsOutputToContain('Importing 3 species')
+        ->assertExitCode(0);
+});

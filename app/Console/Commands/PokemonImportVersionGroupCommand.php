@@ -10,9 +10,21 @@ use Illuminate\Console\Command;
 
 class PokemonImportVersionGroupCommand extends Command
 {
+    /**
+     * Pokedex {@see Pokedex::$name} values for Ogerpon mask forms (not the base Teal form).
+     *
+     * @var list<string>
+     */
+    public const OGERPON_MASK_POKEDEX_NAMES = [
+        'ogerpon-wellspring',
+        'ogerpon-hearthflame',
+        'ogerpon-cornerstone',
+    ];
+
     protected $signature = 'pokemon:import-version-group
                             {slug? : PokeAPI version group slug (e.g. scarlet-violet)}
                             {--id= : Import only this pokedex row id}
+                            {--ogerpon-mask-forms : Re-import only ogerpon-wellspring, ogerpon-hearthflame, and ogerpon-cornerstone (refreshes wrong variety data)}
                             {--async : Dispatch a queued job per species instead of running synchronously}
                             {--only-missing : Skip species that already have pokemon_generation_data for this version group (resume)}
                             {--chunk= : Max species to process this run (use with --only-missing for batched resume)}';
@@ -32,6 +44,10 @@ class PokemonImportVersionGroupCommand extends Command
         $query = Pokedex::query()->orderBy('id');
         if ($this->option('id') !== null) {
             $query->where('id', (int) $this->option('id'));
+        }
+
+        if ($this->option('ogerpon-mask-forms')) {
+            $query->whereIn('name', self::OGERPON_MASK_POKEDEX_NAMES);
         }
 
         if ($this->option('only-missing')) {
