@@ -95,7 +95,14 @@ class PokeApiPokemonGameDataImporter
             ]
         );
 
-        $this->syncAbilities($pokedex->id, $versionGroup->id, $pokemon);
+        $this->syncAbilities(
+            $pokedex->id,
+            $versionGroup->id,
+            $pokemon,
+            $primaryId,
+            $secondaryId,
+            $hiddenId,
+        );
         $this->hydrateMoveCache($baseUrl, $learnset);
 
         return true;
@@ -167,8 +174,17 @@ class PokeApiPokemonGameDataImporter
     /**
      * @param  array<string, mixed>  $pokemon
      */
-    private function syncAbilities(int $pokedexId, int $versionGroupId, array $pokemon): void
-    {
+    /**
+     * @param  array<string, mixed>  $pokemon
+     */
+    private function syncAbilities(
+        int $pokedexId,
+        int $versionGroupId,
+        array $pokemon,
+        ?int $primaryId,
+        ?int $secondaryId,
+        ?int $hiddenId,
+    ): void {
         AbilityGenerationData::query()
             ->where('pokedex_id', $pokedexId)
             ->where('version_group_id', $versionGroupId)
@@ -192,6 +208,53 @@ class PokeApiPokemonGameDataImporter
                 'ability_name' => $name,
                 'slot' => (int) ($row['slot'] ?? 0),
                 'is_hidden' => ! empty($row['is_hidden']),
+            ]);
+        }
+
+        if (AbilityGenerationData::query()
+            ->where('pokedex_id', $pokedexId)
+            ->where('version_group_id', $versionGroupId)
+            ->exists()) {
+            return;
+        }
+
+        $slotById = [];
+        foreach ($pokemon['abilities'] ?? [] as $row) {
+            if (! is_array($row) || empty($row['ability']['url'])) {
+                continue;
+            }
+
+            $id = $this->extractTrailingId((string) $row['ability']['url']);
+            $name = isset($row['ability']['name']) ? (string) $row['ability']['name'] : '';
+            if ($id === null || $name === '') {
+                continue;
+            }
+
+            $slotById[$id] = [
+                'name' => $name,
+                'slot' => (int) ($row['slot'] ?? 1),
+                'is_hidden' => ! empty($row['is_hidden']),
+            ];
+        }
+
+        foreach ([1 => $primaryId, 2 => $secondaryId, 3 => $hiddenId] as $slot => $id) {
+            if ($id === null || $id <= 0) {
+                continue;
+            }
+
+            $fromPokemon = $slotById[$id] ?? null;
+            $name = $fromPokemon['name'] ?? null;
+            if ($name === null || $name === '') {
+                continue;
+            }
+
+            AbilityGenerationData::query()->create([
+                'pokedex_id' => $pokedexId,
+                'version_group_id' => $versionGroupId,
+                'pokeapi_ability_id' => $id,
+                'ability_name' => $name,
+                'slot' => $fromPokemon['slot'] ?? $slot,
+                'is_hidden' => $fromPokemon['is_hidden'] ?? ($slot === 3),
             ]);
         }
     }

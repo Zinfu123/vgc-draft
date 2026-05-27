@@ -2,15 +2,19 @@
 
 namespace App\Modules\Pokepaste\Actions;
 
-use App\Modules\Pokedex\Models\AbilityGenerationData;
 use App\Modules\Pokedex\Models\PokeApiMoveCache;
 use App\Modules\Pokedex\Models\PokemonGenerationData;
 use App\Modules\Pokedex\Models\VersionGroup;
+use App\Modules\Pokedex\Services\PokemonAbilityListResolver;
 use App\Modules\Pokepaste\Services\ShowdownFormatHelper;
 use Illuminate\Support\Collection;
 
 class BuildPokepasteRosterPayloadAction
 {
+    public function __construct(
+        private PokemonAbilityListResolver $abilityListResolver,
+    ) {}
+
     /**
      * @param  Collection<int, \App\Modules\League\Models\LeaguePokemon>  $leaguePokemon
      * @return list<array<string, mixed>>
@@ -21,26 +25,17 @@ class BuildPokepasteRosterPayloadAction
 
         foreach ($leaguePokemon as $lp) {
             $gameData = null;
-            $abilitiesRaw = [];
             if ($versionGroup !== null) {
                 $gameData = PokemonGenerationData::query()
                     ->where('pokedex_id', $lp->pokedex_id)
                     ->where('version_group_id', $versionGroup->id)
                     ->first();
-
-                if ($gameData !== null) {
-                    $abilitiesRaw = AbilityGenerationData::query()
-                        ->where('pokedex_id', $lp->pokedex_id)
-                        ->where('version_group_id', $versionGroup->id)
-                        ->orderBy('slot')
-                        ->get();
-                }
             }
 
             $abilities = [];
-            if ($gameData !== null) {
-                foreach ($abilitiesRaw as $row) {
-                    $label = ShowdownFormatHelper::moveSlugToDisplay($row->ability_name);
+            if ($versionGroup !== null) {
+                foreach ($this->abilityListResolver->forPokemon($lp->pokedex_id, $versionGroup->id, $gameData) as $row) {
+                    $label = ShowdownFormatHelper::moveSlugToDisplay($row['ability_name']);
                     if ($label !== '' && ! in_array($label, $abilities, true)) {
                         $abilities[] = $label;
                     }

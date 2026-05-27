@@ -22,6 +22,7 @@ use App\Modules\Pokepaste\Services\ShowdownTeamExporter;
 use App\Modules\Pokepaste\Support\PokepasteSlotDefaults;
 use App\Modules\Teams\Models\Team;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Http;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -579,6 +580,55 @@ it('accepts showdown ability labels that differ only in title casing from import
         ->first();
     expect($row)->not->toBeNull();
     expect($row->ability)->toBe('Sword Of Ruin');
+});
+
+it('accepts an ability from generation data pokeapi ids when ability rows are missing', function () {
+    Http::fake([
+        '*/ability/287/' => Http::response([
+            'id' => 287,
+            'name' => 'beads-of-ruin',
+            'effect_entries' => [
+                [
+                    'language' => ['name' => 'en'],
+                    'effect' => 'Test.',
+                    'short_effect' => 'Test.',
+                ],
+            ],
+        ]),
+    ]);
+
+    $data = createLeagueTeamWithSixDraftedPokemonAndMatch();
+    $firstLp = $data['leaguePokemon'][0];
+
+    AbilityGenerationData::query()
+        ->where('pokedex_id', $firstLp->pokedex_id)
+        ->where('version_group_id', $data['versionGroup']->id)
+        ->delete();
+
+    PokemonGenerationData::query()
+        ->where('pokedex_id', $firstLp->pokedex_id)
+        ->where('version_group_id', $data['versionGroup']->id)
+        ->update([
+            'ability_primary_pokeapi_id' => 287,
+            'ability_secondary_pokeapi_id' => null,
+            'ability_hidden_pokeapi_id' => null,
+        ]);
+
+    $slots = buildValidSlots($data['leaguePokemon'], $data['heldItems']);
+    $slots[0]['ability'] = 'Beads of Ruin';
+
+    $pokepaste = coachPokepasteRecord($data);
+
+    $this->actingAs($data['coach'])
+        ->put(route('pokepaste.update', ['pokepaste' => $pokepaste->public_id]), ['slots' => $slots])
+        ->assertRedirect(route('pokepaste.show', ['pokepaste' => $pokepaste->public_id, 'edit' => 1]));
+
+    $row = SetTeamPokepasteSlot::query()
+        ->where('set_team_pokepaste_id', $pokepaste->id)
+        ->where('slot_index', 0)
+        ->first();
+    expect($row)->not->toBeNull();
+    expect($row->ability)->toBe('Beads Of Ruin');
 });
 
 it('saves a valid six-mon paste for the match and team', function () {

@@ -6,10 +6,10 @@ use App\Enums\PokemonNature;
 use App\Enums\PokemonTeraType;
 use App\Modules\League\Models\League;
 use App\Modules\League\Models\LeaguePokemon;
-use App\Modules\Pokedex\Models\AbilityGenerationData;
 use App\Modules\Pokedex\Models\PokemonGenerationData;
 use App\Modules\Pokedex\Models\VersionGroup;
 use App\Modules\Pokedex\Models\VersionGroupHeldItem;
+use App\Modules\Pokedex\Services\PokemonAbilityListResolver;
 use App\Modules\Pokepaste\Support\PokepasteSlotDefaults;
 use App\Modules\Teams\Models\Team;
 use Illuminate\Validation\ValidationException;
@@ -18,6 +18,7 @@ class PokepasteSlotValidator
 {
     public function __construct(
         private VersionGroupHeldItemLookup $heldItemLookup,
+        private PokemonAbilityListResolver $abilityListResolver,
     ) {}
 
     /**
@@ -76,11 +77,6 @@ class PokepasteSlotValidator
                 throw ValidationException::withMessages([$prefix.'.league_pokemon_id' => 'Game data is missing for this Pokémon. Import version group data first.']);
             }
 
-            $abilityRows = AbilityGenerationData::query()
-                ->where('pokedex_id', $leaguePokemon->pokedex_id)
-                ->where('version_group_id', $versionGroup->id)
-                ->get();
-
             $ability = trim((string) ($slot['ability'] ?? ''));
 
             if ($ability === '') {
@@ -88,16 +84,12 @@ class PokepasteSlotValidator
                     throw ValidationException::withMessages([$prefix.'.ability' => 'Each Pokémon must have an ability.']);
                 }
             } else {
-                $matchedDisplay = null;
-                $abilityKey = ShowdownFormatHelper::abilityToMatchKey($ability);
-                foreach ($abilityRows as $row) {
-                    $rowKey = ShowdownFormatHelper::abilityToMatchKey($row->ability_name);
-                    if ($rowKey === $abilityKey) {
-                        $matchedDisplay = ShowdownFormatHelper::moveSlugToDisplay($row->ability_name);
-
-                        break;
-                    }
-                }
+                $matchedDisplay = $this->abilityListResolver->matchDisplayAbility(
+                    $ability,
+                    $leaguePokemon->pokedex_id,
+                    $versionGroup->id,
+                    $gameData,
+                );
                 if ($matchedDisplay === null) {
                     throw ValidationException::withMessages([$prefix.'.ability' => 'Invalid ability for this Pokémon.']);
                 }

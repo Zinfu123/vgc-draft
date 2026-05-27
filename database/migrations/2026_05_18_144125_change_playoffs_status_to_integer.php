@@ -2,12 +2,13 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        if (DB::getDriverName() !== 'pgsql') {
+        if (DB::getDriverName() !== 'pgsql' || ! $this->statusIsString()) {
             return;
         }
 
@@ -27,25 +28,22 @@ return new class extends Migration
         DB::statement('ALTER TABLE playoffs ALTER COLUMN status SET DEFAULT 0');
     }
 
-    public function down(): void
+    /**
+     * Reversing the legacy string conversion is not supported once applied.
+     */
+    public function down(): void {}
+
+    private function statusIsString(): bool
     {
-        if (DB::getDriverName() !== 'pgsql') {
-            return;
+        $column = collect(Schema::getColumns('playoffs'))
+            ->firstWhere('name', 'status');
+
+        if ($column === null) {
+            return false;
         }
 
-        DB::statement('ALTER TABLE playoffs ALTER COLUMN status DROP DEFAULT');
+        $type = strtolower((string) ($column['type_name'] ?? $column['type'] ?? ''));
 
-        DB::statement("
-            ALTER TABLE playoffs
-            ALTER COLUMN status TYPE varchar(24)
-            USING CASE status
-                WHEN 0 THEN 'draft'
-                WHEN 1 THEN 'active'
-                WHEN 2 THEN 'completed'
-                ELSE 'draft'
-            END
-        ");
-
-        DB::statement("ALTER TABLE playoffs ALTER COLUMN status SET DEFAULT 'draft'");
+        return in_array($type, ['varchar', 'character varying', 'text', 'string', 'bpchar'], true);
     }
 };
