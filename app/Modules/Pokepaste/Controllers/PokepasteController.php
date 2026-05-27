@@ -14,6 +14,7 @@ use App\Modules\Pokepaste\Actions\ReadPokepastePageAction;
 use App\Modules\Pokepaste\Actions\UpdatePokepasteDetailsVisibleAction;
 use App\Modules\Pokepaste\Actions\UpdateSetTeamPokepasteAction;
 use App\Modules\Pokepaste\Models\SetTeamPokepaste;
+use App\Modules\Pokepaste\Services\AuthorizePokepasteEditor;
 use App\Modules\Pokepaste\Services\EnsureSetTeamPokepasteSlotRows;
 use App\Modules\Pokepaste\Support\PokepasteSlotDefaults;
 use Illuminate\Http\JsonResponse;
@@ -61,10 +62,12 @@ class PokepasteController extends Controller
         $user = $request->user();
         $isOwner = $user !== null
             && (int) $pokepaste->team->user_id === (int) $user->id;
+        $canEdit = $user !== null
+            && app(AuthorizePokepasteEditor::class)->userMayEdit($pokepaste, $user);
 
         $hasData = $this->pokepasteHasSlotData($pokepaste);
 
-        if ($isOwner) {
+        if ($canEdit) {
             if ($request->boolean('view')) {
                 $editMode = false;
             } elseif ($request->boolean('edit')) {
@@ -85,7 +88,7 @@ class PokepasteController extends Controller
             $pageData['showdown_export'] = '';
         }
 
-        if (! $isOwner) {
+        if (! $canEdit) {
             $pageData = [
                 'set' => $pageData['set'],
                 'playoff_match' => $pageData['playoff_match'],
@@ -104,6 +107,7 @@ class PokepasteController extends Controller
         return Inertia::render('pokepaste/PokepasteShow', array_merge($pageData, [
             'pokepaste_public_id' => (string) $pokepaste->public_id,
             'is_owner' => $isOwner,
+            'can_edit' => $canEdit,
             'edit_mode' => $editMode,
             'paste_has_data' => $hasData,
             'details_visible' => $detailsVisible,

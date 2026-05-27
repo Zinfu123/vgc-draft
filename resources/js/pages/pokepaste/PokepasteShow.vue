@@ -12,6 +12,7 @@ import { computed } from 'vue';
 const props = defineProps<{
     pokepaste_public_id: string;
     is_owner: boolean;
+    can_edit: boolean;
     edit_mode: boolean;
     paste_has_data: boolean;
     set: { id: number; league_id: number; round: number } | null;
@@ -137,7 +138,7 @@ const breadcrumbs = computed<BreadcrumbItemType[]>(() => {
                             Log in
                         </Link>
                     </template>
-                    <Button v-if="is_owner" as-child size="sm" class="shrink-0">
+                    <Button v-if="can_edit" as-child size="sm" class="shrink-0">
                         <Link :href="editHref">Edit paste</Link>
                     </Button>
                 </nav>

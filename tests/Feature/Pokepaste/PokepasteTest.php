@@ -434,6 +434,98 @@ it('includes match pokepaste public id only for participants on match detail', f
         );
 });
 
+it('exposes admin match pokepastes for league admins and creates set team pokepaste rows', function () {
+    $data = createLeagueTeamWithSixDraftedPokemonAndMatch();
+
+    expect(SetTeamPokepaste::query()->where('matchable_id', $data['set']->id)->count())->toBe(0);
+
+    $admin = User::query()->findOrFail($data['league']->league_owner);
+
+    $this->actingAs($admin)
+        ->get(route('sets.show', ['set_id' => $data['set']->id]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('match/MatchDetail')
+            ->where('isLeagueAdmin', true)
+            ->where('matchPokepaste', null)
+            ->has('adminMatchPokepastes.team1.pokepaste_public_id')
+            ->has('adminMatchPokepastes.team2.pokepaste_public_id')
+        );
+
+    expect(SetTeamPokepaste::query()->where('matchable_id', $data['set']->id)->count())->toBe(2);
+});
+
+it('does not expose admin match pokepastes when the set is complete', function () {
+    $data = createLeagueTeamWithSixDraftedPokemonAndMatch();
+    $data['set']->update(['status' => 0]);
+    $admin = User::query()->findOrFail($data['league']->league_owner);
+
+    $this->actingAs($admin)
+        ->get(route('sets.show', ['set_id' => $data['set']->id]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('match/MatchDetail')
+            ->where('adminMatchPokepastes', null)
+        );
+});
+
+it('allows a league admin to edit and save a team match pokepaste on behalf of a coach', function () {
+    $data = createLeagueTeamWithSixDraftedPokemonAndMatch();
+    $slots = buildValidSlots($data['leaguePokemon'], $data['heldItems']);
+
+    $admin = User::query()->findOrFail($data['league']->league_owner);
+
+    $this->actingAs($admin)
+        ->get(route('sets.show', ['set_id' => $data['set']->id]))
+        ->assertOk();
+
+    $paste = SetTeamPokepaste::query()
+        ->where('matchable_type', Set::class)
+        ->where('matchable_id', $data['set']->id)
+        ->where('team_id', $data['team']->id)
+        ->first();
+
+    expect($paste)->not->toBeNull();
+
+    $this->actingAs($admin)
+        ->get(route('pokepaste.show', ['pokepaste' => $paste->public_id]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('pokepaste/PokepasteShow')
+            ->where('is_owner', false)
+            ->where('can_edit', true)
+            ->where('edit_mode', true)
+            ->has('roster', 6)
+        );
+
+    $this->actingAs($admin)
+        ->put(route('pokepaste.update', ['pokepaste' => $paste->public_id]), [
+            'slots' => $slots,
+            'details_visible' => false,
+        ])
+        ->assertRedirect();
+
+    expect(
+        SetTeamPokepasteSlot::query()
+            ->where('set_team_pokepaste_id', $paste->id)
+            ->whereNotNull('league_pokemon_id')
+            ->count()
+    )->toBeGreaterThan(0);
+});
+
+it('forbids non-admins from saving another coach match pokepaste', function () {
+    $data = createLeagueTeamWithSixDraftedPokemonAndMatch();
+    $paste = coachPokepasteRecord($data);
+    $slots = buildValidSlots($data['leaguePokemon'], $data['heldItems']);
+
+    $this->actingAs($data['opponent'])
+        ->put(route('pokepaste.update', ['pokepaste' => $paste->public_id]), [
+            'slots' => $slots,
+            'details_visible' => false,
+        ])
+        ->assertForbidden();
+});
+
 it('reports match pokepaste side has_data after paste is saved on a completed set', function () {
     $data = createLeagueTeamWithSixDraftedPokemonAndMatch();
     $data['set']->update([

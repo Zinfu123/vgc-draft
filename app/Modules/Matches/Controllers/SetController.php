@@ -78,6 +78,17 @@ class SetController extends Controller
             && $user !== null
             && $user->can('admin', $league);
 
+        $adminMatchPokepastes = null;
+        if ($isLeagueAdmin && (int) $set->status !== 0) {
+            $set->loadMissing(['team1', 'team2']);
+            if ($set->team1 !== null && $set->team2 !== null) {
+                $adminMatchPokepastes = [
+                    'team1' => $readMatchPokepastePayloadAction($set, $set->team1),
+                    'team2' => $readMatchPokepastePayloadAction($set, $set->team2),
+                ];
+            }
+        }
+
         $isParticipant = $currentUserTeam !== null
             && ($currentUserTeam->id === $set->team1_id || $currentUserTeam->id === $set->team2_id);
 
@@ -85,6 +96,7 @@ class SetController extends Controller
             'set' => fn () => $set,
             'currentUserTeam' => fn () => $currentUserTeam,
             'matchPokepaste' => fn () => $matchPokepaste,
+            'adminMatchPokepastes' => fn () => $adminMatchPokepastes,
             'matchPokepasteSides' => fn () => $readMatchPokepasteSideSummariesAction($set),
             'isLeagueAdmin' => fn () => $isLeagueAdmin,
             'requireTeamMatchPokepasteBeforeResults' => fn () => (bool) ($league?->matchConfig?->require_team_match_pokepaste_before_results ?? false),

@@ -87,6 +87,11 @@ interface MatchPokepastePayload {
     pokepaste_public_id: string;
 }
 
+interface AdminMatchPokepastes {
+    team1: MatchPokepastePayload;
+    team2: MatchPokepastePayload;
+}
+
 interface MatchPokepasteSides {
     team1: { public_id: string; has_data: boolean } | null;
     team2: { public_id: string; has_data: boolean } | null;
@@ -114,6 +119,7 @@ interface Props {
     set: Set;
     currentUserTeam: CurrentUserTeam | null;
     matchPokepaste: MatchPokepastePayload | null;
+    adminMatchPokepastes?: AdminMatchPokepastes | null;
     matchPokepasteSides: MatchPokepasteSides;
     isLeagueAdmin: boolean;
     requireTeamMatchPokepasteBeforeResults?: boolean;
@@ -328,6 +334,27 @@ const authUserId = computed((): number | null => {
 function showdownDisplay(team: { showdown_username?: string | null; user: { showdown_username?: string | null } }): string {
     const t = team.showdown_username?.trim() || team.user.showdown_username?.trim() || '';
     return t;
+}
+
+function participantPasteEditorHref(teamId: number): string | null {
+    if (!props.matchPokepaste || !isUserInSet.value || props.currentUserTeam?.id !== teamId) {
+        return null;
+    }
+
+    return `/pokepaste/${props.matchPokepaste.pokepaste_public_id}`;
+}
+
+function adminPasteEditorHref(team: 'team1' | 'team2', teamId: number): string | null {
+    if (!props.isLeagueAdmin || isSetCompleted.value || participantPasteEditorHref(teamId) !== null) {
+        return null;
+    }
+
+    const payload = props.adminMatchPokepastes?.[team];
+    if (!payload?.pokepaste_public_id) {
+        return null;
+    }
+
+    return `/pokepaste/${payload.pokepaste_public_id}`;
 }
 
 const currentUserMissingShowdown = computed(() => {
@@ -715,15 +742,22 @@ const breadcrumbs: BreadcrumbItem[] = [
                 <h2 class="mb-1 font-semibold">Match Pastes</h2>
                 <p class="text-muted-foreground mb-4 text-sm">
                     Each team's six Pokémon with full build details (moves, items, EVs). Only visible to the submitting player until the match is complete.
+                    <span v-if="isLeagueAdmin && !isUserInSet"> League admins can open the paste editor for either team while the match is in progress.</span>
                 </p>
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <!-- Team 1 paste -->
                     <div class="border-border rounded-lg border p-4">
                         <p class="mb-2 text-sm font-medium">{{ set.team1.name }}</p>
-                        <template v-if="matchPokepaste && isUserInSet && currentUserTeam?.id === set.team1.id">
-                            <p class="text-muted-foreground mb-3 text-xs">Build your team paste with moves, items, and EVs.</p>
+                        <template v-if="participantPasteEditorHref(set.team1.id) || adminPasteEditorHref('team1', set.team1.id)">
+                            <p class="text-muted-foreground mb-3 text-xs">
+                                {{
+                                    adminPasteEditorHref('team1', set.team1.id)
+                                        ? 'Build this team\'s paste on their behalf (moves, items, EVs).'
+                                        : 'Build your team paste with moves, items, and EVs.'
+                                }}
+                            </p>
                             <Link
-                                :href="'/pokepaste/' + matchPokepaste.pokepaste_public_id"
+                                :href="(participantPasteEditorHref(set.team1.id) ?? adminPasteEditorHref('team1', set.team1.id))!"
                                 class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
                             >
                                 Open paste editor
@@ -745,10 +779,16 @@ const breadcrumbs: BreadcrumbItem[] = [
                     <!-- Team 2 paste -->
                     <div class="border-border rounded-lg border p-4">
                         <p class="mb-2 text-sm font-medium">{{ set.team2.name }}</p>
-                        <template v-if="matchPokepaste && isUserInSet && currentUserTeam?.id === set.team2.id">
-                            <p class="text-muted-foreground mb-3 text-xs">Build your team paste with moves, items, and EVs.</p>
+                        <template v-if="participantPasteEditorHref(set.team2.id) || adminPasteEditorHref('team2', set.team2.id)">
+                            <p class="text-muted-foreground mb-3 text-xs">
+                                {{
+                                    adminPasteEditorHref('team2', set.team2.id)
+                                        ? 'Build this team\'s paste on their behalf (moves, items, EVs).'
+                                        : 'Build your team paste with moves, items, and EVs.'
+                                }}
+                            </p>
                             <Link
-                                :href="'/pokepaste/' + matchPokepaste.pokepaste_public_id"
+                                :href="(participantPasteEditorHref(set.team2.id) ?? adminPasteEditorHref('team2', set.team2.id))!"
                                 class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
                             >
                                 Open paste editor

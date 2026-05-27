@@ -22,13 +22,21 @@ class AuthorizePokepasteEditor
             return false;
         }
 
-        if ((int) $pokepaste->team->user_id !== (int) $user->id) {
-            return false;
-        }
-
         $set = $pokepaste->setModel();
         if ($set instanceof Set) {
-            return in_array((int) $pokepaste->team_id, [(int) $set->team1_id, (int) $set->team2_id], true);
+            if (! in_array((int) $pokepaste->team_id, [(int) $set->team1_id, (int) $set->team2_id], true)) {
+                return false;
+            }
+
+            if ((int) $set->status !== 0 && $this->userMayEditSetAsLeagueAdmin($set, $user)) {
+                return true;
+            }
+
+            return (int) $pokepaste->team->user_id === (int) $user->id;
+        }
+
+        if ((int) $pokepaste->team->user_id !== (int) $user->id) {
+            return false;
         }
 
         $match = $pokepaste->playoffMatch();
@@ -41,5 +49,13 @@ class AuthorizePokepasteEditor
         }
 
         return false;
+    }
+
+    private function userMayEditSetAsLeagueAdmin(Set $set, User $user): bool
+    {
+        $set->loadMissing('league');
+        $league = $set->league;
+
+        return $league !== null && $user->can('admin', $league);
     }
 }
