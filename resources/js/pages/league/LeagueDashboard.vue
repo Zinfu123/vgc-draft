@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { LeagueDetailSection } from '@/components/league/LeagueDetailLayout.vue';
 import LeagueDetailLayout from '@/components/league/LeagueDetailLayout.vue';
+import MatchCard from '@/components/match/MatchCard.vue';
 import PokemonCard from '@/components/pokemon/PokemonCard.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -144,6 +145,30 @@ interface NextSet {
     pending_schedule_request: PendingScheduleRequest | null;
 }
 
+interface SetSide {
+    id: number;
+    name: string;
+    logo: string;
+    user: { name: string };
+}
+
+interface TeamSetRow {
+    id: number;
+    league_id: number;
+    pool_id: number;
+    round: number;
+    status: number;
+    scheduled_at: string | null;
+    winner_id: number | null;
+    team1_score: number | null;
+    team2_score: number | null;
+    is_bye: boolean;
+    team1: SetSide;
+    team2: SetSide | null;
+}
+
+type TeamSetsByRound = Record<string, TeamSetRow[]>;
+
 const props = defineProps<{
     league: League;
     section: LeagueDetailSection;
@@ -160,6 +185,7 @@ const props = defineProps<{
     freeTradeWindowEndsAt: string | null;
     nextSet: NextSet | null;
     leagueTransactions: Trade[];
+    team_sets_by_round: TeamSetsByRound;
 }>(); 
 
 const currentUser = usePage().props.auth.user as { id?: number; discord_id?: string | null } | null;
@@ -216,6 +242,62 @@ function winPct(wins: number, losses: number): string {
 function onTeamChange(event: Event): void {
     const target = event.target as HTMLSelectElement;
     router.get(route('leagues.dashboard', { league: props.league.id }), { team: parseInt(target.value, 10) }, { preserveScroll: true });
+}
+
+const sortedSetRounds = computed(() =>
+    Object.keys(props.team_sets_by_round)
+        .map((key) => Number(key))
+        .filter((round) => !Number.isNaN(round))
+        .sort((a, b) => a - b),
+);
+
+function setForRound(round: number): TeamSetRow | null {
+    const rows = props.team_sets_by_round[String(round)];
+
+    return rows?.[0] ?? null;
+}
+
+const teamSetsInRoundOrder = computed(() =>
+    sortedSetRounds.value
+        .map((round) => ({
+            round,
+            set: setForRound(round),
+        }))
+        .filter((item): item is { round: number; set: TeamSetRow } => item.set !== null),
+);
+
+function setStatusLabel(set: TeamSetRow): string {
+    if (set.is_bye) {
+        return 'Bye';
+    }
+
+    if (set.status === 0 || set.winner_id !== null) {
+        return 'Completed';
+    }
+
+    return 'Upcoming';
+}
+
+function setScoreLabel(set: TeamSetRow): string | null {
+    if (set.team1_score === null || set.team2_score === null) {
+        return null;
+    }
+
+    return `${set.team1_score}–${set.team2_score}`;
+}
+
+function formatSetScheduledAt(dateStr: string | null): string {
+    if (!dateStr) {
+        return 'Not yet scheduled';
+    }
+
+    return new Date(dateStr).toLocaleString(undefined, {
+        weekday: 'short',
+        month: 'short',
+        day: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+    });
 }
 
 // --- Trade sheet ---
@@ -926,6 +1008,55 @@ if (isReverbBroadcastClientConfigured) {
                             <div v-else class="rounded-md border border-dashed border-border bg-muted/30 p-8 text-center">
                                 <p class="text-sm text-muted-foreground">No Pokémon drafted yet.</p>
                                 <p class="mt-1 text-xs text-muted-foreground">Pokémon will appear here once the draft begins.</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <!-- Match schedule by round -->
+                    <Card class="border-border shadow-sm">
+                        <CardHeader>
+                            <CardTitle class="text-xl">Match Schedule</CardTitle>
+                            <CardDescription>Sets for this team, sorted by round.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div
+                                v-if="teamSetsInRoundOrder.length === 0"
+                                class="rounded-md border border-dashed border-border bg-muted/30 p-8 text-center"
+                            >
+                                <p class="text-sm text-muted-foreground">No sets scheduled yet.</p>
+                            </div>
+                            <div v-else class="flex flex-col gap-6">
+                                <section
+                                    v-for="{ round, set } in teamSetsInRoundOrder"
+                                    :key="round"
+                                    class="flex flex-col gap-3"
+                                >
+                                    <div class="flex flex-wrap items-center justify-between gap-2">
+                                        <h3 class="text-sm font-semibold text-foreground">Round {{ round }}</h3>
+                                        <div class="flex flex-wrap items-center gap-2">
+                                            <span
+                                                :class="[
+                                                    'rounded-full px-2.5 py-0.5 text-xs font-medium',
+                                                    setStatusLabel(set) === 'Completed' || setStatusLabel(set) === 'Bye'
+                                                        ? 'bg-muted text-muted-foreground'
+                                                        : 'bg-primary/10 text-primary dark:bg-primary/20',
+                                                ]"
+                                            >
+                                                {{ setStatusLabel(set) }}
+                                            </span>
+                                            <span
+                                                v-if="setScoreLabel(set)"
+                                                class="rounded-full border border-border px-2.5 py-0.5 text-xs font-medium tabular-nums text-foreground"
+                                            >
+                                                {{ setScoreLabel(set) }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-muted-foreground">
+                                        {{ formatSetScheduledAt(set.scheduled_at) }}
+                                    </p>
+                                    <MatchCard :sets="set" :team1="set.team1" :team2="set.team2" />
+                                </section>
                             </div>
                         </CardContent>
                     </Card>

@@ -227,3 +227,76 @@ it('includes freeTradeWindowEndsAt when the league is in the post-draft free tra
         ->where('freeTradeWindowEndsAt', $expectedEndsAt)
     );
 });
+
+it('includes team sets grouped by round for the selected team sorted by round', function () {
+    ['user1' => $user1, 'team1' => $team1, 'team2' => $team2, 'league' => $league, 'set' => $set] = makeDashboardFixture();
+
+    $roundTwoSet = Set::create([
+        'league_id' => $league->id,
+        'pool_id' => $set->pool_id,
+        'round' => 2,
+        'team1_id' => $team1->id,
+        'team2_id' => $team2->id,
+        'status' => 1,
+    ]);
+
+    $response = $this->actingAs($user1)->get(route('leagues.dashboard', ['league' => $league->id]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('league/LeagueDashboard')
+        ->has('team_sets_by_round.1', 1)
+        ->has('team_sets_by_round.2', 1)
+        ->where('team_sets_by_round.1.0.id', $set->id)
+        ->where('team_sets_by_round.2.0.id', $roundTwoSet->id)
+        ->where('team_sets_by_round.1.0.round', 1)
+        ->where('team_sets_by_round.2.0.round', 2)
+    );
+});
+
+it('returns team sets for the team selected via query param', function () {
+    ['user1' => $user1, 'user2' => $user2, 'team1' => $team1, 'team2' => $team2, 'league' => $league, 'set' => $set] = makeDashboardFixture();
+
+    Set::create([
+        'league_id' => $league->id,
+        'pool_id' => $set->pool_id,
+        'round' => 2,
+        'team1_id' => $team1->id,
+        'team2_id' => $team2->id,
+        'status' => 1,
+    ]);
+
+    $response = $this->actingAs($user1)->get(route('leagues.dashboard', [
+        'league' => $league->id,
+        'team' => $team2->id,
+    ]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('league/LeagueDashboard')
+        ->where('selected_team_id', $team2->id)
+        ->has('team_sets_by_round.1', 1)
+        ->has('team_sets_by_round.2', 1)
+        ->where('team_sets_by_round.1.0.team1.id', $team1->id)
+        ->where('team_sets_by_round.1.0.team2.id', $team2->id)
+    );
+});
+
+it('returns an empty team_sets_by_round when the league has no teams', function () {
+    $user = User::factory()->create();
+
+    $league = League::create([
+        'name' => 'Empty League',
+        'status' => LeagueStatus::RegularSeason->value,
+        'draft_points' => 100,
+        'league_owner' => $user->id,
+    ]);
+
+    $response = $this->actingAs($user)->get(route('leagues.dashboard', ['league' => $league->id]));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('league/LeagueDashboard')
+        ->where('team_sets_by_round', [])
+    );
+});

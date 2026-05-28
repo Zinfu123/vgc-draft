@@ -69,6 +69,7 @@ class LeagueController extends Controller
         ReadTeamAction $readTeamAction,
         ReadTradesAction $readTradesAction,
         ReadLeaguePokemonAction $readLeaguePokemonAction,
+        ShowSetsAction $showSetsAction,
     ): \Inertia\Response {
         $data = $leagueDetailLayoutDataAction($league);
 
@@ -190,6 +191,9 @@ class LeagueController extends Controller
             'freeTradeWindowEndsAt' => $league->freeTradeWindowEndsAt()?->toIso8601String(),
             'nextSet' => $nextSetData,
             'leagueTransactions' => $leagueTransactions,
+            'team_sets_by_round' => $selectedTeamId !== null
+                ? $showSetsAction(['league_id' => $league->id, 'command' => 'team_by_round', 'team_id' => $selectedTeamId])
+                : [],
         ]);
     }
 
