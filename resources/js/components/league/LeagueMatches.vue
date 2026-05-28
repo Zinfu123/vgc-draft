@@ -182,7 +182,7 @@ function onTeamFilterChange(raw: string): void {
                     </div>
                     <ScrollArea v-else class="h-[min(50vh,28rem)] w-full rounded-xl border border-border/60 bg-card/80 lg:h-[min(60vh,32rem)]">
                         <div class="p-2 pr-3">
-                            <ListWithHeadings :set="filteredUpcomingSets" />
+                            <ListWithHeadings :set="filteredUpcomingSets" initial-round="first" />
                         </div>
                     </ScrollArea>
                 </section>

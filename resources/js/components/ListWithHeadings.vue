@@ -29,9 +29,13 @@ type SetMap = Record<number, SetRow[]>;
 
 interface Props {
     set: SetMap;
+    /** Which round to select when none is chosen or the current round is missing. */
+    initialRound?: 'first' | 'last';
 }
 
-const props = defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+    initialRound: 'last',
+});
 
 const roundKeys = computed(() =>
     Object.keys(props.set)
@@ -43,6 +47,14 @@ const roundKeys = computed(() =>
 
 const selectedRound = ref<string>('');
 
+function defaultRoundKey(keys: string[]): string {
+    if (keys.length === 0) {
+        return '';
+    }
+
+    return props.initialRound === 'first' ? keys[0]! : keys[keys.length - 1]!;
+}
+
 watch(
     roundKeys,
     (keys) => {
@@ -53,7 +65,7 @@ watch(
         }
 
         if (!keys.includes(selectedRound.value)) {
-            selectedRound.value = keys[keys.length - 1]!;
+            selectedRound.value = defaultRoundKey(keys);
         }
     },
     { immediate: true },
