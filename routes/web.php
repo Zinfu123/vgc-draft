@@ -80,7 +80,13 @@ Route::prefix('leagues')->group(function () {
     Route::get('/{league}/schedule', [LeagueController::class, 'showSchedule'])->middleware(['auth', 'verified'])->name('leagues.schedule');
     // Legacy redirects — keep named routes working for any existing links
     Route::get('/{league}/teams', fn ($league) => redirect()->route('leagues.rosters', ['league' => $league]))->middleware(['auth', 'verified'])->name('leagues.teams');
-    Route::get('/{league}/matches', fn ($league) => redirect()->route('leagues.schedule', ['league' => $league]))->middleware(['auth', 'verified'])->name('leagues.matches');
+    Route::get('/{league}/matches', function ($league) {
+        return redirect()->route('leagues.schedule', array_filter([
+            'league' => $league,
+            'view' => 'matches',
+            'team' => request()->query('team'),
+        ], fn ($value) => $value !== null && $value !== ''));
+    })->middleware(['auth', 'verified'])->name('leagues.matches');
     Route::get('/{league}/standings', fn ($league) => redirect()->route('leagues.schedule', ['league' => $league, 'view' => 'standings']))->middleware(['auth', 'verified'])->name('leagues.standings');
     Route::get('/{league}/playoffs', fn ($league) => redirect()->route('leagues.schedule', ['league' => $league, 'view' => 'playoffs']))->middleware(['auth', 'verified'])->name('leagues.playoffs');
     Route::get('/{league}/stats', [LeagueController::class, 'showStats'])->middleware(['auth', 'verified'])->name('leagues.stats');

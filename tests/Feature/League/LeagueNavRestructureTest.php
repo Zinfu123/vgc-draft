@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use App\Modules\League\Models\League;
+use App\Modules\Teams\Models\Team;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -50,7 +51,33 @@ it('redirects the old matches route to schedule', function () {
         ->actingAs($user)
         ->get(route('leagues.matches', ['league' => $league->id]));
 
-    $response->assertRedirect(route('leagues.schedule', ['league' => $league->id]));
+    $response->assertRedirect(route('leagues.schedule', ['league' => $league->id, 'view' => 'matches']));
+});
+
+it('redirects the old matches route to schedule preserving team filter', function () {
+    $user = User::factory()->create();
+    $league = League::create([
+        'name' => 'Test League',
+        'league_owner' => $user->id,
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
+        'set_frequency' => 3,
+    ]);
+    $team = Team::create([
+        'name' => 'Test Team',
+        'league_id' => $league->id,
+        'user_id' => $user->id,
+        'pick_position' => 1,
+    ]);
+
+    $response = $this
+        ->actingAs($user)
+        ->get(route('leagues.matches', ['league' => $league->id, 'team' => $team->id]));
+
+    $response->assertRedirect(route('leagues.schedule', [
+        'league' => $league->id,
+        'view' => 'matches',
+        'team' => $team->id,
+    ]));
 });
 
 it('redirects the old standings route to schedule with standings view', function () {

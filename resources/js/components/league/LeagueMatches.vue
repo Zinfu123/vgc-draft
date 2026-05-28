@@ -105,8 +105,9 @@ function onTeamFilterChange(raw: string): void {
         return;
     }
 
-    const url = route('leagues.matches', {
+    const url = route('leagues.schedule', {
         league: props.leagueId,
+        view: 'matches',
         ...(next !== undefined ? { team: next } : {}),
     });
 
@@ -182,7 +183,11 @@ function onTeamFilterChange(raw: string): void {
                     </div>
                     <ScrollArea v-else class="h-[min(50vh,28rem)] w-full rounded-xl border border-border/60 bg-card/80 lg:h-[min(60vh,32rem)]">
                         <div class="p-2 pr-3">
-                            <ListWithHeadings :set="filteredUpcomingSets" initial-round="first" />
+                            <ListWithHeadings
+                                :key="`upcoming-${matchesFilterTeamId ?? 'all'}`"
+                                :set="filteredUpcomingSets"
+                                initial-round="first"
+                            />
                         </div>
                     </ScrollArea>
                 </section>
@@ -203,7 +208,11 @@ function onTeamFilterChange(raw: string): void {
                     </div>
                     <ScrollArea v-else class="h-[min(50vh,28rem)] w-full rounded-xl border border-border/60 bg-card/80 lg:h-[min(60vh,32rem)]">
                         <div class="p-2 pr-3">
-                            <ListWithHeadings :set="filteredPlayedSets" />
+                            <ListWithHeadings
+                                :key="`played-${matchesFilterTeamId ?? 'all'}`"
+                                :set="filteredPlayedSets"
+                                initial-round="last"
+                            />
                         </div>
                     </ScrollArea>
                 </section>

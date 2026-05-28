@@ -29,7 +29,7 @@ type SetMap = Record<number, SetRow[]>;
 
 interface Props {
     set: SetMap;
-    /** Which round to select when none is chosen or the current round is missing. */
+    /** Which round to select when none is chosen or the current round is missing. `last` = furthest progressed round. */
     initialRound?: 'first' | 'last';
 }
 
