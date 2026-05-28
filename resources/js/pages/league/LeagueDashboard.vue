@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { LeagueDetailSection } from '@/components/league/LeagueDetailLayout.vue';
 import LeagueDetailLayout from '@/components/league/LeagueDetailLayout.vue';
-import MatchCard from '@/components/match/MatchCard.vue';
 import PokemonCard from '@/components/pokemon/PokemonCard.vue';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -298,6 +297,18 @@ function formatSetScheduledAt(dateStr: string | null): string {
         hour: 'numeric',
         minute: '2-digit',
     });
+}
+
+function opponentName(set: TeamSetRow): string {
+    if (set.is_bye || !set.team2) {
+        return 'Bye';
+    }
+
+    if (props.selected_team_id === set.team1.id) {
+        return set.team2.name;
+    }
+
+    return set.team1.name;
 }
 
 // --- Trade sheet ---
@@ -1011,55 +1022,6 @@ if (isReverbBroadcastClientConfigured) {
                             </div>
                         </CardContent>
                     </Card>
-
-                    <!-- Match schedule by round -->
-                    <Card class="border-border shadow-sm">
-                        <CardHeader>
-                            <CardTitle class="text-xl">Match Schedule</CardTitle>
-                            <CardDescription>Sets for this team, sorted by round.</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div
-                                v-if="teamSetsInRoundOrder.length === 0"
-                                class="rounded-md border border-dashed border-border bg-muted/30 p-8 text-center"
-                            >
-                                <p class="text-sm text-muted-foreground">No sets scheduled yet.</p>
-                            </div>
-                            <div v-else class="flex flex-col gap-6">
-                                <section
-                                    v-for="{ round, set } in teamSetsInRoundOrder"
-                                    :key="round"
-                                    class="flex flex-col gap-3"
-                                >
-                                    <div class="flex flex-wrap items-center justify-between gap-2">
-                                        <h3 class="text-sm font-semibold text-foreground">Round {{ round }}</h3>
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <span
-                                                :class="[
-                                                    'rounded-full px-2.5 py-0.5 text-xs font-medium',
-                                                    setStatusLabel(set) === 'Completed' || setStatusLabel(set) === 'Bye'
-                                                        ? 'bg-muted text-muted-foreground'
-                                                        : 'bg-primary/10 text-primary dark:bg-primary/20',
-                                                ]"
-                                            >
-                                                {{ setStatusLabel(set) }}
-                                            </span>
-                                            <span
-                                                v-if="setScoreLabel(set)"
-                                                class="rounded-full border border-border px-2.5 py-0.5 text-xs font-medium tabular-nums text-foreground"
-                                            >
-                                                {{ setScoreLabel(set) }}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <p class="text-xs text-muted-foreground">
-                                        {{ formatSetScheduledAt(set.scheduled_at) }}
-                                    </p>
-                                    <MatchCard :sets="set" :team1="set.team1" :team2="set.team2" />
-                                </section>
-                            </div>
-                        </CardContent>
-                    </Card>
                 </template>
 
             </div>
@@ -1267,6 +1229,67 @@ if (isReverbBroadcastClientConfigured) {
                         <p class="text-sm text-muted-foreground">No completed transactions yet.</p>
                         <p class="mt-1 text-xs text-muted-foreground">Accepted trades will appear here.</p>
                     </div>
+
+                    <template v-if="selected_team">
+                        <div class="flex items-center justify-between gap-2 pt-1">
+                            <div>
+                                <h2 class="text-lg font-semibold">Match Schedule</h2>
+                                <p class="text-xs text-muted-foreground">Sets by round</p>
+                            </div>
+                        </div>
+
+                        <div
+                            v-if="teamSetsInRoundOrder.length === 0"
+                            class="rounded-xl border border-dashed border-border bg-muted/20 p-4 text-center"
+                        >
+                            <p class="text-xs text-muted-foreground">No sets scheduled yet.</p>
+                        </div>
+
+                        <div
+                            v-else
+                            class="flex max-h-72 flex-col gap-1 overflow-y-auto rounded-xl border border-border bg-card/60 p-2"
+                        >
+                            <Link
+                                v-for="{ round, set } in teamSetsInRoundOrder"
+                                :key="round"
+                                :href="route('sets.show', { set_id: set.id })"
+                                class="flex items-start gap-2 rounded-lg border border-transparent px-2.5 py-2 transition-colors hover:border-border hover:bg-background"
+                            >
+                                <span class="w-8 shrink-0 text-xs font-semibold tabular-nums text-muted-foreground">
+                                    R{{ round }}
+                                </span>
+                                <div class="min-w-0 flex-1">
+                                    <p class="truncate text-xs font-medium text-foreground">
+                                        vs {{ opponentName(set) }}
+                                    </p>
+                                    <p
+                                        v-if="setStatusLabel(set) === 'Upcoming'"
+                                        class="mt-0.5 truncate text-[11px] text-muted-foreground"
+                                    >
+                                        {{ formatSetScheduledAt(set.scheduled_at) }}
+                                    </p>
+                                </div>
+                                <div class="flex shrink-0 flex-col items-end gap-1">
+                                    <span
+                                        :class="[
+                                            'rounded-full px-1.5 py-0.5 text-[10px] font-medium leading-none',
+                                            setStatusLabel(set) === 'Upcoming'
+                                                ? 'bg-primary/10 text-primary dark:bg-primary/20'
+                                                : 'bg-muted text-muted-foreground',
+                                        ]"
+                                    >
+                                        {{ setStatusLabel(set) }}
+                                    </span>
+                                    <span
+                                        v-if="setScoreLabel(set)"
+                                        class="text-[11px] font-medium tabular-nums text-foreground"
+                                    >
+                                        {{ setScoreLabel(set) }}
+                                    </span>
+                                </div>
+                            </Link>
+                        </div>
+                    </template>
                 </div>
             </div>
         </div>
