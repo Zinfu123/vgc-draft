@@ -282,6 +282,14 @@ function setScoreLabel(set: TeamSetRow): string | null {
         return null;
     }
 
+    if (props.selected_team_id === set.team1.id) {
+        return `${set.team1_score}–${set.team2_score}`;
+    }
+
+    if (props.selected_team_id === set.team2?.id) {
+        return `${set.team2_score}–${set.team1_score}`;
+    }
+
     return `${set.team1_score}–${set.team2_score}`;
 }
 
