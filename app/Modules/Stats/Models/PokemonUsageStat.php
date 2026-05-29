@@ -15,10 +15,22 @@ class PokemonUsageStat extends Model
         'draft_pick_count',
         'draft_ban_count',
         'match_bring_count',
+        'game_bring_count',
         'game_wins',
         'game_losses',
         'ko_count',
+        'avg_ko_per_game',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'avg_ko_per_game' => 'float',
+        ];
+    }
 
     /**
      * @return BelongsTo<Pokedex, $this>

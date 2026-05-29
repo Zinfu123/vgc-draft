@@ -92,6 +92,9 @@ class RebuildPokemonUsageStatsService
                 }
             }
 
+            /** @var array<int, int> $gameBringByDex */
+            $gameBringByDex = $bringByDex;
+
             // Fallback: sets/playoffs that have pokepaste data but no game results contribute
             // bring counts from their match pokepastes (6-pokemon team preview level).
             $this->mergeFallbackBringFromSets($setClass, $bringByDex, $totalBringUnits);
@@ -110,14 +113,19 @@ class RebuildPokemonUsageStatsService
             )));
 
             foreach ($allIds as $pokedexId) {
+                $gameBringCount = (int) ($gameBringByDex[$pokedexId] ?? 0);
+                $koCount = (int) ($koByDex[$pokedexId] ?? 0);
+
                 PokemonUsageStat::query()->create([
                     'pokedex_id' => $pokedexId,
                     'draft_pick_count' => (int) ($pickRows->get($pokedexId)?->c ?? 0),
                     'draft_ban_count' => (int) ($banRows->get($pokedexId)?->c ?? 0),
                     'match_bring_count' => (int) ($bringByDex[$pokedexId] ?? 0),
+                    'game_bring_count' => $gameBringCount,
                     'game_wins' => (int) ($gameWins[$pokedexId] ?? 0),
                     'game_losses' => (int) ($gameLosses[$pokedexId] ?? 0),
-                    'ko_count' => (int) ($koByDex[$pokedexId] ?? 0),
+                    'ko_count' => $koCount,
+                    'avg_ko_per_game' => $gameBringCount > 0 ? round($koCount / $gameBringCount, 4) : null,
                 ]);
             }
 

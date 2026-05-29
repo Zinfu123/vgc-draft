@@ -89,3 +89,104 @@ it('skips draft_bans rows with null pokedex_id when rebuilding', function () {
         ->and($stats->first()->pokedex_id)->toBe($pokedex->id)
         ->and($stats->first()->draft_ban_count)->toBe(1);
 });
+
+it('stores game bring count and average ko per game when rebuilding from replay data', function () {
+    $owner = User::factory()->create();
+    $coach1 = User::factory()->create();
+    $coach2 = User::factory()->create();
+
+    $league = League::create([
+        'name' => 'Usage Stats League',
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
+        'league_owner' => $owner->id,
+    ]);
+
+    $matchConfig = \App\Modules\Matches\Models\MatchConfig::create([
+        'league_id' => $league->id,
+        'number_of_pools' => 1,
+        'status' => 1,
+    ]);
+
+    $pool = \App\Modules\Matches\Models\Pool::create([
+        'league_id' => $league->id,
+        'match_config_id' => $matchConfig->id,
+        'status' => 1,
+    ]);
+
+    $team1 = \App\Modules\Teams\Models\Team::create([
+        'name' => 'Team Alpha',
+        'league_id' => $league->id,
+        'user_id' => $coach1->id,
+        'admin_flag' => 0,
+        'pick_position' => 1,
+        'seed' => 1,
+        'draft_points' => 80,
+    ]);
+
+    $team2 = \App\Modules\Teams\Models\Team::create([
+        'name' => 'Team Beta',
+        'league_id' => $league->id,
+        'user_id' => $coach2->id,
+        'admin_flag' => 0,
+        'pick_position' => 2,
+        'seed' => 2,
+        'draft_points' => 80,
+    ]);
+
+    $set = \App\Modules\Matches\Models\Set::create([
+        'league_id' => $league->id,
+        'pool_id' => $pool->id,
+        'round' => 1,
+        'team1_id' => $team1->id,
+        'team2_id' => $team2->id,
+        'team1_score' => 2,
+        'team2_score' => 0,
+        'winner_id' => $team1->id,
+        'status' => 0,
+    ]);
+
+    $pokedex = Pokedex::create([
+        'nationaldex_id' => 25,
+        'name' => 'Pikachu',
+        'type1' => 'Electric',
+    ]);
+
+    $otherDex = Pokedex::create([
+        'nationaldex_id' => 6,
+        'name' => 'Charizard',
+        'type1' => 'Fire',
+    ]);
+
+    \App\Modules\Matches\Models\SetGameResult::create([
+        'set_id' => $set->id,
+        'game_number' => 1,
+        'p1_team_id' => $team1->id,
+        'p2_team_id' => $team2->id,
+        'winner_team_id' => $team1->id,
+        'p1_pokemon' => [$pokedex->id],
+        'p2_pokemon' => [$otherDex->id],
+        'p1_knockouts' => [$pokedex->id, $pokedex->id],
+        'p2_knockouts' => [],
+    ]);
+
+    \App\Modules\Matches\Models\SetGameResult::create([
+        'set_id' => $set->id,
+        'game_number' => 2,
+        'p1_team_id' => $team1->id,
+        'p2_team_id' => $team2->id,
+        'winner_team_id' => $team2->id,
+        'p1_pokemon' => [$pokedex->id],
+        'p2_pokemon' => [$otherDex->id],
+        'p1_knockouts' => [],
+        'p2_knockouts' => [$otherDex->id],
+    ]);
+
+    $this->artisan('usage-stats:rebuild')->assertSuccessful();
+
+    $stat = PokemonUsageStat::query()->where('pokedex_id', $pokedex->id)->first();
+
+    expect($stat)->not->toBeNull()
+        ->and($stat->game_bring_count)->toBe(2)
+        ->and($stat->ko_count)->toBe(2)
+        ->and((float) $stat->avg_ko_per_game)->toBe(1.0);
+});

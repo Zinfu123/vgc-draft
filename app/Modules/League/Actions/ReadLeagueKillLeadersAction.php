@@ -29,6 +29,8 @@ class ReadLeagueKillLeadersAction
      *     deaths: int,
      *     differential: int,
      *     gp: int,
+     *     games_brought: int,
+     *     avg_ko_per_game: float|null,
      *     damage: int,
      * }>
      */
@@ -53,6 +55,8 @@ class ReadLeagueKillLeadersAction
      *     deaths: int,
      *     differential: int,
      *     gp: int,
+     *     games_brought: int,
+     *     avg_ko_per_game: float|null,
      *     damage: int,
      * }>
      */
@@ -128,6 +132,7 @@ class ReadLeagueKillLeadersAction
                 $dexId = (int) $lp->pokedex_id;
                 $kills = $killsByDex[$dexId] ?? 0;
                 $deaths = $deathsByDex[$dexId] ?? 0;
+                $gamesBrought = $gpByDex[$dexId] ?? 0;
 
                 return [
                     'pokedex_id' => $dexId,
@@ -139,7 +144,9 @@ class ReadLeagueKillLeadersAction
                     'kills' => $kills,
                     'deaths' => $deaths,
                     'differential' => $kills - $deaths,
-                    'gp' => $gpByDex[$dexId] ?? 0,
+                    'gp' => $gamesBrought,
+                    'games_brought' => $gamesBrought,
+                    'avg_ko_per_game' => $gamesBrought > 0 ? round($kills / $gamesBrought, 2) : null,
                     'damage' => $damageByDex[$dexId] ?? 0,
                 ];
             })

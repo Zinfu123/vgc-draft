@@ -33,9 +33,11 @@ it('renders the pokemon detail page with correct props for authenticated user', 
         'draft_pick_count' => 3,
         'draft_ban_count' => 1,
         'match_bring_count' => 5,
+        'game_bring_count' => 4,
         'game_wins' => 4,
         'game_losses' => 1,
         'ko_count' => 6,
+        'avg_ko_per_game' => 1.5,
     ]);
 
     $this->actingAs(User::factory()->create())
@@ -48,6 +50,8 @@ it('renders the pokemon detail page with correct props for authenticated user', 
             ->where('stat.draft_pick_count', 3)
             ->where('stat.game_wins', 4)
             ->where('stat.ko_count', 6)
+            ->where('stat.game_bring_count', 4)
+            ->where('stat.avg_ko_per_game', 1.5)
             ->has('games'));
 });
 

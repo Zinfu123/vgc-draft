@@ -53,6 +53,8 @@ interface KillLeader {
     deaths: number;
     differential: number;
     gp: number;
+    games_brought: number;
+    avg_ko_per_game: number | null;
     damage: number;
 }
 
@@ -67,7 +69,7 @@ const props = defineProps<{
 }>();
 
 // — Kill leaders table sorting —
-type SortKey = 'kills' | 'deaths' | 'differential' | 'gp' | 'damage';
+type SortKey = 'kills' | 'deaths' | 'differential' | 'gp' | 'games_brought' | 'avg_ko_per_game' | 'damage';
 const sortKey = ref<SortKey>('kills');
 const sortDir = ref<'asc' | 'desc'>('desc');
 
@@ -85,6 +87,9 @@ const sortedLeaders = computed<KillLeader[]>(() => {
     return [...props.killLeaders].sort((a, b) => {
         const av = a[sortKey.value];
         const bv = b[sortKey.value];
+        if (av == null && bv == null) return 0;
+        if (av == null) return 1;
+        if (bv == null) return -1;
         if (av === bv) return 0;
         const cmp = av < bv ? -1 : 1;
         return sortDir.value === 'asc' ? cmp : -cmp;
@@ -120,6 +125,11 @@ function differentialClass(diff: number): string {
     if (diff > 0) return 'text-green-300';
     if (diff < 0) return 'text-red-300';
     return 'text-white/70';
+}
+
+function formatAvgKoPerGame(value: number | null): string {
+    if (value == null) return '—';
+    return value.toFixed(2);
 }
 </script>
 
@@ -186,7 +196,7 @@ function differentialClass(diff: number): string {
                         </div>
 
                         <!-- Stats row -->
-                        <div :class="[cardThemes[index].badge, 'grid grid-cols-4 gap-1 rounded-lg p-2 text-center']">
+                        <div :class="[cardThemes[index].badge, 'grid grid-cols-5 gap-1 rounded-lg p-2 text-center']">
                             <div>
                                 <p class="text-base font-bold">× {{ pokemon.kills }}</p>
                                 <p class="text-[10px] uppercase opacity-70">Kills</p>
@@ -202,8 +212,12 @@ function differentialClass(diff: number): string {
                                 <p class="text-[10px] uppercase opacity-70">+/-</p>
                             </div>
                             <div>
-                                <p class="text-base font-bold">{{ pokemon.gp }}</p>
-                                <p class="text-[10px] uppercase opacity-70">GP</p>
+                                <p class="text-base font-bold">{{ pokemon.games_brought }}</p>
+                                <p class="text-[10px] uppercase opacity-70">Brought</p>
+                            </div>
+                            <div>
+                                <p class="text-base font-bold">{{ formatAvgKoPerGame(pokemon.avg_ko_per_game) }}</p>
+                                <p class="text-[10px] uppercase opacity-70">KO/G</p>
                             </div>
                         </div>
                     </div>
@@ -226,8 +240,11 @@ function differentialClass(diff: number): string {
                                 <th class="cursor-pointer px-3 py-2 text-right hover:text-foreground" @click="setSort('differential')">
                                     +/- {{ sortKey === 'differential' ? (sortDir === 'desc' ? '↓' : '↑') : '' }}
                                 </th>
-                                <th class="cursor-pointer px-3 py-2 text-right hover:text-foreground" @click="setSort('gp')">
-                                    GP {{ sortKey === 'gp' ? (sortDir === 'desc' ? '↓' : '↑') : '' }}
+                                <th class="cursor-pointer px-3 py-2 text-right hover:text-foreground" @click="setSort('games_brought')">
+                                    Brought {{ sortKey === 'games_brought' ? (sortDir === 'desc' ? '↓' : '↑') : '' }}
+                                </th>
+                                <th class="cursor-pointer px-3 py-2 text-right hover:text-foreground" @click="setSort('avg_ko_per_game')">
+                                    KO/G {{ sortKey === 'avg_ko_per_game' ? (sortDir === 'desc' ? '↓' : '↑') : '' }}
                                 </th>
                             </tr>
                         </thead>
@@ -262,7 +279,8 @@ function differentialClass(diff: number): string {
                                 >
                                     {{ pokemon.differential > 0 ? '+' : '' }}{{ pokemon.differential }}
                                 </td>
-                                <td class="px-3 py-2 text-right text-muted-foreground">{{ pokemon.gp }}</td>
+                                <td class="px-3 py-2 text-right text-muted-foreground">{{ pokemon.games_brought }}</td>
+                                <td class="px-3 py-2 text-right font-medium">{{ formatAvgKoPerGame(pokemon.avg_ko_per_game) }}</td>
                             </tr>
                         </tbody>
                     </table>

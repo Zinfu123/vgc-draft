@@ -150,6 +150,8 @@ it('returns kill leaders for a league', function (): void {
         ->and($pikachu['deaths'])->toBe(0)
         ->and($pikachu['differential'])->toBe(1)
         ->and($pikachu['gp'])->toBe(1)
+        ->and($pikachu['games_brought'])->toBe(1)
+        ->and($pikachu['avg_ko_per_game'])->toBe(1.0)
         ->and($pikachu['name'])->toBe('Pikachu');
 
     expect($charizard)->not->toBeNull()
@@ -157,6 +159,8 @@ it('returns kill leaders for a league', function (): void {
         ->and($charizard['deaths'])->toBe(1)
         ->and($charizard['differential'])->toBe(-1)
         ->and($charizard['gp'])->toBe(1)
+        ->and($charizard['games_brought'])->toBe(1)
+        ->and($charizard['avg_ko_per_game'])->toBe(0.0)
         ->and($charizard['name'])->toBe('Charizard');
 });
 
