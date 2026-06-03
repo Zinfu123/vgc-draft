@@ -27,6 +27,7 @@ class Trade extends Model
         'target_team_id',
         'counterparty',
         'status',
+        'draft_points_delta',
     ];
 
     protected static function booted(): void
@@ -74,7 +75,7 @@ class Trade extends Model
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
-            ->logOnly(['status', 'counterparty'])
+            ->logOnly(['status', 'counterparty', 'draft_points_delta'])
             ->logOnlyDirty()
             ->dontLogEmptyChanges();
     }

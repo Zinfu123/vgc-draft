@@ -75,6 +75,7 @@ class ExecuteFreeAgencyTradeAction
                 'target_team_id' => null,
                 'counterparty' => TradeCounterparty::FreeAgency,
                 'status' => 'accepted',
+                'draft_points_delta' => $pointsDelta !== 0 ? $pointsDelta : null,
             ]);
 
             foreach ($offeredIds as $pokemonId) {

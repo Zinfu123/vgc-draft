@@ -439,6 +439,7 @@ it('user can complete a free agency trade and creates an accepted audit trade', 
     expect($trade)->not->toBeNull()
         ->and($trade->target_team_id)->toBeNull()
         ->and($trade->status)->toBe('accepted')
+        ->and($trade->draft_points_delta)->toBe(10 - 5)
         ->and($trade->offeredPokemon)->toHaveCount(1)
         ->and($trade->requestedPokemon)->toHaveCount(1);
 });
@@ -493,6 +494,13 @@ it('deducts draft points from the team when free agency trade requested cost exc
     $response->assertSessionHasNoErrors();
 
     expect($teamA->fresh()->draft_points)->toBe($startingPoints - (50 - 10));
+
+    $trade = Trade::query()
+        ->where('league_id', $league->id)
+        ->where('counterparty', TradeCounterparty::FreeAgency)
+        ->first();
+
+    expect($trade->draft_points_delta)->toBe(10 - 50);
 });
 
 it('refunds draft points to the team when free agency trade offered cost exceeds requested cost', function () {
@@ -520,6 +528,13 @@ it('refunds draft points to the team when free agency trade offered cost exceeds
     $response->assertSessionHasNoErrors();
 
     expect($teamA->fresh()->draft_points)->toBe($startingPoints + (20 - 5));
+
+    $trade = Trade::query()
+        ->where('league_id', $league->id)
+        ->where('counterparty', TradeCounterparty::FreeAgency)
+        ->first();
+
+    expect($trade->draft_points_delta)->toBe(20 - 5);
 });
 
 it('settles draft points during the free trade window as well', function () {
@@ -584,6 +599,13 @@ it('does not change draft points when free agency trade costs are equal', functi
     $response->assertSessionHasNoErrors();
 
     expect($teamA->fresh()->draft_points)->toBe($startingPoints);
+
+    $trade = Trade::query()
+        ->where('league_id', $league->id)
+        ->where('counterparty', TradeCounterparty::FreeAgency)
+        ->first();
+
+    expect($trade->draft_points_delta)->toBeNull();
 });
 
 it('includes all league accepted trades in trade history on the trades page', function () {

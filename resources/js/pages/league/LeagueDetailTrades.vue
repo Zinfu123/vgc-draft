@@ -24,6 +24,7 @@ interface Team {
     coach: string;
     user_id: number;
     trades: number;
+    draft_points: number;
     pokemon: LeaguePokemon[];
 }
 
@@ -40,6 +41,7 @@ interface Trade {
     counterparty: 'team' | 'free_agency';
     requesting_team_id: number;
     target_team_id: number | null;
+    draft_points_delta: number | null;
     requesting_team: { id: number; name: string; user_id: number | null };
     target_team: { id: number; name: string; user_id: number | null } | null;
     offered_pokemon: TradePokemon[];
@@ -141,6 +143,11 @@ function tradeTransactionLabel(trade: Trade): string {
         if (taken) {
             parts.push(`picked up ${taken}`);
         }
+        if (trade.draft_points_delta != null && trade.draft_points_delta < 0) {
+            parts.push(`spent ${Math.abs(trade.draft_points_delta)} draft pts`);
+        } else if (trade.draft_points_delta != null && trade.draft_points_delta > 0) {
+            parts.push(`gained ${trade.draft_points_delta} draft pts`);
+        }
         return parts.join('; ');
     }
 
@@ -220,7 +227,19 @@ const requestedPoolCostSum = computed(() => {
 
 const faTradeTokenCost = computed(() => faForm.offered_pokemon_ids.length + faForm.requested_pokemon_ids.length);
 
-const faCostOk = computed(() => offeredCostSum.value >= requestedPoolCostSum.value && faForm.requested_pokemon_ids.length > 0);
+const faPointsShortfall = computed(() => Math.max(0, requestedPoolCostSum.value - offeredCostSum.value));
+
+const faCanCoverShortfall = computed(() => {
+    if (faPointsShortfall.value === 0) {
+        return true;
+    }
+
+    return (props.userTeam?.draft_points ?? 0) >= faPointsShortfall.value;
+});
+
+const faTradeValid = computed(
+    () => faForm.offered_pokemon_ids.length > 0 && faForm.requested_pokemon_ids.length > 0 && faCanCoverShortfall.value,
+);
 
 const toggleFaOffered = (id: number) => {
     const idx = faForm.offered_pokemon_ids.indexOf(id);
@@ -380,7 +399,8 @@ const respondToTrade = (trade: Trade, response: 'accepted' | 'declined' | 'cance
             <div v-if="showFaForm && userTeam" class="rounded-lg border border-border bg-card p-6">
                 <h3 class="mb-2 text-base font-semibold">Trade with free agency</h3>
                 <p class="mb-4 text-sm text-muted-foreground">
-                    Return Pokémon to the pool and take available Pokémon. Total cost offered must be ≥ total cost taken. This uses
+                    Return Pokémon to the pool and take available Pokémon. If pool cost exceeds what you offer, the difference is paid from your
+                    <span class="font-medium text-foreground">{{ userTeam.draft_points }}</span> draft points. This uses
                     {{ faTradeTokenCost || '…' }} trade slot(s) (offered + taken count).
                 </p>
                 <div class="grid gap-6 md:grid-cols-2">
@@ -432,7 +452,12 @@ const respondToTrade = (trade: Trade, response: 'accepted' | 'declined' | 'cance
                     <p class="text-xs text-muted-foreground">
                         Offered cost: <span class="font-medium text-foreground">{{ offeredCostSum }}</span> · Pool cost:
                         <span class="font-medium text-foreground">{{ requestedPoolCostSum }}</span>
-                        <span v-if="!faCostOk && faForm.requested_pokemon_ids.length > 0" class="text-destructive"> — offered cost must be ≥ pool cost</span>
+                        <span v-if="faPointsShortfall > 0 && faCanCoverShortfall">
+                            — <span class="font-medium text-foreground">{{ faPointsShortfall }}</span> draft pts will be spent
+                        </span>
+                        <span v-else-if="faPointsShortfall > 0 && !faCanCoverShortfall" class="text-destructive">
+                            — need {{ faPointsShortfall }} draft pts (you have {{ userTeam.draft_points }})
+                        </span>
                     </p>
                     <Button
                         @click="submitFaTrade"
@@ -440,7 +465,7 @@ const respondToTrade = (trade: Trade, response: 'accepted' | 'declined' | 'cance
                             faForm.processing ||
                             faForm.offered_pokemon_ids.length === 0 ||
                             faForm.requested_pokemon_ids.length === 0 ||
-                            !faCostOk ||
+                            !faTradeValid ||
                             faTradeTokenCost > (userTeam?.trades ?? 0)
                         "
                     >
