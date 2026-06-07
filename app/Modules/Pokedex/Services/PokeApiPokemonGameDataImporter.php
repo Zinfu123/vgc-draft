@@ -360,18 +360,25 @@ class PokeApiPokemonGameDataImporter
             ->filter(fn ($v) => is_array($v) && ! empty($v['pokemon']['url']));
 
         $rowSlug = Str::slug((string) $pokedex->getAttribute('name'));
+        $matchSlugs = $this->varietyMatchCandidates($rowSlug);
 
-        $matched = $varieties->first(function (array $v) use ($rowSlug): bool {
+        $matched = $varieties->first(function (array $v) use ($matchSlugs): bool {
             $apiSlug = isset($v['pokemon']['name']) ? Str::slug((string) $v['pokemon']['name']) : '';
 
-            return $apiSlug !== '' && $apiSlug === $rowSlug;
+            return $apiSlug !== '' && in_array($apiSlug, $matchSlugs, true);
         });
 
         if ($matched === null) {
-            $matched = $varieties->first(function (array $v) use ($rowSlug): bool {
+            $matched = $varieties->first(function (array $v) use ($matchSlugs): bool {
                 $apiSlug = isset($v['pokemon']['name']) ? Str::slug((string) $v['pokemon']['name']) : '';
 
-                return $apiSlug !== '' && str_starts_with($apiSlug, $rowSlug.'-');
+                foreach ($matchSlugs as $candidate) {
+                    if ($apiSlug !== '' && str_starts_with($apiSlug, $candidate.'-')) {
+                        return true;
+                    }
+                }
+
+                return false;
             });
         }
 
@@ -391,6 +398,24 @@ class PokeApiPokemonGameDataImporter
         }
 
         return null;
+    }
+
+    /**
+     * Showdown and our pokedex use short gender suffixes (`-f`, `-m`); PokéAPI uses `-female` / `-male`.
+     *
+     * @return list<string>
+     */
+    private function varietyMatchCandidates(string $rowSlug): array
+    {
+        $candidates = [$rowSlug];
+
+        if (str_ends_with($rowSlug, '-f')) {
+            $candidates[] = substr($rowSlug, 0, -2).'-female';
+        } elseif (str_ends_with($rowSlug, '-m')) {
+            $candidates[] = substr($rowSlug, 0, -2).'-male';
+        }
+
+        return array_values(array_unique($candidates));
     }
 
     /**

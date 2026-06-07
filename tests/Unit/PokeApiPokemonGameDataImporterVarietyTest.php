@@ -218,6 +218,69 @@ it('falls back to the default variety when the name matches the default form', f
     expect($url)->toEndWith('/80/');
 });
 
+it('maps showdown-style -f pokedex names to pokeapi -female varieties', function (string $pokedexName, string $expectedApiName) {
+    $pokedex = new Pokedex(['name' => $pokedexName]);
+    $species = [
+        'varieties' => [
+            [
+                'is_default' => true,
+                'pokemon' => [
+                    'name' => str_replace('-female', '-male', $expectedApiName),
+                    'url' => 'https://pokeapi.co/api/v2/pokemon/1/',
+                ],
+            ],
+            [
+                'is_default' => false,
+                'pokemon' => [
+                    'name' => $expectedApiName,
+                    'url' => 'https://pokeapi.co/api/v2/pokemon/10186/',
+                ],
+            ],
+        ],
+    ];
+
+    $importer = new PokeApiPokemonGameDataImporter;
+    $method = new ReflectionMethod(PokeApiPokemonGameDataImporter::class, 'resolveVarietyPokemonUrl');
+    $method->setAccessible(true);
+    $url = $method->invoke($importer, $species, $pokedex);
+
+    expect($url)->toEndWith('/10186/');
+})->with([
+    'indeedee-f' => ['indeedee-f', 'indeedee-female'],
+    'meowstic-f' => ['meowstic-f', 'meowstic-female'],
+    'basculegion-f' => ['basculegion-f', 'basculegion-female'],
+    'oinkologne-f' => ['oinkologne-f', 'oinkologne-female'],
+]);
+
+it('maps base pokedex names to pokeapi -male varieties via prefix match', function () {
+    $pokedex = new Pokedex(['name' => 'indeedee']);
+    $species = [
+        'varieties' => [
+            [
+                'is_default' => true,
+                'pokemon' => [
+                    'name' => 'indeedee-male',
+                    'url' => 'https://pokeapi.co/api/v2/pokemon/876/',
+                ],
+            ],
+            [
+                'is_default' => false,
+                'pokemon' => [
+                    'name' => 'indeedee-female',
+                    'url' => 'https://pokeapi.co/api/v2/pokemon/10186/',
+                ],
+            ],
+        ],
+    ];
+
+    $importer = new PokeApiPokemonGameDataImporter;
+    $method = new ReflectionMethod(PokeApiPokemonGameDataImporter::class, 'resolveVarietyPokemonUrl');
+    $method->setAccessible(true);
+    $url = $method->invoke($importer, $species, $pokedex);
+
+    expect($url)->toEndWith('/876/');
+});
+
 it('sets tera_capable true and mega false for tera mechanic version groups', function () {
     $versionGroup = new VersionGroup(['generational_mechanics' => [1]]);
     $importer = new PokeApiPokemonGameDataImporter;
