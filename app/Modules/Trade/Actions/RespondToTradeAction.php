@@ -117,6 +117,12 @@ class RespondToTradeAction
         $offeredIds = $trade->offeredPokemon->pluck('league_pokemon_id')->toArray();
         $requestedIds = $trade->requestedPokemon->pluck('league_pokemon_id')->toArray();
 
+        $draftPointsDelta = $trade->draft_points_delta ?? 0;
+
+        if ($draftPointsDelta < 0) {
+            $this->validateDraftPointsOffer($requestingTeam, abs($draftPointsDelta));
+        }
+
         if (! $isFreeWindow) {
             $this->validateTradeCount($requestingTeam, count($requestedIds));
             $this->validateTradeCount($targetTeam, count($offeredIds));
@@ -124,15 +130,34 @@ class RespondToTradeAction
         $this->validateMinimumRoster($requestingTeam, $trade->league_id, count($offeredIds), count($requestedIds));
         $this->validateMinimumRoster($targetTeam, $trade->league_id, count($requestedIds), count($offeredIds));
 
-        LeaguePokemon::whereIn('id', $offeredIds)->update(['drafted_by' => $targetTeam->id]);
-        LeaguePokemon::whereIn('id', $requestedIds)->update(['drafted_by' => $requestingTeam->id]);
+        if (count($offeredIds) > 0) {
+            LeaguePokemon::whereIn('id', $offeredIds)->update(['drafted_by' => $targetTeam->id]);
+        }
+
+        if (count($requestedIds) > 0) {
+            LeaguePokemon::whereIn('id', $requestedIds)->update(['drafted_by' => $requestingTeam->id]);
+        }
 
         if (! $isFreeWindow) {
             $requestingTeam->decrement('trades', count($requestedIds));
             $targetTeam->decrement('trades', count($offeredIds));
         }
 
+        if ($draftPointsDelta !== 0) {
+            $requestingTeam->increment('draft_points', $draftPointsDelta);
+            $targetTeam->increment('draft_points', -$draftPointsDelta);
+        }
+
         $trade->update(['status' => 'accepted']);
+    }
+
+    private function validateDraftPointsOffer(\App\Modules\Teams\Models\Team $team, int $offeredDraftPoints): void
+    {
+        if ($team->draft_points < $offeredDraftPoints) {
+            throw ValidationException::withMessages([
+                'trade' => "{$team->name} no longer has enough draft points to complete this trade. They need {$offeredDraftPoints} but have {$team->draft_points}.",
+            ]);
+        }
     }
 
     private function validateTradeCount(\App\Modules\Teams\Models\Team $team, int $pokemonReceiving): void

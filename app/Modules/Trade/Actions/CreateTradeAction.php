@@ -22,8 +22,9 @@ class CreateTradeAction
         $request->validate([
             'league_id' => ['required', 'integer', 'exists:leagues,id'],
             'target_team_id' => ['required', 'integer', 'exists:teams,id'],
-            'offered_pokemon_ids' => ['required', 'array', 'min:1'],
+            'offered_pokemon_ids' => ['nullable', 'array'],
             'offered_pokemon_ids.*' => ['integer', 'exists:league_pokemon,id'],
+            'offered_draft_points' => ['nullable', 'integer', 'min:0'],
             'requested_pokemon_ids' => ['required', 'array', 'min:1'],
             'requested_pokemon_ids.*' => ['integer', 'exists:league_pokemon,id'],
         ]);
@@ -50,10 +51,16 @@ class CreateTradeAction
             ->whereNull('dropped_at')
             ->firstOrFail();
 
-        $offeredIds = $request->offered_pokemon_ids;
+        $offeredIds = $request->input('offered_pokemon_ids', []);
         $requestedIds = $request->requested_pokemon_ids;
+        $offeredDraftPoints = (int) ($request->input('offered_draft_points') ?? 0);
 
-        $this->validatePokemonOwnership($offeredIds, $requestingTeam->id, $request->league_id, 'offered');
+        $this->validateHasOffer($offeredIds, $offeredDraftPoints);
+        $this->validateDraftPointsOffer($requestingTeam, $offeredDraftPoints);
+
+        if (count($offeredIds) > 0) {
+            $this->validatePokemonOwnership($offeredIds, $requestingTeam->id, $request->league_id, 'offered');
+        }
         $this->validatePokemonOwnership($requestedIds, $targetTeam->id, $request->league_id, 'requested');
 
         if (! $league->isFreeTradeWindowActive()) {
@@ -70,6 +77,7 @@ class CreateTradeAction
             'target_team_id' => $targetTeam->id,
             'counterparty' => TradeCounterparty::Team,
             'status' => 'pending',
+            'draft_points_delta' => $offeredDraftPoints > 0 ? -$offeredDraftPoints : null,
         ]);
 
         foreach ($offeredIds as $pokemonId) {
@@ -115,6 +123,27 @@ class CreateTradeAction
         if ($league->isTradeDeadlinePassed()) {
             throw ValidationException::withMessages([
                 'league_id' => 'The trade deadline for this league has passed.',
+            ]);
+        }
+    }
+
+    /**
+     * @param  array<int>  $offeredIds
+     */
+    private function validateHasOffer(array $offeredIds, int $offeredDraftPoints): void
+    {
+        if (count($offeredIds) === 0 && $offeredDraftPoints === 0) {
+            throw ValidationException::withMessages([
+                'offered_pokemon_ids' => 'You must offer at least one Pokémon or draft points.',
+            ]);
+        }
+    }
+
+    private function validateDraftPointsOffer(Team $team, int $offeredDraftPoints): void
+    {
+        if ($offeredDraftPoints > 0 && $team->draft_points < $offeredDraftPoints) {
+            throw ValidationException::withMessages([
+                'offered_draft_points' => "Your team only has {$team->draft_points} draft points but you offered {$offeredDraftPoints}.",
             ]);
         }
     }

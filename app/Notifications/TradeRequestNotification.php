@@ -31,9 +31,15 @@ class TradeRequestNotification extends Notification
         $targetTeam = $this->trade->targetTeam;
         $league = $this->trade->league;
 
-        $offeredNames = $this->trade->offeredPokemon
+        $offeredParts = $this->trade->offeredPokemon
             ->map(fn ($tp) => $tp->leaguePokemon?->name ?? 'Unknown')
-            ->join(', ');
+            ->all();
+
+        if ($this->trade->draft_points_delta !== null && $this->trade->draft_points_delta < 0) {
+            $offeredParts[] = abs($this->trade->draft_points_delta).' draft pts';
+        }
+
+        $offeredNames = implode(', ', $offeredParts);
 
         $requestedNames = $this->trade->requestedPokemon
             ->map(fn ($tp) => $tp->leaguePokemon?->name ?? 'Unknown')

@@ -2,6 +2,7 @@
 import type { LeagueDetailSection } from '@/components/league/LeagueDetailLayout.vue';
 import LeagueDetailLayout from '@/components/league/LeagueDetailLayout.vue';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { usePage, useForm, router } from '@inertiajs/vue3';
 import { ref, computed } from 'vue';
 
@@ -108,6 +109,7 @@ const selectedTargetTeamId = ref<number | null>(null);
 const tradeForm = useForm({
     target_team_id: null as number | null,
     offered_pokemon_ids: [] as number[],
+    offered_draft_points: 0,
     requested_pokemon_ids: [] as number[],
 });
 
@@ -151,7 +153,11 @@ function tradeTransactionLabel(trade: Trade): string {
         return parts.join('; ');
     }
 
-    const offered = trade.offered_pokemon.map((tp) => tp.league_pokemon?.name).filter(Boolean).join(', ');
+    const offeredParts: string[] = trade.offered_pokemon.map((tp) => tp.league_pokemon?.name).filter(Boolean) as string[];
+    if (trade.draft_points_delta != null && trade.draft_points_delta < 0) {
+        offeredParts.push(`${Math.abs(trade.draft_points_delta)} draft pts`);
+    }
+    const offered = offeredParts.join(', ');
     const received = trade.requested_pokemon.map((tp) => tp.league_pokemon?.name).filter(Boolean).join(', ');
     if (offered && received) {
         return `${offered} ↔ ${received}`;
@@ -161,6 +167,15 @@ function tradeTransactionLabel(trade: Trade): string {
     }
     return received ? `received ${received}` : '—';
 }
+
+const teamTradeValid = computed(() => {
+    const hasOffer =
+        tradeForm.offered_pokemon_ids.length > 0 || (tradeForm.offered_draft_points ?? 0) > 0;
+    const hasRequest = tradeForm.requested_pokemon_ids.length > 0;
+    const canAffordPoints = (tradeForm.offered_draft_points ?? 0) <= (props.userTeam?.draft_points ?? 0);
+
+    return hasOffer && hasRequest && canAffordPoints;
+});
 
 function relativeTime(dateStr: string): string {
     const diff = (Date.now() - new Date(dateStr).getTime()) / 1000;
@@ -238,7 +253,7 @@ const faCanCoverShortfall = computed(() => {
 });
 
 const faTradeValid = computed(
-    () => faForm.offered_pokemon_ids.length > 0 && faForm.requested_pokemon_ids.length > 0 && faCanCoverShortfall.value,
+    () => faForm.requested_pokemon_ids.length > 0 && faCanCoverShortfall.value,
 );
 
 const toggleFaOffered = (id: number) => {
@@ -355,6 +370,22 @@ const respondToTrade = (trade: Trade, response: 'accepted' | 'declined' | 'cance
                             </button>
                         </div>
                         <p v-if="userTeam.pokemon.length === 0" class="text-sm text-muted-foreground">No Pokémon on your team.</p>
+                        <div class="mt-3 flex flex-col gap-1.5">
+                            <label class="text-sm font-medium" for="offered_draft_points">Or offer draft points</label>
+                            <Input
+                                id="offered_draft_points"
+                                v-model.number="tradeForm.offered_draft_points"
+                                type="number"
+                                min="0"
+                                :max="userTeam.draft_points"
+                                class="w-32"
+                                placeholder="0"
+                            />
+                            <p class="text-xs text-muted-foreground">
+                                You have <span class="font-medium text-foreground">{{ userTeam.draft_points }}</span> draft points available.
+                            </p>
+                            <p v-if="tradeForm.errors.offered_draft_points" class="text-sm text-destructive">{{ tradeForm.errors.offered_draft_points }}</p>
+                        </div>
                     </div>
 
                     <!-- Pokémon you're requesting -->
@@ -384,12 +415,14 @@ const respondToTrade = (trade: Trade, response: 'accepted' | 'declined' | 'cance
 
                 <div v-if="selectedTargetTeam" class="mt-4 flex items-center justify-between">
                     <p class="text-xs text-muted-foreground">
-                        Offering {{ tradeForm.offered_pokemon_ids.length }} · Requesting {{ tradeForm.requested_pokemon_ids.length }}
+                        Offering {{ tradeForm.offered_pokemon_ids.length }} Pokémon
+                        <span v-if="(tradeForm.offered_draft_points ?? 0) > 0"> + {{ tradeForm.offered_draft_points }} draft pts</span>
+                        · Requesting {{ tradeForm.requested_pokemon_ids.length }}
                         <span v-if="tradeForm.requested_pokemon_ids.length > 0">
                             (costs {{ tradeForm.requested_pokemon_ids.length }} of your {{ userTeam?.trades }} remaining trades)
                         </span>
                     </p>
-                    <Button @click="submitTrade" :disabled="tradeForm.processing || tradeForm.offered_pokemon_ids.length === 0 || tradeForm.requested_pokemon_ids.length === 0">
+                    <Button @click="submitTrade" :disabled="tradeForm.processing || !teamTradeValid">
                         Send Request
                     </Button>
                 </div>
@@ -399,7 +432,8 @@ const respondToTrade = (trade: Trade, response: 'accepted' | 'declined' | 'cance
             <div v-if="showFaForm && userTeam" class="rounded-lg border border-border bg-card p-6">
                 <h3 class="mb-2 text-base font-semibold">Trade with free agency</h3>
                 <p class="mb-4 text-sm text-muted-foreground">
-                    Return Pokémon to the pool and take available Pokémon. If pool cost exceeds what you offer, the difference is paid from your
+                    Return Pokémon to the pool and take available Pokémon, or spend draft points to pick up pool Pokémon without dropping any.
+                    If pool cost exceeds what you offer, the difference is paid from your
                     <span class="font-medium text-foreground">{{ userTeam.draft_points }}</span> draft points. This uses
                     {{ faTradeTokenCost || '…' }} trade slot(s) (offered + taken count).
                 </p>
@@ -463,7 +497,6 @@ const respondToTrade = (trade: Trade, response: 'accepted' | 'declined' | 'cance
                         @click="submitFaTrade"
                         :disabled="
                             faForm.processing ||
-                            faForm.offered_pokemon_ids.length === 0 ||
                             faForm.requested_pokemon_ids.length === 0 ||
                             !faTradeValid ||
                             faTradeTokenCost > (userTeam?.trades ?? 0)
@@ -494,6 +527,12 @@ const respondToTrade = (trade: Trade, response: 'accepted' | 'declined' | 'cance
                                     >
                                         <img v-if="tp.league_pokemon?.pokemon?.sprite_url" :src="tp.league_pokemon.pokemon.sprite_url" :alt="tp.league_pokemon?.name" class="size-4 object-contain" />
                                         {{ tp.league_pokemon?.name ?? '?' }}
+                                    </span>
+                                    <span
+                                        v-if="trade.draft_points_delta != null && trade.draft_points_delta < 0"
+                                        class="rounded-full bg-muted px-2.5 py-0.5 text-xs"
+                                    >
+                                        {{ Math.abs(trade.draft_points_delta) }} draft pts
                                     </span>
                                 </div>
                             </div>
@@ -539,6 +578,12 @@ const respondToTrade = (trade: Trade, response: 'accepted' | 'declined' | 'cance
                                     >
                                         <img v-if="tp.league_pokemon?.pokemon?.sprite_url" :src="tp.league_pokemon.pokemon.sprite_url" :alt="tp.league_pokemon?.name" class="size-4 object-contain" />
                                         {{ tp.league_pokemon?.name ?? '?' }}
+                                    </span>
+                                    <span
+                                        v-if="trade.draft_points_delta != null && trade.draft_points_delta < 0"
+                                        class="rounded-full bg-muted px-2.5 py-0.5 text-xs"
+                                    >
+                                        {{ Math.abs(trade.draft_points_delta) }} draft pts
                                     </span>
                                 </div>
                             </div>

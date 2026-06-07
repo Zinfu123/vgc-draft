@@ -20,7 +20,7 @@ class ExecuteFreeAgencyTradeAction
     {
         $request->validate([
             'league_id' => ['required', 'integer', 'exists:leagues,id'],
-            'offered_pokemon_ids' => ['required', 'array', 'min:1'],
+            'offered_pokemon_ids' => ['nullable', 'array'],
             'offered_pokemon_ids.*' => ['integer', 'exists:league_pokemon,id'],
             'requested_pokemon_ids' => ['required', 'array', 'min:1'],
             'requested_pokemon_ids.*' => ['integer', 'exists:league_pokemon,id'],
@@ -46,10 +46,12 @@ class ExecuteFreeAgencyTradeAction
             ->whereNull('dropped_at')
             ->firstOrFail();
 
-        $offeredIds = $request->offered_pokemon_ids;
+        $offeredIds = $request->input('offered_pokemon_ids', []);
         $requestedIds = $request->requested_pokemon_ids;
 
-        $this->validatePokemonOwnership($offeredIds, $requestingTeam->id, $leagueId, 'offered');
+        if (count($offeredIds) > 0) {
+            $this->validatePokemonOwnership($offeredIds, $requestingTeam->id, $leagueId, 'offered');
+        }
         $this->validateFreeAgencyPoolPokemon($requestedIds, $leagueId);
 
         $offeredSum = (int) LeaguePokemon::query()->whereIn('id', $offeredIds)->where('league_id', $leagueId)->sum('cost');
@@ -78,12 +80,14 @@ class ExecuteFreeAgencyTradeAction
                 'draft_points_delta' => $pointsDelta !== 0 ? $pointsDelta : null,
             ]);
 
-            foreach ($offeredIds as $pokemonId) {
-                TradePokemon::create([
-                    'trade_id' => $trade->id,
-                    'league_pokemon_id' => $pokemonId,
-                    'direction' => 'offered',
-                ]);
+            if (count($offeredIds) > 0) {
+                foreach ($offeredIds as $pokemonId) {
+                    TradePokemon::create([
+                        'trade_id' => $trade->id,
+                        'league_pokemon_id' => $pokemonId,
+                        'direction' => 'offered',
+                    ]);
+                }
             }
 
             foreach ($requestedIds as $pokemonId) {
@@ -94,10 +98,12 @@ class ExecuteFreeAgencyTradeAction
                 ]);
             }
 
-            LeaguePokemon::query()->whereIn('id', $offeredIds)->update([
-                'drafted_by' => null,
-                'is_drafted' => false,
-            ]);
+            if (count($offeredIds) > 0) {
+                LeaguePokemon::query()->whereIn('id', $offeredIds)->update([
+                    'drafted_by' => null,
+                    'is_drafted' => false,
+                ]);
+            }
 
             LeaguePokemon::query()->whereIn('id', $requestedIds)->update([
                 'drafted_by' => $requestingTeam->id,

@@ -3,6 +3,7 @@ import type { LeagueDetailSection } from '@/components/league/LeagueDetailLayout
 import LeagueDetailLayout from '@/components/league/LeagueDetailLayout.vue';
 import PokemonCard from '@/components/pokemon/PokemonCard.vue';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Sheet,
@@ -330,6 +331,7 @@ const selectedTargetTeamId = ref<number | null>(null);
 const tradeForm = useForm({
     target_team_id: null as number | null,
     offered_pokemon_ids: [] as number[],
+    offered_draft_points: 0,
     requested_pokemon_ids: [] as number[],
 });
 
@@ -417,8 +419,17 @@ const faCanCoverShortfall = computed(() => {
 });
 
 const faTradeValid = computed(
-    () => faForm.offered_pokemon_ids.length > 0 && faForm.requested_pokemon_ids.length > 0 && faCanCoverShortfall.value,
+    () => faForm.requested_pokemon_ids.length > 0 && faCanCoverShortfall.value,
 );
+
+const teamTradeValid = computed(() => {
+    const hasOffer =
+        tradeForm.offered_pokemon_ids.length > 0 || (tradeForm.offered_draft_points ?? 0) > 0;
+    const hasRequest = tradeForm.requested_pokemon_ids.length > 0;
+    const canAffordPoints = (tradeForm.offered_draft_points ?? 0) <= (props.userTradesTeam?.draft_points ?? 0);
+
+    return hasOffer && hasRequest && canAffordPoints;
+});
 
 function toggleFaOffered(id: number): void {
     const idx = faForm.offered_pokemon_ids.indexOf(id);
@@ -477,7 +488,11 @@ function tradeTransactionLabel(trade: Trade): string {
         return parts.join('; ');
     }
 
-    const offered = trade.offered_pokemon.map((tp) => tp.league_pokemon?.name).filter(Boolean).join(', ');
+    const offeredParts: string[] = trade.offered_pokemon.map((tp) => tp.league_pokemon?.name).filter(Boolean) as string[];
+    if (trade.draft_points_delta != null && trade.draft_points_delta < 0) {
+        offeredParts.push(`${Math.abs(trade.draft_points_delta)} draft pts`);
+    }
+    const offered = offeredParts.join(', ');
     const received = trade.requested_pokemon.map((tp) => tp.league_pokemon?.name).filter(Boolean).join(', ');
     if (offered && received) {
         return `${offered} ↔ ${received}`;
@@ -696,6 +711,22 @@ if (isReverbBroadcastClientConfigured) {
                                                     </button>
                                                 </div>
                                                 <p v-if="userTradesTeam.pokemon.length === 0" class="text-sm text-muted-foreground">No Pokémon on your team.</p>
+                                                <div class="mt-3 flex flex-col gap-1.5">
+                                                    <label class="text-sm font-medium" for="offered_draft_points">Or offer draft points</label>
+                                                    <Input
+                                                        id="offered_draft_points"
+                                                        v-model.number="tradeForm.offered_draft_points"
+                                                        type="number"
+                                                        min="0"
+                                                        :max="userTradesTeam.draft_points"
+                                                        class="w-32"
+                                                        placeholder="0"
+                                                    />
+                                                    <p class="text-xs text-muted-foreground">
+                                                        You have <span class="font-medium text-foreground">{{ userTradesTeam.draft_points }}</span> draft points available.
+                                                    </p>
+                                                    <p v-if="tradeForm.errors.offered_draft_points" class="text-sm text-destructive">{{ tradeForm.errors.offered_draft_points }}</p>
+                                                </div>
                                             </div>
 
                                             <div>
@@ -723,14 +754,16 @@ if (isReverbBroadcastClientConfigured) {
 
                                             <div class="flex items-center justify-between gap-4 border-t border-border pt-4">
                                                 <p class="text-xs text-muted-foreground">
-                                                    Offering {{ tradeForm.offered_pokemon_ids.length }} · Requesting {{ tradeForm.requested_pokemon_ids.length }}
+                                                    Offering {{ tradeForm.offered_pokemon_ids.length }} Pokémon
+                                                    <span v-if="(tradeForm.offered_draft_points ?? 0) > 0"> + {{ tradeForm.offered_draft_points }} draft pts</span>
+                                                    · Requesting {{ tradeForm.requested_pokemon_ids.length }}
                                                     <span v-if="tradeForm.requested_pokemon_ids.length > 0">
                                                         (costs {{ tradeForm.requested_pokemon_ids.length }} of your {{ userTradesTeam.trades }} remaining)
                                                     </span>
                                                 </p>
                                                 <Button
                                                     size="sm"
-                                                    :disabled="tradeForm.processing || tradeForm.offered_pokemon_ids.length === 0 || tradeForm.requested_pokemon_ids.length === 0"
+                                                    :disabled="tradeForm.processing || !teamTradeValid"
                                                     @click="submitTrade"
                                                 >
                                                     Send Request
@@ -742,7 +775,8 @@ if (isReverbBroadcastClientConfigured) {
                                     <!-- Free agency form -->
                                     <div v-else class="flex flex-col gap-4">
                                         <p class="text-sm text-muted-foreground">
-                                            Return Pokémon to the pool and take available ones. If pool cost exceeds what you offer, the difference is paid from your
+                                            Return Pokémon to the pool and take available ones, or spend draft points to pick up pool Pokémon without dropping any.
+                                            If pool cost exceeds what you offer, the difference is paid from your
                                             <span class="font-medium text-foreground">{{ userTradesTeam.draft_points }}</span> draft points. Uses
                                             {{ faTradeTokenCost > 0 ? faTradeTokenCost : '…' }} trade slot(s).
                                         </p>
@@ -836,7 +870,6 @@ if (isReverbBroadcastClientConfigured) {
                                                 size="sm"
                                                 :disabled="
                                                     faForm.processing ||
-                                                    faForm.offered_pokemon_ids.length === 0 ||
                                                     faForm.requested_pokemon_ids.length === 0 ||
                                                     !faTradeValid ||
                                                     faTradeTokenCost > (userTradesTeam.trades ?? 0)
@@ -893,6 +926,12 @@ if (isReverbBroadcastClientConfigured) {
                                                                 <img v-if="tp.league_pokemon?.pokemon?.sprite_url" :src="tp.league_pokemon.pokemon.sprite_url" :alt="tp.league_pokemon?.name" class="size-4 object-contain" />
                                                                 {{ tp.league_pokemon?.name ?? '?' }}
                                                             </span>
+                                                            <span
+                                                                v-if="trade.draft_points_delta != null && trade.draft_points_delta < 0"
+                                                                class="rounded-full bg-muted px-2.5 py-0.5 text-xs"
+                                                            >
+                                                                {{ Math.abs(trade.draft_points_delta) }} draft pts
+                                                            </span>
                                                         </div>
                                                     </div>
                                                     <div>
@@ -929,6 +968,12 @@ if (isReverbBroadcastClientConfigured) {
                                                             <span v-for="tp in trade.offered_pokemon" :key="tp.id" class="flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-xs">
                                                                 <img v-if="tp.league_pokemon?.pokemon?.sprite_url" :src="tp.league_pokemon.pokemon.sprite_url" :alt="tp.league_pokemon?.name" class="size-4 object-contain" />
                                                                 {{ tp.league_pokemon?.name ?? '?' }}
+                                                            </span>
+                                                            <span
+                                                                v-if="trade.draft_points_delta != null && trade.draft_points_delta < 0"
+                                                                class="rounded-full bg-muted px-2.5 py-0.5 text-xs"
+                                                            >
+                                                                {{ Math.abs(trade.draft_points_delta) }} draft pts
                                                             </span>
                                                         </div>
                                                     </div>

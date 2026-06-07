@@ -207,6 +207,88 @@ it('rejects a trade that would drop the offering team below minimum roster size'
     $response->assertSessionHasErrors('offered_pokemon_ids');
 });
 
+it('user can create a team trade offering only draft points', function () {
+    Notification::fake();
+
+    [$owner, $league, $teamA, $teamB, $userA, $userB, $pikachuA, $charizardA, $gengarA, $blastoiseB] = createLeagueForTradeTests();
+
+    $response = $this->actingAs($userA)->post("/leagues/{$league->id}/trades", [
+        'target_team_id' => $teamB->id,
+        'offered_pokemon_ids' => [],
+        'offered_draft_points' => 25,
+        'requested_pokemon_ids' => [$blastoiseB->id],
+    ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHasNoErrors();
+
+    $trade = Trade::where('requesting_team_id', $teamA->id)->where('target_team_id', $teamB->id)->first();
+
+    expect($trade)->not->toBeNull()
+        ->and($trade->status)->toBe('pending')
+        ->and($trade->draft_points_delta)->toBe(-25)
+        ->and($trade->offeredPokemon)->toHaveCount(0)
+        ->and($trade->requestedPokemon)->toHaveCount(1);
+});
+
+it('rejects a team trade when offered draft points exceed the team balance', function () {
+    [$owner, $league, $teamA, $teamB, $userA, $userB, $pikachuA, $charizardA, $gengarA, $blastoiseB] = createLeagueForTradeTests();
+
+    $teamA->update(['draft_points' => 10]);
+
+    $response = $this->actingAs($userA)->post("/leagues/{$league->id}/trades", [
+        'target_team_id' => $teamB->id,
+        'offered_pokemon_ids' => [],
+        'offered_draft_points' => 25,
+        'requested_pokemon_ids' => [$blastoiseB->id],
+    ]);
+
+    $response->assertSessionHasErrors('offered_draft_points');
+});
+
+it('rejects a team trade with no pokemon or draft points offered', function () {
+    [$owner, $league, $teamA, $teamB, $userA, $userB, $pikachuA, $charizardA, $gengarA, $blastoiseB] = createLeagueForTradeTests();
+
+    $response = $this->actingAs($userA)->post("/leagues/{$league->id}/trades", [
+        'target_team_id' => $teamB->id,
+        'offered_pokemon_ids' => [],
+        'offered_draft_points' => 0,
+        'requested_pokemon_ids' => [$blastoiseB->id],
+    ]);
+
+    $response->assertSessionHasErrors('offered_pokemon_ids');
+});
+
+it('target user can accept a draft-points-only team trade and points are transferred', function () {
+    [$owner, $league, $teamA, $teamB, $userA, $userB, $pikachuA, $charizardA, $gengarA, $blastoiseB] = createLeagueForTradeTests();
+
+    $teamAStartingPoints = $teamA->draft_points;
+    $teamBStartingPoints = $teamB->draft_points;
+
+    $trade = Trade::create([
+        'league_id' => $league->id,
+        'requesting_team_id' => $teamA->id,
+        'target_team_id' => $teamB->id,
+        'status' => 'pending',
+        'draft_points_delta' => -25,
+    ]);
+    $trade->tradePokemon()->create(['league_pokemon_id' => $blastoiseB->id, 'direction' => 'requested']);
+
+    $response = $this->actingAs($userB)->put("/leagues/{$league->id}/trades/{$trade->id}", [
+        'response' => 'accepted',
+    ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHasNoErrors();
+
+    expect($trade->fresh()->status)->toBe('accepted')
+        ->and($blastoiseB->fresh()->drafted_by)->toBe($teamA->id)
+        ->and($teamA->fresh()->draft_points)->toBe($teamAStartingPoints - 25)
+        ->and($teamB->fresh()->draft_points)->toBe($teamBStartingPoints + 25)
+        ->and($teamA->fresh()->trades)->toBe(2)
+        ->and($teamB->fresh()->trades)->toBe(3);
+});
+
 // ── Respond to Trade ─────────────────────────────────────────────────────────
 
 it('target user can accept a trade and pokemon are transferred', function () {
@@ -606,6 +688,46 @@ it('does not change draft points when free agency trade costs are equal', functi
         ->first();
 
     expect($trade->draft_points_delta)->toBeNull();
+});
+
+it('user can complete a free agency trade using only draft points', function () {
+    [$owner, $league, $teamA, $teamB, $userA, $userB, $pikachuA, $charizardA, $gengarA, $blastoiseB] = createLeagueForTradeTests();
+
+    $startingPoints = $teamA->draft_points;
+    $beforeTrades = $teamA->trades;
+
+    $pd = Pokedex::create(['nationaldex_id' => 133, 'name' => 'Eevee', 'type1' => 'Normal']);
+    $poolMon = LeaguePokemon::create([
+        'league_id' => $league->id,
+        'pokedex_id' => $pd->id,
+        'name' => 'Eevee',
+        'cost' => 15,
+        'drafted_by' => null,
+        'is_drafted' => false,
+        'banned' => false,
+    ]);
+
+    $response = $this->actingAs($userA)->post(route('leagues.trades.free-agency', ['league' => $league->id]), [
+        'offered_pokemon_ids' => [],
+        'requested_pokemon_ids' => [$poolMon->id],
+    ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHasNoErrors();
+
+    expect($poolMon->fresh()->drafted_by)->toBe($teamA->id)
+        ->and($teamA->fresh()->draft_points)->toBe($startingPoints - 15)
+        ->and($teamA->fresh()->trades)->toBe($beforeTrades - 1);
+
+    $trade = Trade::query()
+        ->where('league_id', $league->id)
+        ->where('counterparty', TradeCounterparty::FreeAgency)
+        ->latest('id')
+        ->first();
+
+    expect($trade->draft_points_delta)->toBe(-15)
+        ->and($trade->offeredPokemon)->toHaveCount(0)
+        ->and($trade->requestedPokemon)->toHaveCount(1);
 });
 
 it('includes all league accepted trades in trade history on the trades page', function () {
