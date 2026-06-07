@@ -62,7 +62,7 @@ class ExecuteFreeAgencyTradeAction
             $this->validateDraftPointsForShortfall($requestingTeam, abs($pointsDelta));
         }
 
-        $tradeTokenCost = count($offeredIds) + count($requestedIds);
+        $tradeTokenCost = count($requestedIds);
 
         if (! $isFreeWindow) {
             $this->validateTradeCount($requestingTeam, $tradeTokenCost);

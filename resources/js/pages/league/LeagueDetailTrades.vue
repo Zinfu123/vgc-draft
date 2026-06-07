@@ -240,7 +240,7 @@ const requestedPoolCostSum = computed(() => {
     return faForm.requested_pokemon_ids.reduce((s, id) => s + (byId.get(id) ?? 0), 0);
 });
 
-const faTradeTokenCost = computed(() => faForm.offered_pokemon_ids.length + faForm.requested_pokemon_ids.length);
+const faTradeTokenCost = computed(() => faForm.requested_pokemon_ids.length);
 
 const faPointsShortfall = computed(() => Math.max(0, requestedPoolCostSum.value - offeredCostSum.value));
 
@@ -435,7 +435,7 @@ const respondToTrade = (trade: Trade, response: 'accepted' | 'declined' | 'cance
                     Return Pokémon to the pool and take available Pokémon, or spend draft points to pick up pool Pokémon without dropping any.
                     If pool cost exceeds what you offer, the difference is paid from your
                     <span class="font-medium text-foreground">{{ userTeam.draft_points }}</span> draft points. This uses
-                    {{ faTradeTokenCost || '…' }} trade slot(s) (offered + taken count).
+                    {{ faTradeTokenCost || '…' }} trade slot(s) (one per Pokémon picked up).
                 </p>
                 <div class="grid gap-6 md:grid-cols-2">
                     <div>

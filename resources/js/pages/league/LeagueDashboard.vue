@@ -406,7 +406,7 @@ const requestedPoolCostSum = computed(() => {
     return faForm.requested_pokemon_ids.reduce((s, id) => s + (byId.get(id) ?? 0), 0);
 });
 
-const faTradeTokenCost = computed(() => faForm.offered_pokemon_ids.length + faForm.requested_pokemon_ids.length);
+const faTradeTokenCost = computed(() => faForm.requested_pokemon_ids.length);
 
 const faPointsShortfall = computed(() => Math.max(0, requestedPoolCostSum.value - offeredCostSum.value));
 

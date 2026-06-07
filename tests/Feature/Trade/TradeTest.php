@@ -510,7 +510,7 @@ it('user can complete a free agency trade and creates an accepted audit trade', 
 
     expect($pikachuA->fresh()->drafted_by)->toBeNull()
         ->and($poolMon->fresh()->drafted_by)->toBe($teamA->id)
-        ->and($teamA->fresh()->trades)->toBe($beforeTrades - 2);
+        ->and($teamA->fresh()->trades)->toBe($beforeTrades - 1);
 
     $trade = Trade::query()
         ->where('league_id', $league->id)
@@ -688,6 +688,45 @@ it('does not change draft points when free agency trade costs are equal', functi
         ->first();
 
     expect($trade->draft_points_delta)->toBeNull();
+});
+
+it('charges one trade slot per pokemon picked up in a free agency trade', function () {
+    [$owner, $league, $teamA, $teamB, $userA, $userB, $pikachuA, $charizardA, $gengarA, $blastoiseB, $venusaurB, $mewB] = createLeagueForTradeTests();
+
+    $beforeTrades = $teamA->trades;
+
+    $pdKommoO = Pokedex::create(['nationaldex_id' => 784, 'name' => 'Kommo-o', 'type1' => 'Dragon']);
+    $pdYanma = Pokedex::create(['nationaldex_id' => 193, 'name' => 'Yanma', 'type1' => 'Bug']);
+
+    $kommoO = LeaguePokemon::create([
+        'league_id' => $league->id,
+        'pokedex_id' => $pdKommoO->id,
+        'name' => 'Kommo-o',
+        'cost' => 20,
+        'drafted_by' => null,
+        'is_drafted' => false,
+        'banned' => false,
+    ]);
+
+    $yanma = LeaguePokemon::create([
+        'league_id' => $league->id,
+        'pokedex_id' => $pdYanma->id,
+        'name' => 'Yanma',
+        'cost' => 10,
+        'drafted_by' => null,
+        'is_drafted' => false,
+        'banned' => false,
+    ]);
+
+    $response = $this->actingAs($userA)->post(route('leagues.trades.free-agency', ['league' => $league->id]), [
+        'offered_pokemon_ids' => [$pikachuA->id, $charizardA->id],
+        'requested_pokemon_ids' => [$kommoO->id, $yanma->id],
+    ]);
+
+    $response->assertRedirect();
+    $response->assertSessionHasNoErrors();
+
+    expect($teamA->fresh()->trades)->toBe($beforeTrades - 2);
 });
 
 it('user can complete a free agency trade using only draft points', function () {
