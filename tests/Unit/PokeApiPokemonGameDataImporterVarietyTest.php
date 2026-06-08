@@ -252,6 +252,53 @@ it('maps showdown-style -f pokedex names to pokeapi -female varieties', function
     'oinkologne-f' => ['oinkologne-f', 'oinkologne-female'],
 ]);
 
+it('maps paldea tauros pokedex names to pokeapi breed varieties', function (string $pokedexName, string $expectedApiName, int $expectedPokemonId) {
+    $pokedex = new Pokedex(['name' => $pokedexName]);
+    $species = [
+        'varieties' => [
+            [
+                'is_default' => true,
+                'pokemon' => [
+                    'name' => 'tauros',
+                    'url' => 'https://pokeapi.co/api/v2/pokemon/128/',
+                ],
+            ],
+            [
+                'is_default' => false,
+                'pokemon' => [
+                    'name' => 'tauros-paldea-combat-breed',
+                    'url' => 'https://pokeapi.co/api/v2/pokemon/10250/',
+                ],
+            ],
+            [
+                'is_default' => false,
+                'pokemon' => [
+                    'name' => 'tauros-paldea-blaze-breed',
+                    'url' => 'https://pokeapi.co/api/v2/pokemon/10251/',
+                ],
+            ],
+            [
+                'is_default' => false,
+                'pokemon' => [
+                    'name' => 'tauros-paldea-aqua-breed',
+                    'url' => 'https://pokeapi.co/api/v2/pokemon/10252/',
+                ],
+            ],
+        ],
+    ];
+
+    $importer = new PokeApiPokemonGameDataImporter;
+    $method = new ReflectionMethod(PokeApiPokemonGameDataImporter::class, 'resolveVarietyPokemonUrl');
+    $method->setAccessible(true);
+    $url = $method->invoke($importer, $species, $pokedex);
+
+    expect($url)->toEndWith("/{$expectedPokemonId}/");
+})->with([
+    'combat' => ['tauros-paldea', 'tauros-paldea-combat-breed', 10250],
+    'blaze' => ['tauros-paldea-fire', 'tauros-paldea-blaze-breed', 10251],
+    'aqua' => ['tauros-paldea-water', 'tauros-paldea-aqua-breed', 10252],
+]);
+
 it('maps base pokedex names to pokeapi -male varieties via prefix match', function () {
     $pokedex = new Pokedex(['name' => 'indeedee']);
     $species = [

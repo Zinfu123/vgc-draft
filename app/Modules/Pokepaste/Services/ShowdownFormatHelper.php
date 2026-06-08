@@ -24,8 +24,8 @@ class ShowdownFormatHelper
         'rotom-mow' => 'rotom',
         'rotom-fan' => 'rotom',
         'meowstic-f' => 'meowstic',
-        'tauros-paldea-aqua' => 'tauros-paldea',
-        'tauros-paldea-blaze' => 'tauros-paldea',
+        'tauros-paldea-aqua' => 'tauros-paldea-water',
+        'tauros-paldea-blaze' => 'tauros-paldea-fire',
         'tauros-paldea-combat' => 'tauros-paldea',
     ];
 

@@ -13,6 +13,17 @@ use Illuminate\Support\Str;
 
 class PokeApiPokemonGameDataImporter
 {
+    /**
+     * Pokedex row slugs that do not match PokéAPI variety slugs directly.
+     *
+     * @var array<string, list<string>>
+     */
+    private const POKEDEX_VARIETY_ALIASES = [
+        'tauros-paldea' => ['tauros-paldea-combat-breed'],
+        'tauros-paldea-fire' => ['tauros-paldea-blaze-breed'],
+        'tauros-paldea-water' => ['tauros-paldea-aqua-breed'],
+    ];
+
     public function import(Pokedex $pokedex, VersionGroup $versionGroup): bool
     {
         $baseUrl = rtrim((string) config('pokemon.pokeapi_url'), '/');
@@ -109,6 +120,50 @@ class PokeApiPokemonGameDataImporter
     }
 
     /**
+     * Resolve which PokéAPI /pokemon/{id} resource should back this pokedex row.
+     *
+     * @param  array<string, mixed>|null  $species  Pre-fetched species payload (for batched audits).
+     * @return array{pokeapi_pokemon_id: int, variety_name: string}|null
+     */
+    public function expectedVarietyForPokedex(Pokedex $pokedex, ?array $species = null): ?array
+    {
+        $baseUrl = rtrim((string) config('pokemon.pokeapi_url'), '/');
+
+        if ($species === null) {
+            $speciesId = (int) floor((float) $pokedex->getAttribute('nationaldex_id'));
+            $species = $this->getJson("{$baseUrl}/pokemon-species/{$speciesId}/");
+            if ($species === null) {
+                return null;
+            }
+        }
+
+        $pokemonUrl = $this->resolveVarietyPokemonUrl($species, $pokedex);
+        if ($pokemonUrl === null) {
+            return null;
+        }
+
+        $pokemonId = $this->extractTrailingId($pokemonUrl);
+        if ($pokemonId === null) {
+            return null;
+        }
+
+        return [
+            'pokeapi_pokemon_id' => $pokemonId,
+            'variety_name' => $this->varietyNameForPokemonUrl($species, $pokemonUrl) ?? '',
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    public function fetchSpeciesPayload(int $speciesId): ?array
+    {
+        $baseUrl = rtrim((string) config('pokemon.pokeapi_url'), '/');
+
+        return $this->getJson("{$baseUrl}/pokemon-species/{$speciesId}/");
+    }
+
+    /**
      * Build the same learnset rows as stored in {@see PokemonGenerationData::$learnset} from PokéAPI for a
      * reference version group (e.g. scarlet-violet). PokéAPI does not list learnsets for champions.
      *
@@ -124,17 +179,12 @@ class PokeApiPokemonGameDataImporter
             return null;
         }
 
-        $pokemonUrl = $this->resolveVarietyPokemonUrl($species, $pokedex);
-        if ($pokemonUrl === null) {
+        $expected = $this->expectedVarietyForPokedex($pokedex, $species);
+        if ($expected === null) {
             return null;
         }
 
-        $pokemonId = $this->extractTrailingId($pokemonUrl);
-        if ($pokemonId === null) {
-            return null;
-        }
-
-        $pokemon = $this->getJson("{$baseUrl}/pokemon/{$pokemonId}/");
+        $pokemon = $this->getJson("{$baseUrl}/pokemon/{$expected['pokeapi_pokemon_id']}/");
         if ($pokemon === null) {
             return null;
         }
@@ -401,6 +451,24 @@ class PokeApiPokemonGameDataImporter
     }
 
     /**
+     * @param  array<string, mixed>  $species
+     */
+    private function varietyNameForPokemonUrl(array $species, string $pokemonUrl): ?string
+    {
+        foreach ($species['varieties'] ?? [] as $variety) {
+            if (! is_array($variety) || empty($variety['pokemon']['url'])) {
+                continue;
+            }
+
+            if ((string) $variety['pokemon']['url'] === $pokemonUrl) {
+                return isset($variety['pokemon']['name']) ? (string) $variety['pokemon']['name'] : null;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Showdown and our pokedex use short gender suffixes (`-f`, `-m`); PokéAPI uses `-female` / `-male`.
      *
      * @return list<string>
@@ -414,6 +482,8 @@ class PokeApiPokemonGameDataImporter
         } elseif (str_ends_with($rowSlug, '-m')) {
             $candidates[] = substr($rowSlug, 0, -2).'-male';
         }
+
+        $candidates = array_merge($candidates, self::POKEDEX_VARIETY_ALIASES[$rowSlug] ?? []);
 
         return array_values(array_unique($candidates));
     }
