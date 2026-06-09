@@ -1,19 +1,36 @@
 <?php
 
-use App\Modules\V2\Pokedex\Http\Controllers\PokedexAbilityController;
-use App\Modules\V2\Pokedex\Http\Controllers\PokedexController;
-use App\Modules\V2\Pokedex\Http\Controllers\PokedexItemController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'verified'])->group(function (): void {
-    Route::get('pokedex', [PokedexController::class, 'index'])->name('pokedex.index');
-    Route::get('pokedex/abilities/{id}', [PokedexAbilityController::class, 'show'])
+    Route::get('pokedex', function (Request $request) {
+        $query = $request->getQueryString();
+
+        return redirect($query ? "/pokedex?{$query}" : '/pokedex');
+    })->name('pokedex.index');
+
+    Route::get('pokedex/abilities/{id}', function (Request $request, int $id) {
+        $query = $request->getQueryString();
+
+        return redirect($query ? "/pokedex/abilities/{$id}?{$query}" : "/pokedex/abilities/{$id}");
+    })
         ->whereNumber('id')
         ->name('pokedex.abilities.show');
-    Route::get('pokedex/items/{id}', [PokedexItemController::class, 'show'])
+
+    Route::get('pokedex/items/{id}', function (Request $request, int $id) {
+        $query = $request->getQueryString();
+
+        return redirect($query ? "/pokedex/items/{$id}?{$query}" : "/pokedex/items/{$id}");
+    })
         ->whereNumber('id')
         ->name('pokedex.items.show');
-    Route::get('pokedex/{pokedex}', [PokedexController::class, 'show'])
+
+    Route::get('pokedex/{pokedex}', function (Request $request, int $pokedex) {
+        $query = $request->getQueryString();
+
+        return redirect($query ? "/pokedex/{$pokedex}?{$query}" : "/pokedex/{$pokedex}");
+    })
         ->whereNumber('pokedex')
         ->name('pokedex.show');
 });

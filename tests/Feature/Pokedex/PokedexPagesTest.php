@@ -19,9 +19,60 @@ it('renders the pokedex index for authenticated users', function () {
         ->component('pokedex/PokedexIndex')
         ->has('pokemon')
         ->has('filters')
+        ->has('filters.game')
+        ->has('filters.ability')
+        ->has('filters.move')
         ->has('typeOptions')
         ->has('generationFilterOptions')
+        ->has('versionGroups')
+        ->has('abilityFilterOptions')
     );
+});
+
+it('filters pokedex index by ability query param', function () {
+    $user = User::factory()->create();
+    $versionGroup = VersionGroup::query()->where('slug', 'scarlet-violet')->firstOrFail();
+
+    $bulbasaurId = DB::table('pokedex')->insertGetId([
+        'nationaldex_id' => 1,
+        'name' => 'Bulbasaur',
+        'type1' => 'Grass',
+        'type2' => 'Poison',
+        'sprite_url' => null,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('pokedex')->insert([
+        'nationaldex_id' => 4,
+        'name' => 'Charmander',
+        'type1' => 'Fire',
+        'type2' => null,
+        'sprite_url' => null,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    AbilityGenerationData::query()->create([
+        'pokedex_id' => $bulbasaurId,
+        'version_group_id' => $versionGroup->id,
+        'pokeapi_ability_id' => 65,
+        'ability_name' => 'overgrow',
+        'slot' => 1,
+        'is_hidden' => false,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('pokedex.index', [
+            'game' => 'scarlet-violet',
+            'ability' => 'overgrow',
+        ]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('filters.ability', 'overgrow')
+            ->where('pokemon.total', 1)
+            ->where('pokemon.data.0.name', 'Bulbasaur')
+        );
 });
 
 it('renders pokemon detail with scarlet-violet game data', function () {
@@ -179,4 +230,10 @@ it('renders pokedex item detail from PokéAPI', function () {
         ->assertInertia(fn ($page) => $page
             ->component('pokedex/PokedexItemShow')
             ->where('name_display', 'Leftovers'));
+});
+
+it('runs pokedex module audit command', function () {
+    $this->artisan('module:audit', ['module' => 'Pokedex'])
+        ->expectsOutput('Module audit: Pokedex')
+        ->assertSuccessful();
 });

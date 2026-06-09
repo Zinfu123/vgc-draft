@@ -30,7 +30,7 @@ it('loads modules config', function () {
 
 it('exposes v2 preview nav links when modules are enabled', function () {
     expect(\App\Kernel\Support\V2PreviewNav::links())->toBe([
-        ['module' => 'Pokedex', 'href' => '/v2/pokedex'],
+        ['module' => 'Pokedex', 'href' => '/pokedex'],
     ]);
 });
 
