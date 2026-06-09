@@ -3,6 +3,8 @@
 namespace App\Providers;
 
 use App\Kernel\Audit\ModuleAuditRegistry;
+use App\Kernel\Contracts\ShowdownFormatter;
+use App\Kernel\Support\ShowdownFormatterService;
 use App\Modules\League\Models\League;
 use App\Policies\LeaguePolicy;
 use App\Support\CleanupInvalidViteHotFile;
@@ -20,6 +22,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(ModuleAuditRegistry::class);
+        $this->app->singleton(ShowdownFormatter::class, ShowdownFormatterService::class);
 
         if ($this->app->environment('local') && class_exists(\Laravel\Telescope\TelescopeServiceProvider::class)) {
             $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);

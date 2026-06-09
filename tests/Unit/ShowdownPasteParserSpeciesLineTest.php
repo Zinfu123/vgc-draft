@@ -1,6 +1,6 @@
 <?php
 
-use App\Modules\Pokepaste\Services\ShowdownFormatHelper;
+use App\Kernel\Support\ShowdownFormatHelper;
 use App\Modules\Pokepaste\Services\ShowdownPasteParser;
 
 function showdownBlock(string $speciesLine): string

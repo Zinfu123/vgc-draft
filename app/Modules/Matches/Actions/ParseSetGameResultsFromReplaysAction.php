@@ -2,10 +2,10 @@
 
 namespace App\Modules\Matches\Actions;
 
+use App\Kernel\Support\ShowdownFormatHelper;
 use App\Modules\League\Models\LeaguePokemon;
 use App\Modules\Matches\Models\Set;
 use App\Modules\Matches\Models\SetGameResult;
-use App\Modules\Pokepaste\Services\ShowdownFormatHelper;
 use App\Modules\Pokepaste\Services\ShowdownReplayDamageParser;
 use App\Modules\Pokepaste\Services\ShowdownReplayKoParser;
 use App\Modules\Pokepaste\Services\ShowdownReplayLogFetcher;

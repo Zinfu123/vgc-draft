@@ -1,6 +1,6 @@
 <?php
 
-use App\Modules\Pokepaste\Services\ShowdownFormatHelper;
+use App\Kernel\Support\ShowdownFormatHelper;
 
 it('collapses showdown tatsugiri forms to a single match key', function (string $raw, string $expectedKey) {
     expect(ShowdownFormatHelper::speciesToMatchKey($raw))->toBe($expectedKey);

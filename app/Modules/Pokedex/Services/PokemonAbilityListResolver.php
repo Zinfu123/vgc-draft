@@ -2,9 +2,9 @@
 
 namespace App\Modules\Pokedex\Services;
 
+use App\Kernel\Support\ShowdownFormatHelper;
 use App\Modules\Pokedex\Models\AbilityGenerationData;
 use App\Modules\Pokedex\Models\PokemonGenerationData;
-use App\Modules\Pokepaste\Services\ShowdownFormatHelper;
 
 class PokemonAbilityListResolver
 {

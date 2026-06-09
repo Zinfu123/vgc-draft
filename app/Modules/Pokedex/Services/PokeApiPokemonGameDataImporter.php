@@ -698,7 +698,7 @@ class PokeApiPokemonGameDataImporter
     }
 
     /**
-     * Dedup key aligned with {@see \App\Modules\Pokepaste\Services\ShowdownFormatHelper::moveToSlug}.
+     * Dedup key aligned with {@see \App\Kernel\Support\ShowdownFormatHelper::moveToSlug}.
      */
     private function moveNameToSlugKey(string $displayOrSlug): string
     {

@@ -3,4 +3,5 @@
  * Import from @/kernel/* — not from other modules' internals.
  */
 
-export {};
+export { default as PokemonCard } from '@/kernel/pokemon/PokemonCard.vue';
+export * from '@/kernel/showdown/showdownExport';

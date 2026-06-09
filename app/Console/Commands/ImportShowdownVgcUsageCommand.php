@@ -2,7 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Modules\Pokepaste\Services\ShowdownFormatHelper;
+use App\Kernel\Support\ShowdownFormatHelper;
 use App\Modules\Stats\Models\VgcLadderSpeciesUsage;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Http;

@@ -1,6 +1,6 @@
 <?php
 
-use App\Modules\Pokepaste\Services\ShowdownFormatHelper;
+use App\Kernel\Support\ShowdownFormatHelper;
 
 it('title-cases pokemon display labels', function (string $raw, string $expected) {
     expect(ShowdownFormatHelper::pokemonDisplayLabel($raw))->toBe($expected);

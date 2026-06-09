@@ -2,11 +2,11 @@
 
 namespace App\Modules\Pokepaste\Actions;
 
+use App\Kernel\Support\ShowdownFormatHelper;
 use App\Modules\Matches\Models\Set;
 use App\Modules\Playoffs\Models\PlayoffMatch;
 use App\Modules\Pokepaste\Models\SetTeamPokepaste;
 use App\Modules\Pokepaste\Services\PokepasteSlotValidator;
-use App\Modules\Pokepaste\Services\ShowdownFormatHelper;
 use App\Modules\Pokepaste\Services\ShowdownPasteParser;
 use App\Modules\Pokepaste\Services\VersionGroupHeldItemLookup;
 use Illuminate\Http\JsonResponse;

@@ -2,6 +2,7 @@
 
 namespace App\Modules\Pokepaste\Actions;
 
+use App\Kernel\Support\ShowdownFormatHelper;
 use App\Modules\League\Models\League;
 use App\Modules\League\Models\LeaguePokemon;
 use App\Modules\Matches\Models\Set;
@@ -9,7 +10,6 @@ use App\Modules\Pokepaste\Models\SetTeamPokepaste;
 use App\Modules\Pokepaste\Models\SetTeamPokepasteSlot;
 use App\Modules\Pokepaste\Services\EnsureSetTeamPokepasteSlotRows;
 use App\Modules\Pokepaste\Services\PokepasteSlotValidator;
-use App\Modules\Pokepaste\Services\ShowdownFormatHelper;
 use App\Modules\Pokepaste\Services\ShowdownReplayLogFetcher;
 use App\Modules\Pokepaste\Services\ShowdownReplayLogUrl;
 use App\Modules\Pokepaste\Services\ShowdownReplayTeamPreviewParser;
