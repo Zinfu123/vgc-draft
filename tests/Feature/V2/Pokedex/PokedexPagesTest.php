@@ -19,9 +19,60 @@ it('renders the v2 pokedex index for authenticated users', function () {
         ->component('v2/pokedex/PokedexIndex')
         ->has('pokemon')
         ->has('filters')
+        ->has('filters.game')
+        ->has('filters.ability')
+        ->has('filters.move')
         ->has('typeOptions')
         ->has('generationFilterOptions')
+        ->has('versionGroups')
+        ->has('abilityFilterOptions')
     );
+});
+
+it('filters v2 pokedex index by ability query param', function () {
+    $user = User::factory()->create();
+    $versionGroup = VersionGroup::query()->where('slug', 'scarlet-violet')->firstOrFail();
+
+    $bulbasaurId = DB::table('pokedex')->insertGetId([
+        'nationaldex_id' => 1,
+        'name' => 'Bulbasaur',
+        'type1' => 'Grass',
+        'type2' => 'Poison',
+        'sprite_url' => null,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('pokedex')->insert([
+        'nationaldex_id' => 4,
+        'name' => 'Charmander',
+        'type1' => 'Fire',
+        'type2' => null,
+        'sprite_url' => null,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    AbilityGenerationData::query()->create([
+        'pokedex_id' => $bulbasaurId,
+        'version_group_id' => $versionGroup->id,
+        'pokeapi_ability_id' => 65,
+        'ability_name' => 'overgrow',
+        'slot' => 1,
+        'is_hidden' => false,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('v2.pokedex.index', [
+            'game' => 'scarlet-violet',
+            'ability' => 'overgrow',
+        ]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('filters.ability', 'overgrow')
+            ->where('pokemon.total', 1)
+            ->where('pokemon.data.0.name', 'Bulbasaur')
+        );
 });
 
 it('renders v2 pokemon detail with scarlet-violet game data', function () {

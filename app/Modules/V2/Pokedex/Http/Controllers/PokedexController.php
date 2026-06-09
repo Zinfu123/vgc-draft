@@ -17,6 +17,9 @@ class PokedexController extends Controller
             'type1' => ['sometimes', 'nullable', 'string', 'max:30'],
             'type2' => ['sometimes', 'nullable', 'string', 'max:30'],
             'generation' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:99'],
+            'game' => ['sometimes', 'nullable', 'string', 'max:80'],
+            'ability' => ['sometimes', 'nullable', 'string', 'max:80'],
+            'move' => ['sometimes', 'nullable', 'string', 'max:80'],
             'per_page' => ['sometimes', 'integer', 'min:10', 'max:100'],
         ]);
 
