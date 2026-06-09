@@ -2,8 +2,8 @@
 
 namespace App\Modules\Pokedex\Services;
 
+use App\Kernel\Support\ShowdownFormatHelper;
 use App\Modules\Pokedex\Models\Pokedex;
-use App\Modules\Pokepaste\Services\ShowdownFormatHelper;
 
 class DraftPoolPokedexResolver
 {

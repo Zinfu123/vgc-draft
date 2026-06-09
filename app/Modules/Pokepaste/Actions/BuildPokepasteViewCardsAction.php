@@ -3,10 +3,10 @@
 namespace App\Modules\Pokepaste\Actions;
 
 use App\Enums\PokemonNature;
+use App\Kernel\Support\ShowdownFormatHelper;
 use App\Modules\Pokepaste\Models\SetTeamPokepaste;
 use App\Modules\Pokepaste\Models\SetTeamPokepasteSlot;
 use App\Modules\Pokepaste\Services\EnsureSetTeamPokepasteSlotRows;
-use App\Modules\Pokepaste\Services\ShowdownFormatHelper;
 
 class BuildPokepasteViewCardsAction
 {

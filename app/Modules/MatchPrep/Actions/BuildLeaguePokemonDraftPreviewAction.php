@@ -2,8 +2,8 @@
 
 namespace App\Modules\MatchPrep\Actions;
 
+use App\Kernel\Support\ShowdownFormatHelper;
 use App\Modules\League\Models\LeaguePokemon;
-use App\Modules\Pokepaste\Services\ShowdownFormatHelper;
 use Illuminate\Support\Collection;
 
 class BuildLeaguePokemonDraftPreviewAction

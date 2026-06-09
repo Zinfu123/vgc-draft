@@ -2,11 +2,11 @@
 
 namespace App\Modules\Pokepaste\Actions;
 
+use App\Kernel\Support\ShowdownFormatHelper;
 use App\Modules\Pokedex\Models\PokeApiMoveCache;
 use App\Modules\Pokedex\Models\PokemonGenerationData;
 use App\Modules\Pokedex\Models\VersionGroup;
 use App\Modules\Pokedex\Services\PokemonAbilityListResolver;
-use App\Modules\Pokepaste\Services\ShowdownFormatHelper;
 use Illuminate\Support\Collection;
 
 class BuildPokepasteRosterPayloadAction
