@@ -7,6 +7,7 @@ use App\Modules\Teams\Actions\CreateEditTeamAction;
 use App\Modules\Teams\Actions\ReadTeamAction;
 use App\Modules\Teams\Models\Team;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class TeamController extends Controller
 {

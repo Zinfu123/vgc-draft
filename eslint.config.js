@@ -16,4 +16,20 @@ export default defineConfigWithVueTs(
         },
     },
     prettier,
+    {
+        files: ['resources/js/modules/v2/**/*.{ts,vue}'],
+        rules: {
+            'no-restricted-imports': [
+                'error',
+                {
+                    patterns: [
+                        {
+                            group: ['@/components/league/*', '@/components/draft/*', '@/components/match/*', '@/components/pokepaste/*'],
+                            message: 'V2 modules must not import v1 feature components. Use @/kernel or module-local components.',
+                        },
+                    ],
+                },
+            ],
+        },
+    },
 );
