@@ -36,15 +36,17 @@ interface PokemonRow {
     type2: string;
 }
 
+interface FilterState {
+    search: string;
+    type1: string;
+    type2: string;
+    generation: number | null;
+    per_page: number;
+}
+
 interface Props {
     pokemon: Paginator<PokemonRow>;
-    filters: {
-        search: string;
-        type1: string;
-        type2: string;
-        generation: number | null;
-        per_page: number;
-    };
+    filters: FilterState;
     typeOptions: string[];
     generationFilterOptions: number[];
 }
@@ -52,15 +54,42 @@ interface Props {
 const props = defineProps<Props>();
 
 const searchDraft = ref(props.filters.search);
+const type1Draft = ref(props.filters.type1);
+const type2Draft = ref(props.filters.type2);
+const generationDraft = ref<number | ''>(props.filters.generation ?? '');
+const perPageDraft = ref(props.filters.per_page);
+
 watch(
-    () => props.filters.search,
-    (v) => {
-        searchDraft.value = v;
+    () => props.filters,
+    (filters) => {
+        searchDraft.value = filters.search;
+        type1Draft.value = filters.type1;
+        type2Draft.value = filters.type2;
+        generationDraft.value = filters.generation ?? '';
+        perPageDraft.value = filters.per_page;
     },
+    { deep: true },
 );
 
-function applyFilters(overrides: Partial<typeof props.filters> = {}) {
-    const merged = { ...props.filters, search: searchDraft.value, ...overrides };
+function currentFilters(): FilterState {
+    return {
+        search: searchDraft.value,
+        type1: type1Draft.value,
+        type2: type2Draft.value,
+        generation: generationDraft.value === '' ? null : Number(generationDraft.value),
+        per_page: perPageDraft.value,
+    };
+}
+
+function applyFilters(overrides: Partial<FilterState> = {}) {
+    const merged = { ...currentFilters(), ...overrides };
+
+    searchDraft.value = merged.search;
+    type1Draft.value = merged.type1;
+    type2Draft.value = merged.type2;
+    generationDraft.value = merged.generation ?? '';
+    perPageDraft.value = merged.per_page;
+
     router.get(
         route('pokedex.index'),
         {
@@ -70,12 +99,12 @@ function applyFilters(overrides: Partial<typeof props.filters> = {}) {
             generation: merged.generation ?? undefined,
             per_page: merged.per_page,
         },
-        { preserveState: true, replace: true },
+        { preserveScroll: true, replace: true },
     );
 }
 
 function submitFilters() {
-    applyFilters({ search: searchDraft.value });
+    applyFilters();
 }
 </script>
 
@@ -97,9 +126,9 @@ function submitFilters() {
                     <Label for="type1">Type (either slot)</Label>
                     <select
                         id="type1"
-                        :value="filters.type1"
+                        v-model="type1Draft"
                         class="flex h-11 min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none md:h-9 md:min-h-9 md:py-1 md:text-sm"
-                        @change="applyFilters({ type1: ($event.target as HTMLSelectElement).value })"
+                        @change="applyFilters()"
                     >
                         <option value="">Any</option>
                         <option v-for="t in typeOptions" :key="t" :value="t">{{ t }}</option>
@@ -109,9 +138,9 @@ function submitFilters() {
                     <Label for="type2">Also has type</Label>
                     <select
                         id="type2"
-                        :value="filters.type2"
+                        v-model="type2Draft"
                         class="flex h-11 min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none md:h-9 md:min-h-9 md:py-1 md:text-sm"
-                        @change="applyFilters({ type2: ($event.target as HTMLSelectElement).value })"
+                        @change="applyFilters()"
                     >
                         <option value="">Any</option>
                         <option v-for="t in typeOptions" :key="'s-' + t" :value="t">{{ t }}</option>
@@ -121,16 +150,9 @@ function submitFilters() {
                     <Label for="generation">Generation (game data)</Label>
                     <select
                         id="generation"
-                        :value="filters.generation ?? ''"
+                        v-model="generationDraft"
                         class="flex h-11 min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none md:h-9 md:min-h-9 md:py-1 md:text-sm"
-                        @change="
-                            applyFilters({
-                                generation:
-                                    ($event.target as HTMLSelectElement).value === ''
-                                        ? null
-                                        : Number(($event.target as HTMLSelectElement).value),
-                            })
-                        "
+                        @change="applyFilters()"
                     >
                         <option value="">Any</option>
                         <option v-for="g in generationFilterOptions" :key="g" :value="g">Gen {{ g }}</option>
@@ -140,9 +162,9 @@ function submitFilters() {
                     <Label for="per_page">Per page</Label>
                     <select
                         id="per_page"
-                        :value="filters.per_page"
+                        v-model.number="perPageDraft"
                         class="flex h-11 min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none md:h-9 md:min-h-9 md:py-1 md:text-sm"
-                        @change="applyFilters({ per_page: Number(($event.target as HTMLSelectElement).value) })"
+                        @change="applyFilters()"
                     >
                         <option :value="18">18</option>
                         <option :value="36">36</option>
@@ -151,6 +173,8 @@ function submitFilters() {
                 </div>
                 <Button type="submit" variant="secondary" class="min-h-11 w-full touch-manipulation md:mb-0 md:h-9 md:min-h-9 md:w-auto">Apply</Button>
             </form>
+
+            <p class="text-xs text-muted-foreground">Dropdown filters apply immediately. Use Apply for the name search field.</p>
 
             <p v-if="pokemon.total > 0" class="text-sm text-muted-foreground">
                 Showing {{ pokemon.data.length }} of {{ pokemon.total }} Pokémon

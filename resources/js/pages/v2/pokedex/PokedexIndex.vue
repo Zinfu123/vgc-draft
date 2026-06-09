@@ -44,18 +44,20 @@ interface VersionGroupRow {
     sort_order: number;
 }
 
+interface FilterState {
+    search: string;
+    type1: string;
+    type2: string;
+    generation: number | null;
+    game: string;
+    ability: string;
+    move: string;
+    per_page: number;
+}
+
 interface Props {
     pokemon: Paginator<PokemonRow>;
-    filters: {
-        search: string;
-        type1: string;
-        type2: string;
-        generation: number | null;
-        game: string;
-        ability: string;
-        move: string;
-        per_page: number;
-    };
+    filters: FilterState;
     typeOptions: string[];
     generationFilterOptions: number[];
     versionGroups: VersionGroupRow[];
@@ -67,26 +69,25 @@ const props = defineProps<Props>();
 const searchDraft = ref(props.filters.search);
 const abilityDraft = ref(props.filters.ability);
 const moveDraft = ref(props.filters.move);
+const gameDraft = ref(props.filters.game);
+const type1Draft = ref(props.filters.type1);
+const type2Draft = ref(props.filters.type2);
+const generationDraft = ref<number | ''>(props.filters.generation ?? '');
+const perPageDraft = ref(props.filters.per_page);
 
 watch(
-    () => props.filters.search,
-    (v) => {
-        searchDraft.value = v;
+    () => props.filters,
+    (filters) => {
+        searchDraft.value = filters.search;
+        abilityDraft.value = filters.ability;
+        moveDraft.value = filters.move;
+        gameDraft.value = filters.game;
+        type1Draft.value = filters.type1;
+        type2Draft.value = filters.type2;
+        generationDraft.value = filters.generation ?? '';
+        perPageDraft.value = filters.per_page;
     },
-);
-
-watch(
-    () => props.filters.ability,
-    (v) => {
-        abilityDraft.value = v;
-    },
-);
-
-watch(
-    () => props.filters.move,
-    (v) => {
-        moveDraft.value = v;
-    },
+    { deep: true },
 );
 
 function formatSlugLabel(slug: string): string {
@@ -96,14 +97,30 @@ function formatSlugLabel(slug: string): string {
         .join(' ');
 }
 
-function applyFilters(overrides: Partial<typeof props.filters> = {}) {
-    const merged = {
-        ...props.filters,
+function currentFilters(): FilterState {
+    return {
         search: searchDraft.value,
+        type1: type1Draft.value,
+        type2: type2Draft.value,
+        generation: generationDraft.value === '' ? null : Number(generationDraft.value),
+        game: gameDraft.value,
         ability: abilityDraft.value,
         move: moveDraft.value,
-        ...overrides,
+        per_page: perPageDraft.value,
     };
+}
+
+function applyFilters(overrides: Partial<FilterState> = {}) {
+    const merged = { ...currentFilters(), ...overrides };
+
+    searchDraft.value = merged.search;
+    abilityDraft.value = merged.ability;
+    moveDraft.value = merged.move;
+    gameDraft.value = merged.game;
+    type1Draft.value = merged.type1;
+    type2Draft.value = merged.type2;
+    generationDraft.value = merged.generation ?? '';
+    perPageDraft.value = merged.per_page;
 
     router.get(
         route('v2.pokedex.index'),
@@ -117,22 +134,24 @@ function applyFilters(overrides: Partial<typeof props.filters> = {}) {
             move: merged.move || undefined,
             per_page: merged.per_page,
         },
-        { preserveState: true, replace: true },
+        { preserveScroll: true, replace: true },
     );
 }
 
 function submitFilters() {
-    applyFilters({
-        search: searchDraft.value,
-        ability: abilityDraft.value,
-        move: moveDraft.value,
-    });
+    applyFilters();
+}
+
+function onGameChange() {
+    abilityDraft.value = '';
+    moveDraft.value = '';
+    applyFilters({ game: gameDraft.value, ability: '', move: '' });
 }
 
 function pokemonShowHref(id: number): string {
     const params = new URLSearchParams();
-    if (props.filters.game) {
-        params.set('game', props.filters.game);
+    if (gameDraft.value) {
+        params.set('game', gameDraft.value);
     }
 
     const query = params.toString();
@@ -159,9 +178,9 @@ function pokemonShowHref(id: number): string {
                     <Label for="game">Game version</Label>
                     <select
                         id="game"
-                        :value="filters.game"
+                        v-model="gameDraft"
                         class="flex h-11 min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none md:h-9 md:min-h-9 md:py-1 md:text-sm"
-                        @change="applyFilters({ game: ($event.target as HTMLSelectElement).value, ability: '', move: '' })"
+                        @change="onGameChange()"
                     >
                         <option v-for="vg in versionGroups" :key="vg.id" :value="vg.slug">
                             {{ vg.name }} (Gen {{ vg.generation }})
@@ -198,9 +217,9 @@ function pokemonShowHref(id: number): string {
                     <Label for="type1">Type (either slot)</Label>
                     <select
                         id="type1"
-                        :value="filters.type1"
+                        v-model="type1Draft"
                         class="flex h-11 min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none md:h-9 md:min-h-9 md:py-1 md:text-sm"
-                        @change="applyFilters({ type1: ($event.target as HTMLSelectElement).value })"
+                        @change="applyFilters()"
                     >
                         <option value="">Any</option>
                         <option v-for="t in typeOptions" :key="t" :value="t">{{ t }}</option>
@@ -210,9 +229,9 @@ function pokemonShowHref(id: number): string {
                     <Label for="type2">Also has type</Label>
                     <select
                         id="type2"
-                        :value="filters.type2"
+                        v-model="type2Draft"
                         class="flex h-11 min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none md:h-9 md:min-h-9 md:py-1 md:text-sm"
-                        @change="applyFilters({ type2: ($event.target as HTMLSelectElement).value })"
+                        @change="applyFilters()"
                     >
                         <option value="">Any</option>
                         <option v-for="t in typeOptions" :key="'s-' + t" :value="t">{{ t }}</option>
@@ -222,16 +241,9 @@ function pokemonShowHref(id: number): string {
                     <Label for="generation">Generation (game data)</Label>
                     <select
                         id="generation"
-                        :value="filters.generation ?? ''"
+                        v-model="generationDraft"
                         class="flex h-11 min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none md:h-9 md:min-h-9 md:py-1 md:text-sm"
-                        @change="
-                            applyFilters({
-                                generation:
-                                    ($event.target as HTMLSelectElement).value === ''
-                                        ? null
-                                        : Number(($event.target as HTMLSelectElement).value),
-                            })
-                        "
+                        @change="applyFilters()"
                     >
                         <option value="">Any</option>
                         <option v-for="g in generationFilterOptions" :key="g" :value="g">Gen {{ g }}</option>
@@ -241,9 +253,9 @@ function pokemonShowHref(id: number): string {
                     <Label for="per_page">Per page</Label>
                     <select
                         id="per_page"
-                        :value="filters.per_page"
+                        v-model.number="perPageDraft"
                         class="flex h-11 min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none md:h-9 md:min-h-9 md:py-1 md:text-sm"
-                        @change="applyFilters({ per_page: Number(($event.target as HTMLSelectElement).value) })"
+                        @change="applyFilters()"
                     >
                         <option :value="18">18</option>
                         <option :value="36">36</option>
@@ -252,6 +264,8 @@ function pokemonShowHref(id: number): string {
                 </div>
                 <Button type="submit" variant="secondary" class="min-h-11 w-full touch-manipulation md:mb-0 md:h-9 md:min-h-9 md:w-auto">Apply</Button>
             </form>
+
+            <p class="text-xs text-muted-foreground">Dropdown filters apply immediately. Use Apply for name, ability, and move text fields.</p>
 
             <p v-if="filters.ability || filters.move" class="text-sm text-muted-foreground">
                 Ability and move filters use
