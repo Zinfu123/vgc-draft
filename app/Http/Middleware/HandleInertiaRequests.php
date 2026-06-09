@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Actions\GetNotificationDataAction;
+use App\Kernel\Support\V2PreviewNav;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -59,6 +60,10 @@ class HandleInertiaRequests extends Middleware
             'notifications' => fn () => $request->user()
                 ? app(GetNotificationDataAction::class)($request->user())
                 : null,
+            'v2Preview' => fn (): array => [
+                'visible' => V2PreviewNav::isVisible(),
+                'links' => V2PreviewNav::links(),
+            ],
         ];
     }
 }

@@ -201,13 +201,17 @@ function openRescheduleDialog(): void {
 
 function submitScheduleRequest(): void {
     scheduleRequestForm.post(route('sets.schedule-request.store', { set: props.set.id }), {
-        onSuccess: () => { scheduleRequestDialogOpen.value = false; },
+        onSuccess: () => {
+            scheduleRequestDialogOpen.value = false;
+        },
     });
 }
 
 function submitReschedule(scheduleRequestId: number): void {
     rescheduleForm.patch(route('sets.schedule-request.respond', { scheduleRequest: scheduleRequestId }), {
-        onSuccess: () => { rescheduleDialogOpen.value = false; },
+        onSuccess: () => {
+            rescheduleDialogOpen.value = false;
+        },
     });
 }
 
@@ -446,7 +450,9 @@ watch(importReplayModalOpen, (open) => {
 
 watch(
     () => importFromReplayForm.replay_slot,
-    () => { if (importReplayModalOpen.value) void fetchReplayPlayerPreview(); },
+    () => {
+        if (importReplayModalOpen.value) void fetchReplayPlayerPreview();
+    },
 );
 
 // — Actions —
@@ -493,7 +499,9 @@ async function attemptReplayImportAfterSave(): Promise<void> {
 function submitImportFromReplay(): void {
     importFromReplayForm.post(route('sets.import-replay-teams'), {
         preserveScroll: true,
-        onSuccess: () => { importReplayModalOpen.value = false; },
+        onSuccess: () => {
+            importReplayModalOpen.value = false;
+        },
     });
 }
 
@@ -537,22 +545,18 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 Chat
                                 <span
                                     v-if="localUnreadCount > 0"
-                                    class="bg-primary text-primary-foreground ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-xs"
+                                    class="ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-xs text-primary-foreground"
                                 >
                                     {{ localUnreadCount }}
                                 </span>
                             </Button>
                         </SheetTrigger>
                         <SheetContent side="right" class="flex w-full flex-col p-0 sm:max-w-md">
-                            <SheetHeader class="border-border shrink-0 border-b px-4 py-3">
+                            <SheetHeader class="shrink-0 border-b border-border px-4 py-3">
                                 <SheetTitle class="text-base">Chat</SheetTitle>
                             </SheetHeader>
                             <div class="flex-1 overflow-hidden">
-                                <MatchChat
-                                    :set-id="set.id"
-                                    :initial-messages="matchMessages"
-                                    :current-user-id="authUserId ?? 0"
-                                />
+                                <MatchChat :set-id="set.id" :initial-messages="matchMessages" :current-user-id="authUserId ?? 0" />
                             </div>
                         </SheetContent>
                     </Sheet>
@@ -562,19 +566,22 @@ const breadcrumbs: BreadcrumbItem[] = [
 
         <!-- Scoreboard header -->
         <div class="mt-6 px-4 sm:px-6 lg:px-8">
-            <div class="border-border bg-card mx-auto max-w-2xl rounded-xl border p-6">
-                <p class="text-muted-foreground mb-4 text-center text-xs font-medium uppercase tracking-wider">Round {{ set.round }}</p>
+            <div class="mx-auto max-w-2xl rounded-xl border border-border bg-card p-6">
+                <p class="mb-4 text-center text-xs font-medium tracking-wider text-muted-foreground uppercase">Round {{ set.round }}</p>
                 <div class="grid grid-cols-3 items-center gap-4">
                     <!-- Team 1 -->
                     <div class="flex flex-col items-center gap-2">
                         <img v-if="set.team1.logo" :src="set.team1.logo" :alt="set.team1.name" class="h-16 w-16 rounded-full object-cover" />
-                        <div v-else class="bg-muted h-16 w-16 rounded-full" />
-                        <Link :href="`/teams/${set.team1.id}`" class="hover:text-primary text-center text-sm font-semibold transition-colors">
+                        <div v-else class="h-16 w-16 rounded-full bg-muted" />
+                        <Link :href="`/teams/${set.team1.id}`" class="text-center text-sm font-semibold transition-colors hover:text-primary">
                             {{ set.team1.name }}
                         </Link>
-                        <p class="text-muted-foreground text-xs">{{ set.team1.user.name }}</p>
-                        <p v-if="showdownDisplay(set.team1)" class="text-muted-foreground font-mono text-xs">{{ showdownDisplay(set.team1) }}</p>
-                        <p v-else-if="currentUserMissingShowdown && set.team1.user.id === authUserId" class="text-xs text-amber-600 dark:text-amber-400">
+                        <p class="text-xs text-muted-foreground">{{ set.team1.user.name }}</p>
+                        <p v-if="showdownDisplay(set.team1)" class="font-mono text-xs text-muted-foreground">{{ showdownDisplay(set.team1) }}</p>
+                        <p
+                            v-else-if="currentUserMissingShowdown && set.team1.user.id === authUserId"
+                            class="text-xs text-amber-600 dark:text-amber-400"
+                        >
                             <Link :href="route('profile.edit')" class="underline">Add Showdown name</Link>
                         </p>
                     </div>
@@ -583,30 +590,35 @@ const breadcrumbs: BreadcrumbItem[] = [
                     <div class="flex flex-col items-center gap-1">
                         <div class="flex items-center gap-3">
                             <span class="text-5xl font-bold tabular-nums">{{ set.team1_score ?? '–' }}</span>
-                            <span class="text-muted-foreground text-2xl">–</span>
+                            <span class="text-2xl text-muted-foreground">–</span>
                             <span class="text-5xl font-bold tabular-nums">{{ set.team2_score ?? '–' }}</span>
                         </div>
                         <span
                             class="mt-1 rounded-full px-2 py-0.5 text-xs font-medium"
-                            :class="isSetCompleted ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' : 'bg-muted text-muted-foreground'"
+                            :class="
+                                isSetCompleted
+                                    ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+                                    : 'bg-muted text-muted-foreground'
+                            "
                         >
                             {{ isSetCompleted ? 'Complete' : 'In progress' }}
                         </span>
-                        <p v-if="winnerTeam" class="mt-1 text-center text-xs font-semibold">
-                            {{ winnerTeam.name }} wins
-                        </p>
+                        <p v-if="winnerTeam" class="mt-1 text-center text-xs font-semibold">{{ winnerTeam.name }} wins</p>
                     </div>
 
                     <!-- Team 2 -->
                     <div class="flex flex-col items-center gap-2">
                         <img v-if="set.team2.logo" :src="set.team2.logo" :alt="set.team2.name" class="h-16 w-16 rounded-full object-cover" />
-                        <div v-else class="bg-muted h-16 w-16 rounded-full" />
-                        <Link :href="`/teams/${set.team2.id}`" class="hover:text-primary text-center text-sm font-semibold transition-colors">
+                        <div v-else class="h-16 w-16 rounded-full bg-muted" />
+                        <Link :href="`/teams/${set.team2.id}`" class="text-center text-sm font-semibold transition-colors hover:text-primary">
                             {{ set.team2.name }}
                         </Link>
-                        <p class="text-muted-foreground text-xs">{{ set.team2.user.name }}</p>
-                        <p v-if="showdownDisplay(set.team2)" class="text-muted-foreground font-mono text-xs">{{ showdownDisplay(set.team2) }}</p>
-                        <p v-else-if="currentUserMissingShowdown && set.team2.user.id === authUserId" class="text-xs text-amber-600 dark:text-amber-400">
+                        <p class="text-xs text-muted-foreground">{{ set.team2.user.name }}</p>
+                        <p v-if="showdownDisplay(set.team2)" class="font-mono text-xs text-muted-foreground">{{ showdownDisplay(set.team2) }}</p>
+                        <p
+                            v-else-if="currentUserMissingShowdown && set.team2.user.id === authUserId"
+                            class="text-xs text-amber-600 dark:text-amber-400"
+                        >
                             <Link :href="route('profile.edit')" class="underline">Add Showdown name</Link>
                         </p>
                     </div>
@@ -616,7 +628,9 @@ const breadcrumbs: BreadcrumbItem[] = [
 
         <!-- Scheduled time badge -->
         <div v-if="set.scheduled_at" class="mt-4 flex justify-center">
-            <span class="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-800 dark:bg-green-900/50 dark:text-green-300">
+            <span
+                class="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-800 dark:bg-green-900/50 dark:text-green-300"
+            >
                 <CalendarClock class="size-4" />
                 Scheduled: {{ formatScheduledTime(set.scheduled_at) }}
             </span>
@@ -629,21 +643,20 @@ const breadcrumbs: BreadcrumbItem[] = [
 
         <!-- Main content -->
         <div class="mx-auto mt-8 max-w-screen-xl space-y-6 px-4 pb-16 sm:px-6 lg:px-8">
-
             <!-- Pending schedule request -->
-            <div v-if="pendingScheduleRequest" class="border-border bg-card rounded-xl border p-6">
+            <div v-if="pendingScheduleRequest" class="rounded-xl border border-border bg-card p-6">
                 <div class="mb-3 flex items-center gap-2">
-                    <CalendarClock class="text-primary size-5" />
+                    <CalendarClock class="size-5 text-primary" />
                     <h2 class="font-semibold">Pending Time Request</h2>
                 </div>
-                <p class="text-muted-foreground mb-4 text-sm">
+                <p class="mb-4 text-sm text-muted-foreground">
                     Proposed time:
-                    <span class="text-foreground font-medium">{{ formatScheduledTime(pendingScheduleRequest.proposed_at) }}</span>
+                    <span class="font-medium text-foreground">{{ formatScheduledTime(pendingScheduleRequest.proposed_at) }}</span>
                 </p>
 
                 <!-- The proposer is waiting for the other player -->
                 <div v-if="pendingScheduleRequest.is_mine" class="flex flex-wrap items-center gap-3">
-                    <p class="text-muted-foreground text-sm italic">Waiting for your opponent to respond…</p>
+                    <p class="text-sm text-muted-foreground italic">Waiting for your opponent to respond…</p>
                     <Button
                         variant="outline"
                         size="sm"
@@ -657,21 +670,8 @@ const breadcrumbs: BreadcrumbItem[] = [
 
                 <!-- The other player can respond -->
                 <div v-else-if="isUserInSet" class="flex flex-wrap gap-2">
-                    <Button
-                        size="sm"
-                        :disabled="respondForm.processing"
-                        @click="acceptScheduleRequest(pendingScheduleRequest!.id)"
-                    >
-                        Accept
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        :disabled="respondForm.processing"
-                        @click="openRescheduleDialog"
-                    >
-                        Propose new time
-                    </Button>
+                    <Button size="sm" :disabled="respondForm.processing" @click="acceptScheduleRequest(pendingScheduleRequest!.id)"> Accept </Button>
+                    <Button variant="outline" size="sm" :disabled="respondForm.processing" @click="openRescheduleDialog"> Propose new time </Button>
                     <Button
                         variant="outline"
                         size="sm"
@@ -685,38 +685,47 @@ const breadcrumbs: BreadcrumbItem[] = [
             </div>
 
             <!-- Replays -->
-            <div class="border-border bg-card rounded-xl border p-6">
+            <div class="rounded-xl border border-border bg-card p-6">
                 <div class="mb-4 flex items-center justify-between">
                     <div>
                         <h2 class="font-semibold">Replays</h2>
-                        <p class="text-muted-foreground text-sm">Paste your Pokémon Showdown replay links. Rosters and results are imported automatically.</p>
+                        <p class="text-sm text-muted-foreground">
+                            Paste your Pokémon Showdown replay links. Rosters and results are imported automatically.
+                        </p>
                     </div>
                 </div>
 
                 <div class="space-y-3">
-                    <template v-for="slot in [{ key: 'replay1', label: 'Game 1' }, { key: 'replay2', label: 'Game 2' }, { key: 'replay3', label: 'Game 3' }]" :key="slot.key">
+                    <template
+                        v-for="slot in [
+                            { key: 'replay1', label: 'Game 1' },
+                            { key: 'replay2', label: 'Game 2' },
+                            { key: 'replay3', label: 'Game 3' },
+                        ]"
+                        :key="slot.key"
+                    >
                         <div class="flex items-center gap-3">
-                            <span class="text-muted-foreground w-14 shrink-0 text-sm font-medium">{{ slot.label }}</span>
+                            <span class="w-14 shrink-0 text-sm font-medium text-muted-foreground">{{ slot.label }}</span>
                             <div class="relative min-w-0 flex-1">
                                 <input
                                     v-if="isUserInSet && !isSetCompleted"
                                     v-model="(replayForm as any)[slot.key]"
                                     type="url"
                                     :placeholder="`https://replay.pokemonshowdown.com/...`"
-                                    class="border-input bg-background text-foreground placeholder:text-muted-foreground focus:ring-ring block w-full rounded-md border px-3 py-2 pr-9 text-sm focus:ring-2 focus:outline-none"
+                                    class="block w-full rounded-md border border-input bg-background px-3 py-2 pr-9 text-sm text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-ring focus:outline-none"
                                 />
                                 <a
                                     v-else-if="(set as any)[slot.key]"
                                     :href="(set as any)[slot.key]"
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    class="text-primary flex items-center gap-1 truncate text-sm hover:underline"
+                                    class="flex items-center gap-1 truncate text-sm text-primary hover:underline"
                                 >
                                     <span class="truncate">{{ (set as any)[slot.key] }}</span>
                                     <ExternalLink class="size-3 shrink-0" />
                                 </a>
-                                <p v-else class="text-muted-foreground text-sm italic">No replay yet</p>
-                                <p v-if="(replayForm.errors as any)[slot.key]" class="text-destructive mt-1 text-xs">
+                                <p v-else class="text-sm text-muted-foreground italic">No replay yet</p>
+                                <p v-if="(replayForm.errors as any)[slot.key]" class="mt-1 text-xs text-destructive">
                                     {{ (replayForm.errors as any)[slot.key] }}
                                 </p>
                             </div>
@@ -729,36 +738,36 @@ const breadcrumbs: BreadcrumbItem[] = [
                         {{ replayForm.processing ? 'Saving…' : importFromReplayForm.processing ? 'Importing…' : 'Save replays' }}
                     </Button>
                 </div>
-                <p
-                    v-if="page.props.errors && (page.props.errors as Record<string, string>).replay_import"
-                    class="text-destructive mt-2 text-sm"
-                >
-                    {{ (page.props.errors as Record<string, string>).replay_import }}
+                <p v-if="(page.props.errors as any)?.replay_import" class="mt-2 text-sm text-destructive">
+                    {{ (page.props.errors as any).replay_import }}
                 </p>
             </div>
 
             <!-- Match Pastes -->
-            <div class="border-border bg-card rounded-xl border p-6">
+            <div class="rounded-xl border border-border bg-card p-6">
                 <h2 class="mb-1 font-semibold">Match Pastes</h2>
-                <p class="text-muted-foreground mb-4 text-sm">
-                    Each team's six Pokémon with full build details (moves, items, EVs). Only visible to the submitting player until the match is complete.
-                    <span v-if="isLeagueAdmin && !isUserInSet"> League admins can open the paste editor for either team while the match is in progress.</span>
+                <p class="mb-4 text-sm text-muted-foreground">
+                    Each team's six Pokémon with full build details (moves, items, EVs). Only visible to the submitting player until the match is
+                    complete.
+                    <span v-if="isLeagueAdmin && !isUserInSet">
+                        League admins can open the paste editor for either team while the match is in progress.</span
+                    >
                 </p>
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <!-- Team 1 paste -->
-                    <div class="border-border rounded-lg border p-4">
+                    <div class="rounded-lg border border-border p-4">
                         <p class="mb-2 text-sm font-medium">{{ set.team1.name }}</p>
                         <template v-if="participantPasteEditorHref(set.team1.id) || adminPasteEditorHref('team1', set.team1.id)">
-                            <p class="text-muted-foreground mb-3 text-xs">
+                            <p class="mb-3 text-xs text-muted-foreground">
                                 {{
                                     adminPasteEditorHref('team1', set.team1.id)
-                                        ? 'Build this team\'s paste on their behalf (moves, items, EVs).'
+                                        ? "Build this team's paste on their behalf (moves, items, EVs)."
                                         : 'Build your team paste with moves, items, and EVs.'
                                 }}
                             </p>
                             <Link
                                 :href="(participantPasteEditorHref(set.team1.id) ?? adminPasteEditorHref('team1', set.team1.id))!"
-                                class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+                                class="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                             >
                                 Open paste editor
                                 <ExternalLink class="size-3" />
@@ -767,29 +776,31 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <template v-else-if="matchPokepasteSides.team1?.has_data && isSetCompleted">
                             <Link
                                 :href="'/pokepaste/' + matchPokepasteSides.team1.public_id"
-                                class="text-primary inline-flex items-center gap-1 text-sm hover:underline"
+                                class="inline-flex items-center gap-1 text-sm text-primary hover:underline"
                             >
                                 View paste <ExternalLink class="size-3" />
                             </Link>
                         </template>
-                        <p v-else-if="matchPokepasteSides.team1?.has_data" class="text-muted-foreground text-sm italic">Submitted — visible after match</p>
-                        <p v-else class="text-muted-foreground text-sm italic">No paste submitted</p>
+                        <p v-else-if="matchPokepasteSides.team1?.has_data" class="text-sm text-muted-foreground italic">
+                            Submitted — visible after match
+                        </p>
+                        <p v-else class="text-sm text-muted-foreground italic">No paste submitted</p>
                     </div>
 
                     <!-- Team 2 paste -->
-                    <div class="border-border rounded-lg border p-4">
+                    <div class="rounded-lg border border-border p-4">
                         <p class="mb-2 text-sm font-medium">{{ set.team2.name }}</p>
                         <template v-if="participantPasteEditorHref(set.team2.id) || adminPasteEditorHref('team2', set.team2.id)">
-                            <p class="text-muted-foreground mb-3 text-xs">
+                            <p class="mb-3 text-xs text-muted-foreground">
                                 {{
                                     adminPasteEditorHref('team2', set.team2.id)
-                                        ? 'Build this team\'s paste on their behalf (moves, items, EVs).'
+                                        ? "Build this team's paste on their behalf (moves, items, EVs)."
                                         : 'Build your team paste with moves, items, and EVs.'
                                 }}
                             </p>
                             <Link
                                 :href="(participantPasteEditorHref(set.team2.id) ?? adminPasteEditorHref('team2', set.team2.id))!"
-                                class="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors"
+                                class="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
                             >
                                 Open paste editor
                                 <ExternalLink class="size-3" />
@@ -798,21 +809,23 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <template v-else-if="matchPokepasteSides.team2?.has_data && isSetCompleted">
                             <Link
                                 :href="'/pokepaste/' + matchPokepasteSides.team2.public_id"
-                                class="text-primary inline-flex items-center gap-1 text-sm hover:underline"
+                                class="inline-flex items-center gap-1 text-sm text-primary hover:underline"
                             >
                                 View paste <ExternalLink class="size-3" />
                             </Link>
                         </template>
-                        <p v-else-if="matchPokepasteSides.team2?.has_data" class="text-muted-foreground text-sm italic">Submitted — visible after match</p>
-                        <p v-else class="text-muted-foreground text-sm italic">No paste submitted</p>
+                        <p v-else-if="matchPokepasteSides.team2?.has_data" class="text-sm text-muted-foreground italic">
+                            Submitted — visible after match
+                        </p>
+                        <p v-else class="text-sm text-muted-foreground italic">No paste submitted</p>
                     </div>
                 </div>
             </div>
 
             <!-- Set result (active matches, participants and league admins) -->
-            <div v-if="!isSetCompleted && canManageSetResult" class="border-border bg-card rounded-xl border p-6">
+            <div v-if="!isSetCompleted && canManageSetResult" class="rounded-xl border border-border bg-card p-6">
                 <h2 class="mb-1 font-semibold">Set Result</h2>
-                <p class="text-muted-foreground mb-4 text-sm">
+                <p class="mb-4 text-sm text-muted-foreground">
                     Results are calculated automatically when replays are saved. You can also enter them manually here.
                     <span v-if="isLeagueAdmin && !isUserInSet"> As league admin, you can submit on behalf of the players.</span>
                 </p>
@@ -825,7 +838,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                             name="team1_score"
                             v-model="scoreForm.team1_score"
                             :disabled="disableScoreForm"
-                            class="border-input bg-background text-foreground focus:ring-ring block w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:outline-none disabled:opacity-50"
+                            class="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-ring focus:outline-none disabled:opacity-50"
                         >
                             <option value="0">0</option>
                             <option value="1">1</option>
@@ -839,7 +852,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                             name="team2_score"
                             v-model="scoreForm.team2_score"
                             :disabled="disableScoreForm"
-                            class="border-input bg-background text-foreground focus:ring-ring block w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:outline-none disabled:opacity-50"
+                            class="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-ring focus:outline-none disabled:opacity-50"
                         >
                             <option value="0">0</option>
                             <option value="1">1</option>
@@ -848,16 +861,22 @@ const breadcrumbs: BreadcrumbItem[] = [
                     </div>
                 </div>
 
-                <p v-if="(scoreForm.errors as any).set_result" class="text-destructive mt-2 text-sm">{{ (scoreForm.errors as any).set_result }}</p>
-                <p v-else-if="!(isLeagueAdmin && !isUserInSet) && requireTeamMatchPokepasteBeforeResults && !bothSidesPasteReady" class="mt-2 text-sm text-amber-700 dark:text-amber-400">
+                <p v-if="(scoreForm.errors as any).set_result" class="mt-2 text-sm text-destructive">{{ (scoreForm.errors as any).set_result }}</p>
+                <p
+                    v-else-if="!(isLeagueAdmin && !isUserInSet) && requireTeamMatchPokepasteBeforeResults && !bothSidesPasteReady"
+                    class="mt-2 text-sm text-amber-700 dark:text-amber-400"
+                >
                     Both teams must submit their match paste before results can be entered.
                     <span v-if="!matchPokepasteSides.team1?.has_data" class="block">Missing: {{ set.team1.name }}</span>
                     <span v-if="!matchPokepasteSides.team2?.has_data" class="block">Missing: {{ set.team2.name }}</span>
                 </p>
-                <p v-else-if="!(isLeagueAdmin && !isUserInSet) && requireReplaysBeforeResults && !hasServerSavedReplay" class="mt-2 text-sm text-amber-700 dark:text-amber-400">
+                <p
+                    v-else-if="!(isLeagueAdmin && !isUserInSet) && requireReplaysBeforeResults && !hasServerSavedReplay"
+                    class="mt-2 text-sm text-amber-700 dark:text-amber-400"
+                >
                     At least one replay must be saved before submitting results for this league.
                 </p>
-                <p v-else-if="!canSubmitSetResult" class="text-muted-foreground mt-2 text-sm">
+                <p v-else-if="!canSubmitSetResult" class="mt-2 text-sm text-muted-foreground">
                     Choose a valid score — one team must have 2 wins (2-0 or 2-1).
                 </p>
 
@@ -878,7 +897,7 @@ const breadcrumbs: BreadcrumbItem[] = [
                 >
                     Reopen match (admin)
                 </Button>
-                <p v-if="reopenForm.errors.set_id" class="text-destructive mt-1 text-center text-sm">{{ reopenForm.errors.set_id }}</p>
+                <p v-if="reopenForm.errors.set_id" class="mt-1 text-center text-sm text-destructive">{{ reopenForm.errors.set_id }}</p>
             </div>
 
             <!-- Team rosters -->
@@ -894,7 +913,11 @@ const breadcrumbs: BreadcrumbItem[] = [
                 <DialogHeader>
                     <DialogTitle>{{ set.scheduled_at ? 'Reschedule Match' : 'Request a Match Time' }}</DialogTitle>
                     <DialogDescription>
-                        {{ set.scheduled_at ? 'Propose a new date and time. Your opponent will be notified on Discord and can accept, decline, or counter-propose.' : 'Propose a date and time to play. Your opponent will be notified on Discord and can accept, decline, or propose a new time.' }}
+                        {{
+                            set.scheduled_at
+                                ? 'Propose a new date and time. Your opponent will be notified on Discord and can accept, decline, or counter-propose.'
+                                : 'Propose a date and time to play. Your opponent will be notified on Discord and can accept, decline, or propose a new time.'
+                        }}
                     </DialogDescription>
                 </DialogHeader>
                 <div class="space-y-4">
@@ -903,10 +926,10 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <input
                             v-model="scheduleRequestForm.proposed_at"
                             type="datetime-local"
-                            class="border-input bg-background text-foreground focus:ring-ring block w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:outline-none"
+                            class="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
                             @keydown="preventKeyboardEntry"
                         />
-                        <p v-if="scheduleRequestForm.errors.proposed_at" class="text-destructive mt-1 text-sm">
+                        <p v-if="scheduleRequestForm.errors.proposed_at" class="mt-1 text-sm text-destructive">
                             {{ scheduleRequestForm.errors.proposed_at }}
                         </p>
                     </div>
@@ -925,9 +948,7 @@ const breadcrumbs: BreadcrumbItem[] = [
             <DialogContent class="sm:max-w-sm">
                 <DialogHeader>
                     <DialogTitle>Propose a New Time</DialogTitle>
-                    <DialogDescription>
-                        Suggest an alternative date and time. Your opponent will be notified on Discord.
-                    </DialogDescription>
+                    <DialogDescription> Suggest an alternative date and time. Your opponent will be notified on Discord. </DialogDescription>
                 </DialogHeader>
                 <div class="space-y-4">
                     <div>
@@ -935,10 +956,10 @@ const breadcrumbs: BreadcrumbItem[] = [
                         <input
                             v-model="rescheduleForm.proposed_at"
                             type="datetime-local"
-                            class="border-input bg-background text-foreground focus:ring-ring block w-full rounded-md border px-3 py-2 text-sm focus:ring-2 focus:outline-none"
+                            class="block w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground focus:ring-2 focus:ring-ring focus:outline-none"
                             @keydown="preventKeyboardEntry"
                         />
-                        <p v-if="rescheduleForm.errors.proposed_at" class="text-destructive mt-1 text-sm">
+                        <p v-if="rescheduleForm.errors.proposed_at" class="mt-1 text-sm text-destructive">
                             {{ rescheduleForm.errors.proposed_at }}
                         </p>
                     </div>
@@ -961,7 +982,8 @@ const breadcrumbs: BreadcrumbItem[] = [
                 <DialogHeader>
                     <DialogTitle>Confirm team assignment</DialogTitle>
                     <DialogDescription>
-                        Showdown usernames couldn't be matched automatically. Choose which team was Showdown player 1 so rosters can be imported correctly.
+                        Showdown usernames couldn't be matched automatically. Choose which team was Showdown player 1 so rosters can be imported
+                        correctly.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -972,29 +994,40 @@ const breadcrumbs: BreadcrumbItem[] = [
                             <label
                                 v-for="opt in savedReplayOptions"
                                 :key="opt.slot"
-                                class="hover:bg-muted/50 flex cursor-pointer items-start gap-2 rounded-md border border-transparent p-2"
+                                class="flex cursor-pointer items-start gap-2 rounded-md border border-transparent p-2 hover:bg-muted/50"
                             >
-                                <input v-model.number="importFromReplayForm.replay_slot" type="radio" name="replay_slot_import" class="mt-1" :value="opt.slot" />
+                                <input
+                                    v-model.number="importFromReplayForm.replay_slot"
+                                    type="radio"
+                                    name="replay_slot_import"
+                                    class="mt-1"
+                                    :value="opt.slot"
+                                />
                                 <span class="text-sm">
                                     <span class="font-medium">{{ opt.label }}</span>
-                                    <span class="text-muted-foreground block truncate text-xs">{{ opt.url }}</span>
+                                    <span class="block truncate text-xs text-muted-foreground">{{ opt.url }}</span>
                                 </span>
                             </label>
                         </div>
-                        <p v-if="importFromReplayForm.errors.replay_slot" class="text-destructive mt-1 text-sm">{{ importFromReplayForm.errors.replay_slot }}</p>
+                        <p v-if="importFromReplayForm.errors.replay_slot" class="mt-1 text-sm text-destructive">
+                            {{ importFromReplayForm.errors.replay_slot }}
+                        </p>
                     </fieldset>
 
-                    <p v-if="replayPreviewLoading" class="text-muted-foreground text-sm">Reading replay…</p>
-                    <p v-else-if="replayPreviewError" class="text-destructive text-sm">{{ replayPreviewError }}</p>
+                    <p v-if="replayPreviewLoading" class="text-sm text-muted-foreground">Reading replay…</p>
+                    <p v-else-if="replayPreviewError" class="text-sm text-destructive">{{ replayPreviewError }}</p>
                     <template v-else-if="replayPreviewData">
-                        <p class="text-muted-foreground text-sm">
-                            Showdown: <span class="text-foreground font-medium">{{ replayPreviewData.p1_name }}</span>
-                            vs <span class="text-foreground font-medium">{{ replayPreviewData.p2_name }}</span>
+                        <p class="text-sm text-muted-foreground">
+                            Showdown: <span class="font-medium text-foreground">{{ replayPreviewData.p1_name }}</span> vs
+                            <span class="font-medium text-foreground">{{ replayPreviewData.p2_name }}</span>
                         </p>
-                        <p v-if="!replayPreviewData.needs_manual_p1_map && replayPreviewData.suggested_p1_team_id" class="text-sm font-medium text-green-700 dark:text-green-400">
+                        <p
+                            v-if="!replayPreviewData.needs_manual_p1_map && replayPreviewData.suggested_p1_team_id"
+                            class="text-sm font-medium text-green-700 dark:text-green-400"
+                        >
                             p1 matched to {{ replayPreviewData.suggested_p1_team_id === set.team1.id ? set.team1.name : set.team2.name }}.
                         </p>
-                        <p v-else class="text-muted-foreground text-sm">Could not auto-match — choose below.</p>
+                        <p v-else class="text-sm text-muted-foreground">Could not auto-match — choose below.</p>
                     </template>
 
                     <fieldset v-if="replayPreviewLoading || !replayPreviewData || replayPreviewData.needs_manual_p1_map">
@@ -1009,10 +1042,12 @@ const breadcrumbs: BreadcrumbItem[] = [
                                 <span class="text-sm">{{ set.team2.name }}</span>
                             </label>
                         </div>
-                        <p v-if="importFromReplayForm.errors.p1_team_id" class="text-destructive mt-1 text-sm">{{ importFromReplayForm.errors.p1_team_id }}</p>
+                        <p v-if="importFromReplayForm.errors.p1_team_id" class="mt-1 text-sm text-destructive">
+                            {{ importFromReplayForm.errors.p1_team_id }}
+                        </p>
                     </fieldset>
 
-                    <p v-if="importFromReplayForm.errors.set_id" class="text-destructive text-sm">{{ importFromReplayForm.errors.set_id }}</p>
+                    <p v-if="importFromReplayForm.errors.set_id" class="text-sm text-destructive">{{ importFromReplayForm.errors.set_id }}</p>
                 </div>
 
                 <DialogFooter class="flex-wrap gap-2">

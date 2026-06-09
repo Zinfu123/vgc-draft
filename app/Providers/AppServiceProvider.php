@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Kernel\Audit\ModuleAuditRegistry;
 use App\Modules\League\Models\League;
 use App\Policies\LeaguePolicy;
 use App\Support\CleanupInvalidViteHotFile;
@@ -18,6 +19,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        $this->app->singleton(ModuleAuditRegistry::class);
+
         if ($this->app->environment('local') && class_exists(\Laravel\Telescope\TelescopeServiceProvider::class)) {
             $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
             $this->app->register(TelescopeServiceProvider::class);

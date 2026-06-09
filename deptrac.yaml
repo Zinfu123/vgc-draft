@@ -1,0 +1,29 @@
+deptrac:
+  paths:
+    - ./app
+  exclude_files:
+    - '#.*Test\.php#'
+
+  layers:
+    - name: Kernel
+      collectors:
+        - type: className
+          value: App\\Kernel\\.*
+
+    - name: ModulesV2
+      collectors:
+        - type: className
+          value: App\\Modules\\V2\\.*
+
+    - name: ModulesV1
+      collectors:
+        - type: className
+          value: App\\Modules\\(Calendar|Dashboard|Draft|League|MatchPrep|Matches|Playoffs|Pokedex|Pokepaste|Shared|Stats|TeamCoverage|Teams|Trade)\\.*
+
+  ruleset:
+    ModulesV2:
+      - Kernel
+
+    ModulesV1:
+      - Kernel
+      - ModulesV1
