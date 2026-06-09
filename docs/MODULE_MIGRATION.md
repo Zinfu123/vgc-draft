@@ -4,7 +4,7 @@ Agent and human handoff file for the parallel v2 rebuild. See [architecture/adr/
 
 ## Current focus
 
-**Next PR:** `v2/pokedex-cutover` (after QA on `/v2/pokedex/*`)
+**Next PR:** `v2/team-coverage-add`
 
 **Blocked:** none
 
@@ -14,15 +14,16 @@ Agent and human handoff file for the parallel v2 rebuild. See [architecture/adr/
 |---|--------|--------|-----|-------|
 | 1 | `v2/phase-0-scaffold` | merged | #13 | |
 | 2 | `v2/kernel-showdown-backend` | merged | #14 | Kernel ShowdownFormatHelper + frontend shims |
-| 3 | `v2/pokedex-add` | in progress | — | Preview routes at `/v2/pokedex/*` |
-| 4 | `v2/pokedex-cutover` | pending | — | Requires manual QA on `/v2/pokedex/*` |
+| 3 | `v2/pokedex-add` | merged | #15 | Preview routes + ability/move filters |
+| 4 | `v2/pokedex-cutover` | in progress | — | Production `/pokedex` serves v2 |
+| 5 | `v2/team-coverage-add` | pending | — | After pokedex cutover |
 
 ## Module status
 
 | Module | Phase | Add PR | Cutover PR | Audit passed | v1 deleted | Preview URLs |
 |--------|-------|--------|------------|--------------|------------|--------------|
 | Kernel | 1 | #13 | — | in progress | — | — |
-| Pokedex | 2 | in progress | — | ☐ | ☐ | `/v2/pokedex` |
+| Pokedex | 2 | #15 | in progress | ☐ | ☐ | `/pokedex` |
 | TeamCoverage | 2 | — | — | ☐ | ☐ | `/v2/team-coverage` |
 | Teams | 3 | — | — | ☐ | ☐ | `/v2/teams` |
 | Draft | 3 | — | — | ☐ | ☐ | `/v2/draft`, `/v2/leagues/{id}/draft` |

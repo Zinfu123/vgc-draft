@@ -36,11 +36,22 @@ interface PokemonRow {
     type2: string;
 }
 
+interface VersionGroupRow {
+    id: number;
+    slug: string;
+    name: string;
+    generation: number;
+    sort_order: number;
+}
+
 interface FilterState {
     search: string;
     type1: string;
     type2: string;
     generation: number | null;
+    game: string;
+    ability: string;
+    move: string;
     per_page: number;
 }
 
@@ -49,11 +60,16 @@ interface Props {
     filters: FilterState;
     typeOptions: string[];
     generationFilterOptions: number[];
+    versionGroups: VersionGroupRow[];
+    abilityFilterOptions: string[];
 }
 
 const props = defineProps<Props>();
 
 const searchDraft = ref(props.filters.search);
+const abilityDraft = ref(props.filters.ability);
+const moveDraft = ref(props.filters.move);
+const gameDraft = ref(props.filters.game);
 const type1Draft = ref(props.filters.type1);
 const type2Draft = ref(props.filters.type2);
 const generationDraft = ref<number | ''>(props.filters.generation ?? '');
@@ -63,6 +79,9 @@ watch(
     () => props.filters,
     (filters) => {
         searchDraft.value = filters.search;
+        abilityDraft.value = filters.ability;
+        moveDraft.value = filters.move;
+        gameDraft.value = filters.game;
         type1Draft.value = filters.type1;
         type2Draft.value = filters.type2;
         generationDraft.value = filters.generation ?? '';
@@ -71,12 +90,22 @@ watch(
     { deep: true },
 );
 
+function formatSlugLabel(slug: string): string {
+    return slug
+        .split('-')
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
+}
+
 function currentFilters(): FilterState {
     return {
         search: searchDraft.value,
         type1: type1Draft.value,
         type2: type2Draft.value,
         generation: generationDraft.value === '' ? null : Number(generationDraft.value),
+        game: gameDraft.value,
+        ability: abilityDraft.value,
+        move: moveDraft.value,
         per_page: perPageDraft.value,
     };
 }
@@ -85,6 +114,9 @@ function applyFilters(overrides: Partial<FilterState> = {}) {
     const merged = { ...currentFilters(), ...overrides };
 
     searchDraft.value = merged.search;
+    abilityDraft.value = merged.ability;
+    moveDraft.value = merged.move;
+    gameDraft.value = merged.game;
     type1Draft.value = merged.type1;
     type2Draft.value = merged.type2;
     generationDraft.value = merged.generation ?? '';
@@ -97,6 +129,9 @@ function applyFilters(overrides: Partial<FilterState> = {}) {
             type1: merged.type1 || undefined,
             type2: merged.type2 || undefined,
             generation: merged.generation ?? undefined,
+            game: merged.game || undefined,
+            ability: merged.ability || undefined,
+            move: merged.move || undefined,
             per_page: merged.per_page,
         },
         { preserveScroll: true, replace: true },
@@ -105,6 +140,23 @@ function applyFilters(overrides: Partial<FilterState> = {}) {
 
 function submitFilters() {
     applyFilters();
+}
+
+function onGameChange() {
+    abilityDraft.value = '';
+    moveDraft.value = '';
+    applyFilters({ game: gameDraft.value, ability: '', move: '' });
+}
+
+function pokemonShowHref(id: number): string {
+    const params = new URLSearchParams();
+    if (gameDraft.value) {
+        params.set('game', gameDraft.value);
+    }
+
+    const query = params.toString();
+
+    return route('pokedex.show', id) + (query ? `?${query}` : '');
 }
 </script>
 
@@ -121,6 +173,45 @@ function submitFilters() {
                 <div class="grid min-w-[200px] flex-1 gap-2">
                     <Label for="search">Search</Label>
                     <Input id="search" v-model="searchDraft" type="search" placeholder="Name…" class="min-h-11 text-base md:min-h-9 md:text-sm" />
+                </div>
+                <div class="grid min-w-[180px] gap-2">
+                    <Label for="game">Game version</Label>
+                    <select
+                        id="game"
+                        v-model="gameDraft"
+                        class="flex h-11 min-h-11 w-full rounded-md border border-input bg-background px-3 py-2 text-base shadow-sm focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none md:h-9 md:min-h-9 md:py-1 md:text-sm"
+                        @change="onGameChange()"
+                    >
+                        <option v-for="vg in versionGroups" :key="vg.id" :value="vg.slug">
+                            {{ vg.name }} (Gen {{ vg.generation }})
+                        </option>
+                    </select>
+                </div>
+                <div class="grid min-w-[180px] gap-2">
+                    <Label for="ability">Ability</Label>
+                    <Input
+                        id="ability"
+                        v-model="abilityDraft"
+                        type="search"
+                        list="ability-options"
+                        placeholder="e.g. overgrow"
+                        class="min-h-11 text-base md:min-h-9 md:text-sm"
+                    />
+                    <datalist id="ability-options">
+                        <option v-for="ability in abilityFilterOptions" :key="ability" :value="ability">
+                            {{ formatSlugLabel(ability) }}
+                        </option>
+                    </datalist>
+                </div>
+                <div class="grid min-w-[180px] gap-2">
+                    <Label for="move">Move in learnset</Label>
+                    <Input
+                        id="move"
+                        v-model="moveDraft"
+                        type="search"
+                        placeholder="e.g. earthquake"
+                        class="min-h-11 text-base md:min-h-9 md:text-sm"
+                    />
                 </div>
                 <div class="grid min-w-[140px] gap-2">
                     <Label for="type1">Type (either slot)</Label>
@@ -174,19 +265,20 @@ function submitFilters() {
                 <Button type="submit" variant="secondary" class="min-h-11 w-full touch-manipulation md:mb-0 md:h-9 md:min-h-9 md:w-auto">Apply</Button>
             </form>
 
-            <p class="text-xs text-muted-foreground">Dropdown filters apply immediately. Use Apply for the name search field.</p>
+            <p class="text-xs text-muted-foreground">Dropdown filters apply immediately. Use Apply for name, ability, and move text fields.</p>
+
+            <p v-if="filters.ability || filters.move" class="text-sm text-muted-foreground">
+                Ability and move filters use
+                <span class="font-medium text-foreground">{{ versionGroups.find((vg) => vg.slug === filters.game)?.name ?? filters.game }}</span>
+                learnsets.
+            </p>
 
             <p v-if="pokemon.total > 0" class="text-sm text-muted-foreground">
                 Showing {{ pokemon.data.length }} of {{ pokemon.total }} Pokémon
             </p>
 
             <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-                <Link
-                    v-for="row in pokemon.data"
-                    :key="row.id"
-                    :href="route('pokedex.show', row.id)"
-                    class="transition-opacity hover:opacity-90"
-                >
+                <Link v-for="row in pokemon.data" :key="row.id" :href="pokemonShowHref(row.id)" class="transition-opacity hover:opacity-90">
                     <PokemonCard :pokemon="row" />
                 </Link>
             </div>
@@ -202,11 +294,7 @@ function submitFilters() {
                     >
                         <span v-html="link.label" />
                     </Link>
-                    <span
-                        v-else
-                        class="rounded-md px-3 py-1 text-sm text-muted-foreground"
-                        v-html="link.label"
-                    />
+                    <span v-else class="rounded-md px-3 py-1 text-sm text-muted-foreground" v-html="link.label" />
                 </template>
             </nav>
         </div>

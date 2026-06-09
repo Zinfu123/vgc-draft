@@ -11,6 +11,6 @@ class PokedexAbilityController extends Controller
 {
     public function show(int $id, PokedexPages $pokedexPages): Response
     {
-        return Inertia::render('v2/pokedex/PokedexAbilityShow', $pokedexPages->abilityProps($id));
+        return Inertia::render('pokedex/PokedexAbilityShow', $pokedexPages->abilityProps($id));
     }
 }

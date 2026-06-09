@@ -23,7 +23,7 @@ class PokedexController extends Controller
             'per_page' => ['sometimes', 'integer', 'min:10', 'max:100'],
         ]);
 
-        return Inertia::render('v2/pokedex/PokedexIndex', $pokedexPages->indexProps($validated));
+        return Inertia::render('pokedex/PokedexIndex', $pokedexPages->indexProps($validated));
     }
 
     public function show(Request $request, int $pokedex, PokedexPages $pokedexPages): Response
@@ -31,6 +31,6 @@ class PokedexController extends Controller
         $requestedSlug = $request->query('game');
         $requestedSlug = is_string($requestedSlug) && $requestedSlug !== '' ? $requestedSlug : null;
 
-        return Inertia::render('v2/pokedex/PokedexShow', $pokedexPages->showProps($pokedex, $requestedSlug));
+        return Inertia::render('pokedex/PokedexShow', $pokedexPages->showProps($pokedex, $requestedSlug));
     }
 }

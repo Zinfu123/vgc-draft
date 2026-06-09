@@ -24,7 +24,7 @@ return [
         'preview_nav' => env('V2_PREVIEW_NAV', null),
 
         'preview_routes' => [
-            'Pokedex' => '/v2/pokedex',
+            'Pokedex' => '/pokedex',
             'TeamCoverage' => '/v2/team-coverage',
             'Teams' => '/v2/teams',
             'Draft' => '/v2/draft',

@@ -15,14 +15,14 @@ use App\Modules\Matches\Controllers\PoolController;
 use App\Modules\Matches\Controllers\SetController;
 use App\Modules\MatchPrep\Controllers\MatchPrepController;
 use App\Modules\Playoffs\Controllers\PlayoffController;
-use App\Modules\Pokedex\Controllers\PokedexAbilityController;
-use App\Modules\Pokedex\Controllers\PokedexController;
-use App\Modules\Pokedex\Controllers\PokedexItemController;
 use App\Modules\Pokepaste\Controllers\PokepasteController;
 use App\Modules\Stats\Controllers\PokemonUsageStatsController;
 use App\Modules\TeamCoverage\Controllers\TeamCoveragePlannerController;
 use App\Modules\Teams\Controllers\TeamController;
 use App\Modules\Trade\Controllers\TradeController;
+use App\Modules\V2\Pokedex\Http\Controllers\PokedexAbilityController;
+use App\Modules\V2\Pokedex\Http\Controllers\PokedexController;
+use App\Modules\V2\Pokedex\Http\Controllers\PokedexItemController;
 /* End Define Controllers */
 
 /* Dependencies */
