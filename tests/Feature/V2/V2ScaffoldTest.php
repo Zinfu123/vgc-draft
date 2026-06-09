@@ -10,13 +10,13 @@ it('exposes v2 health endpoint with enabled modules list', function () {
     $response->assertSuccessful()
         ->assertJson([
             'version' => 2,
-            'modules' => [],
+            'modules' => ['Pokedex'],
         ]);
 });
 
 it('registers module audit command', function () {
     $this->artisan('module:audit')
-        ->expectsOutput('No module auditors registered yet.')
+        ->expectsOutput('Registered module auditors: Pokedex')
         ->assertSuccessful();
 });
 
@@ -28,9 +28,10 @@ it('loads modules config', function () {
     expect(config('modules.v2.enabled'))->toBeArray();
 });
 
-it('hides v2 preview nav when no modules are enabled', function () {
-    expect(\App\Kernel\Support\V2PreviewNav::isVisible())->toBeFalse();
-    expect(\App\Kernel\Support\V2PreviewNav::links())->toBe([]);
+it('exposes v2 preview nav links when modules are enabled', function () {
+    expect(\App\Kernel\Support\V2PreviewNav::links())->toBe([
+        ['module' => 'Pokedex', 'href' => '/v2/pokedex'],
+    ]);
 });
 
 it('renders teams index page', function () {
