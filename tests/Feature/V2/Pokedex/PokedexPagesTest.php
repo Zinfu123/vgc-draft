@@ -1,0 +1,239 @@
+<?php
+
+use App\Models\User;
+use App\Modules\Pokedex\Models\AbilityGenerationData;
+use App\Modules\Pokedex\Models\PokemonGenerationData;
+use App\Modules\Pokedex\Models\VersionGroup;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
+
+uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
+
+it('renders the v2 pokedex index for authenticated users', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->get(route('v2.pokedex.index'));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('v2/pokedex/PokedexIndex')
+        ->has('pokemon')
+        ->has('filters')
+        ->has('filters.game')
+        ->has('filters.ability')
+        ->has('filters.move')
+        ->has('typeOptions')
+        ->has('generationFilterOptions')
+        ->has('versionGroups')
+        ->has('abilityFilterOptions')
+    );
+});
+
+it('filters v2 pokedex index by ability query param', function () {
+    $user = User::factory()->create();
+    $versionGroup = VersionGroup::query()->where('slug', 'scarlet-violet')->firstOrFail();
+
+    $bulbasaurId = DB::table('pokedex')->insertGetId([
+        'nationaldex_id' => 1,
+        'name' => 'Bulbasaur',
+        'type1' => 'Grass',
+        'type2' => 'Poison',
+        'sprite_url' => null,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    DB::table('pokedex')->insert([
+        'nationaldex_id' => 4,
+        'name' => 'Charmander',
+        'type1' => 'Fire',
+        'type2' => null,
+        'sprite_url' => null,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    AbilityGenerationData::query()->create([
+        'pokedex_id' => $bulbasaurId,
+        'version_group_id' => $versionGroup->id,
+        'pokeapi_ability_id' => 65,
+        'ability_name' => 'overgrow',
+        'slot' => 1,
+        'is_hidden' => false,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('v2.pokedex.index', [
+            'game' => 'scarlet-violet',
+            'ability' => 'overgrow',
+        ]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('filters.ability', 'overgrow')
+            ->where('pokemon.total', 1)
+            ->where('pokemon.data.0.name', 'Bulbasaur')
+        );
+});
+
+it('renders v2 pokemon detail with scarlet-violet game data', function () {
+    $user = User::factory()->create();
+    $versionGroup = VersionGroup::query()->where('slug', 'scarlet-violet')->firstOrFail();
+
+    $pokedexId = DB::table('pokedex')->insertGetId([
+        'nationaldex_id' => 1,
+        'name' => 'Bulbasaur',
+        'type1' => 'Grass',
+        'type2' => 'Poison',
+        'sprite_url' => null,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    PokemonGenerationData::factory()->create([
+        'pokedex_id' => $pokedexId,
+        'version_group_id' => $versionGroup->id,
+    ]);
+    AbilityGenerationData::query()->create([
+        'pokedex_id' => $pokedexId,
+        'version_group_id' => $versionGroup->id,
+        'pokeapi_ability_id' => 65,
+        'ability_name' => 'overgrow',
+        'slot' => 1,
+        'is_hidden' => false,
+    ]);
+
+    $response = $this->actingAs($user)->get(route('v2.pokedex.show', $pokedexId).'?'.http_build_query(['game' => 'scarlet-violet']));
+
+    $response->assertOk();
+    $response->assertInertia(fn ($page) => $page
+        ->component('v2/pokedex/PokedexShow')
+        ->where('selectedVersionSlug', 'scarlet-violet')
+        ->has('gameData')
+        ->where('gameData.hp', 50)
+        ->has('gameData.abilities')
+    );
+});
+
+it('switches v2 game data when game query matches another version group', function () {
+    $user = User::factory()->create();
+
+    DB::table('version_groups')->insert([
+        'slug' => 'sword-shield',
+        'generation' => 8,
+        'sort_order' => 50,
+        'name' => 'Sword & Shield',
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $sv = VersionGroup::query()->where('slug', 'scarlet-violet')->firstOrFail();
+    $swsh = VersionGroup::query()->where('slug', 'sword-shield')->firstOrFail();
+
+    $pokedexId = DB::table('pokedex')->insertGetId([
+        'nationaldex_id' => 4,
+        'name' => 'Charmander',
+        'type1' => 'Fire',
+        'type2' => null,
+        'sprite_url' => null,
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    PokemonGenerationData::factory()->create([
+        'pokedex_id' => $pokedexId,
+        'version_group_id' => $sv->id,
+        'hp' => 39,
+    ]);
+    AbilityGenerationData::query()->create([
+        'pokedex_id' => $pokedexId,
+        'version_group_id' => $sv->id,
+        'pokeapi_ability_id' => 66,
+        'ability_name' => 'blaze',
+        'slot' => 1,
+        'is_hidden' => false,
+    ]);
+
+    PokemonGenerationData::factory()->create([
+        'pokedex_id' => $pokedexId,
+        'version_group_id' => $swsh->id,
+        'hp' => 40,
+    ]);
+    AbilityGenerationData::query()->create([
+        'pokedex_id' => $pokedexId,
+        'version_group_id' => $swsh->id,
+        'pokeapi_ability_id' => 66,
+        'ability_name' => 'blaze',
+        'slot' => 1,
+        'is_hidden' => false,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('v2.pokedex.show', $pokedexId).'?'.http_build_query(['game' => 'sword-shield']))
+        ->assertInertia(fn ($page) => $page
+            ->where('selectedVersionSlug', 'sword-shield')
+            ->where('gameData.hp', 40)
+        );
+});
+
+it('renders v2 pokedex ability detail from PokéAPI', function () {
+    $user = User::factory()->create();
+    Http::fake(function (\Illuminate\Http\Client\Request $request) {
+        $path = (string) (parse_url($request->url(), PHP_URL_PATH) ?? '');
+        if (str_contains($path, '/ability/65')) {
+            return Http::response([
+                'id' => 65,
+                'name' => 'overgrow',
+                'effect_entries' => [
+                    ['effect' => 'Test effect.', 'short_effect' => 'Short.', 'language' => ['name' => 'en']],
+                ],
+                'generation' => ['name' => 'generation-iii'],
+                'flavor_text_entries' => [],
+            ], 200);
+        }
+
+        return Http::response(['error' => 'unexpected'], 404);
+    });
+
+    $this->actingAs($user)
+        ->get(route('v2.pokedex.abilities.show', 65))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('v2/pokedex/PokedexAbilityShow')
+            ->where('name_display', 'Overgrow'));
+});
+
+it('renders v2 pokedex item detail from PokéAPI', function () {
+    $user = User::factory()->create();
+    Http::fake(function (\Illuminate\Http\Client\Request $request) {
+        $path = (string) (parse_url($request->url(), PHP_URL_PATH) ?? '');
+        if (str_contains($path, '/item/211')) {
+            return Http::response([
+                'id' => 211,
+                'name' => 'leftovers',
+                'cost' => 200,
+                'category' => ['name' => 'medicine'],
+                'effect_entries' => [
+                    ['effect' => 'Restores HP.', 'short_effect' => 'Restores HP each turn.', 'language' => ['name' => 'en']],
+                ],
+                'names' => [['name' => 'Leftovers', 'language' => ['name' => 'en']]],
+                'sprites' => ['default' => 'https://example.com/leftovers.png'],
+                'flavor_text_entries' => [],
+            ], 200);
+        }
+
+        return Http::response(['error' => 'unexpected'], 404);
+    });
+
+    $this->actingAs($user)
+        ->get(route('v2.pokedex.items.show', 211))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('v2/pokedex/PokedexItemShow')
+            ->where('name_display', 'Leftovers'));
+});
+
+it('runs pokedex module audit command', function () {
+    $this->artisan('module:audit', ['module' => 'Pokedex'])
+        ->expectsOutput('Module audit: Pokedex')
+        ->assertSuccessful();
+});

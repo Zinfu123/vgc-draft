@@ -1,9 +1,11 @@
 <?php
 
+use App\Modules\Pokedex\Models\AbilityGenerationData;
 use App\Modules\Pokedex\Models\Pokedex;
 use App\Modules\Pokedex\Models\PokemonGenerationData;
 use App\Modules\Pokedex\Models\VersionGroup;
 use App\Modules\Pokedex\Services\PokedexFilterService;
+use Illuminate\Support\Facades\DB;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -105,4 +107,116 @@ it('returns all results when search is empty without using Scout', function () {
     $results = $service->paginate(50, ['search' => '']);
 
     expect($results->total())->toBeGreaterThanOrEqual(2);
+});
+
+it('filters by ability for the selected game version', function () {
+    $versionGroup = VersionGroup::query()->where('slug', 'scarlet-violet')->firstOrFail();
+
+    $withAbility = Pokedex::query()->create([
+        'nationaldex_id' => 1,
+        'name' => 'Bulbasaur',
+        'type1' => 'Grass',
+        'type2' => 'Poison',
+        'sprite_url' => null,
+    ]);
+
+    $withoutAbility = Pokedex::query()->create([
+        'nationaldex_id' => 4,
+        'name' => 'Charmander',
+        'type1' => 'Fire',
+        'type2' => null,
+        'sprite_url' => null,
+    ]);
+
+    AbilityGenerationData::query()->create([
+        'pokedex_id' => $withAbility->id,
+        'version_group_id' => $versionGroup->id,
+        'pokeapi_ability_id' => 65,
+        'ability_name' => 'overgrow',
+        'slot' => 1,
+        'is_hidden' => false,
+    ]);
+
+    $service = new PokedexFilterService;
+    $results = $service->paginate(50, [
+        'game' => 'scarlet-violet',
+        'ability' => 'overgrow',
+    ]);
+
+    expect($results->pluck('name')->all())
+        ->toContain('Bulbasaur')
+        ->not->toContain('Charmander');
+});
+
+it('filters by move in learnset for the selected game version', function () {
+    $versionGroup = VersionGroup::query()->where('slug', 'scarlet-violet')->firstOrFail();
+
+    $withMove = Pokedex::query()->create([
+        'nationaldex_id' => 1,
+        'name' => 'Bulbasaur',
+        'type1' => 'Grass',
+        'type2' => 'Poison',
+        'sprite_url' => null,
+    ]);
+
+    $withoutMove = Pokedex::query()->create([
+        'nationaldex_id' => 4,
+        'name' => 'Charmander',
+        'type1' => 'Fire',
+        'type2' => null,
+        'sprite_url' => null,
+    ]);
+
+    PokemonGenerationData::factory()->create([
+        'pokedex_id' => $withMove->id,
+        'version_group_id' => $versionGroup->id,
+        'learnset' => [
+            ['move_id' => 89, 'move_name' => 'earthquake', 'method' => 'machine', 'level' => 0],
+        ],
+    ]);
+
+    DB::table('pokeapi_move_cache')->insert([
+        'id' => 89,
+        'name' => 'earthquake',
+        'type_slug' => 'ground',
+        'damage_class' => 'physical',
+        'power' => 100,
+        'accuracy' => 100,
+        'ailment_name' => null,
+        'short_effect_en' => null,
+        'updated_at' => now(),
+    ]);
+
+    $service = new PokedexFilterService;
+    $results = $service->paginate(50, [
+        'game' => 'scarlet-violet',
+        'move' => 'earthquake',
+    ]);
+
+    expect($results->pluck('name')->all())
+        ->toContain('Bulbasaur')
+        ->not->toContain('Charmander');
+});
+
+it('lists ability options for a version group', function () {
+    $versionGroup = VersionGroup::query()->where('slug', 'scarlet-violet')->firstOrFail();
+    $pokedex = Pokedex::query()->create([
+        'nationaldex_id' => 1,
+        'name' => 'Bulbasaur',
+        'type1' => 'Grass',
+        'type2' => 'Poison',
+        'sprite_url' => null,
+    ]);
+
+    AbilityGenerationData::query()->create([
+        'pokedex_id' => $pokedex->id,
+        'version_group_id' => $versionGroup->id,
+        'pokeapi_ability_id' => 65,
+        'ability_name' => 'overgrow',
+        'slot' => 1,
+        'is_hidden' => false,
+    ]);
+
+    expect(PokedexFilterService::abilityFilterOptionsForVersionGroup($versionGroup->id))
+        ->toContain('overgrow');
 });
