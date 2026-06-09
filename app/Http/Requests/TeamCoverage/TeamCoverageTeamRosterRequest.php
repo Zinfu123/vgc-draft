@@ -12,7 +12,16 @@ class TeamCoverageTeamRosterRequest extends FormRequest
     {
         $user = $this->user();
         $team = $this->route('team');
-        if ($user === null || ! $team instanceof Team) {
+
+        if ($user === null) {
+            return false;
+        }
+
+        if (is_numeric($team)) {
+            $team = Team::query()->find((int) $team);
+        }
+
+        if (! $team instanceof Team) {
             return false;
         }
 
