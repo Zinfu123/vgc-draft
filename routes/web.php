@@ -17,12 +17,12 @@ use App\Modules\MatchPrep\Controllers\MatchPrepController;
 use App\Modules\Playoffs\Controllers\PlayoffController;
 use App\Modules\Pokepaste\Controllers\PokepasteController;
 use App\Modules\Stats\Controllers\PokemonUsageStatsController;
-use App\Modules\Teams\Controllers\TeamController;
 use App\Modules\Trade\Controllers\TradeController;
 use App\Modules\V2\Pokedex\Http\Controllers\PokedexAbilityController;
 use App\Modules\V2\Pokedex\Http\Controllers\PokedexController;
 use App\Modules\V2\Pokedex\Http\Controllers\PokedexItemController;
 use App\Modules\V2\TeamCoverage\Http\Controllers\TeamCoveragePlannerController;
+use App\Modules\V2\Teams\Http\Controllers\TeamController;
 /* End Define Controllers */
 
 /* Dependencies */
