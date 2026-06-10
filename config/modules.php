@@ -33,7 +33,7 @@ return [
             'Pokedex' => '/pokedex',
             'TeamCoverage' => '/team-coverage',
             'Teams' => '/teams',
-            'Draft' => '/v2/draft',
+            'Draft' => '/draft',
             'Matches' => '/v2/match',
             'Trade' => '/v2/leagues',
             'Playoffs' => '/v2/leagues',

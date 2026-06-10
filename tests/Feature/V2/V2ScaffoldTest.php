@@ -33,9 +33,17 @@ it('exposes v2 preview nav links when modules are enabled', function () {
         ['module' => 'Pokedex', 'href' => '/pokedex'],
         ['module' => 'TeamCoverage', 'href' => '/team-coverage'],
         ['module' => 'Teams', 'href' => '/teams'],
-        ['module' => 'Draft', 'href' => '/v2/draft'],
+        ['module' => 'Draft', 'href' => '/draft'],
     ]);
 });
+
+it('redirects v2 draft detail to production route', function () {
+    $user = \App\Models\User::factory()->create();
+
+    $this->actingAs($user)
+        ->get('/v2/draft/1')
+        ->assertRedirect('/draft/1');
+})->group('v2');
 
 it('redirects v2 teams index to production route', function () {
     $user = \App\Models\User::factory()->create();
