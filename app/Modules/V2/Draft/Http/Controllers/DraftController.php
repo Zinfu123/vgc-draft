@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\Draft\Controllers;
+namespace App\Modules\V2\Draft\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Draft\AdjustDraftTimerRequest;
@@ -39,7 +39,7 @@ class DraftController extends Controller
             (int) $request->validated('league_pokemon_id'),
         );
 
-        return redirect()->route('draft.detail', ['league_id' => $leagueId]);
+        return redirect()->route('v2.draft.detail', ['league_id' => $leagueId]);
     }
 
     public function reorderWishlist(ReorderDraftWishlistRequest $request, DraftOperations $draftOperations): RedirectResponse
@@ -49,14 +49,14 @@ class DraftController extends Controller
             $request->orderedLeaguePokemonIds(),
         );
 
-        return redirect()->route('draft.detail', ['league_id' => $leagueId]);
+        return redirect()->route('v2.draft.detail', ['league_id' => $leagueId]);
     }
 
     public function create(StartDraftRequest $request, DraftOperations $draftOperations): RedirectResponse
     {
         $leagueId = $draftOperations->startDraft((int) $request->validated('league_id'));
 
-        return redirect()->route('draft.detail', ['league_id' => $leagueId]);
+        return redirect()->route('v2.draft.detail', ['league_id' => $leagueId]);
     }
 
     public function ban(Request $request, DraftOperations $draftOperations): RedirectResponse
@@ -70,7 +70,7 @@ class DraftController extends Controller
             (int) $request->integer('pokemon_id'),
         );
 
-        return DraftRedirectHelper::fromActionResult($result, 'draft.detail');
+        return DraftRedirectHelper::fromActionResult($result, 'v2.draft.detail');
     }
 
     public function pick(Request $request, DraftOperations $draftOperations): RedirectResponse
@@ -85,14 +85,14 @@ class DraftController extends Controller
             (int) $request->integer('pokemon_cost'),
         );
 
-        return DraftRedirectHelper::fromActionResult($result, 'draft.detail');
+        return DraftRedirectHelper::fromActionResult($result, 'v2.draft.detail');
     }
 
     public function revertLastPick(Request $request, DraftOperations $draftOperations): RedirectResponse
     {
         $leagueId = $draftOperations->revertLastPick((int) $request->integer('league_id'));
 
-        return redirect()->route('draft.detail', ['league_id' => $leagueId]);
+        return redirect()->route('v2.draft.detail', ['league_id' => $leagueId]);
     }
 
     public function abortDraft(Request $request, DraftOperations $draftOperations): RedirectResponse
@@ -106,14 +106,14 @@ class DraftController extends Controller
     {
         $leagueId = $draftOperations->pauseTimer((int) $request->validated('league_id'));
 
-        return redirect()->route('draft.detail', ['league_id' => $leagueId]);
+        return redirect()->route('v2.draft.detail', ['league_id' => $leagueId]);
     }
 
     public function resumeTimer(ManageDraftTimerRequest $request, DraftOperations $draftOperations): RedirectResponse
     {
         $leagueId = $draftOperations->resumeTimer((int) $request->validated('league_id'));
 
-        return redirect()->route('draft.detail', ['league_id' => $leagueId]);
+        return redirect()->route('v2.draft.detail', ['league_id' => $leagueId]);
     }
 
     public function adjustTimer(AdjustDraftTimerRequest $request, DraftOperations $draftOperations): RedirectResponse
@@ -123,13 +123,13 @@ class DraftController extends Controller
             (int) $request->validated('delta_seconds'),
         );
 
-        return redirect()->route('draft.detail', ['league_id' => $leagueId]);
+        return redirect()->route('v2.draft.detail', ['league_id' => $leagueId]);
     }
 
     public function forceSkip(ManageDraftTimerRequest $request, DraftOperations $draftOperations): RedirectResponse
     {
         $leagueId = $draftOperations->forceSkip((int) $request->validated('league_id'));
 
-        return redirect()->route('draft.detail', ['league_id' => $leagueId]);
+        return redirect()->route('v2.draft.detail', ['league_id' => $leagueId]);
     }
 }

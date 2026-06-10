@@ -17,12 +17,14 @@ return [
             'Pokedex',
             'TeamCoverage',
             'Teams',
+            'Draft',
         ],
 
         'providers' => [
             App\Modules\V2\Pokedex\Providers\PokedexServiceProvider::class,
             App\Modules\V2\TeamCoverage\Providers\TeamCoverageServiceProvider::class,
             App\Modules\V2\Teams\Providers\TeamsServiceProvider::class,
+            App\Modules\V2\Draft\Providers\DraftServiceProvider::class,
         ],
 
         'preview_nav' => env('V2_PREVIEW_NAV', null),

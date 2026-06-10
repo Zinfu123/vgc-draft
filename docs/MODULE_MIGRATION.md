@@ -4,7 +4,7 @@ Agent and human handoff file for the parallel v2 rebuild. See [architecture/adr/
 
 ## Current focus
 
-**Next PR:** Phase 3 — `v2/draft-add`
+**Next PR:** Phase 3 — `v2/draft-cutover` (after QA on `v2/draft-add`)
 
 **Blocked:** none
 
@@ -19,7 +19,8 @@ Agent and human handoff file for the parallel v2 rebuild. See [architecture/adr/
 | 5 | `v2/team-coverage-add` | merged | #17 | Preview at `/v2/team-coverage` |
 | 6 | `v2/team-coverage-cutover` | merged | #18 | Production `/team-coverage` serves v2 |
 | 7 | `v2/teams-add` | merged/pending | #19 | Preview at `/v2/teams` |
-| 8 | `v2/teams-cutover` | in progress | — | Production `/teams` serves v2 |
+| 8 | `v2/teams-cutover` | merged/pending | #20 | Production `/teams` serves v2 |
+| 9 | `v2/draft-add` | in progress | — | Preview at `/v2/draft` |
 
 ## Module status
 
@@ -28,8 +29,8 @@ Agent and human handoff file for the parallel v2 rebuild. See [architecture/adr/
 | Kernel | 1 | #13 | — | in progress | — | — |
 | Pokedex | 2 | #15 | #16 | ☐ | partial | `/pokedex` |
 | TeamCoverage | 2 | #17 | #18 | ☐ | partial | `/team-coverage` |
-| Teams | 3 | #19 | in progress | ☐ | partial | `/teams` |
-| Draft | 3 | — | — | ☐ | ☐ | `/v2/draft`, `/v2/leagues/{id}/draft` |
+| Teams | 3 | #19 | #20 | ☐ | partial | `/teams` |
+| Draft | 3 | in progress | — | ☐ | ☐ | `/v2/draft` |
 | Matches | 3 | — | — | ☐ | ☐ | `/v2/match`, `/v2/pools` |
 | Trade | 3 | — | — | ☐ | ☐ | `/v2/leagues/{id}/trades` |
 | Playoffs | 3 | — | — | ☐ | ☐ | `/v2/leagues/{id}/admin/playoffs` |
