@@ -17,7 +17,17 @@ it('redirects guests from the planner page', function () {
 
 it('shows the planner for authenticated users', function () {
     $user = User::factory()->create();
-    $this->actingAs($user)->get(route('team-coverage.index'))->assertOk();
+
+    $this->actingAs($user)
+        ->get(route('team-coverage.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('tools/TeamCoveragePlanner')
+            ->has('versionGroups')
+            ->has('defaultVersionSlug')
+            ->has('typeOrder')
+            ->has('myTeams')
+        );
 });
 
 it('returns pokedex search json for authenticated users', function () {
@@ -125,4 +135,10 @@ it('forbids roster fetch for another users team', function () {
     $intruder = User::factory()->create();
 
     $this->actingAs($intruder)->getJson(route('team-coverage.roster', ['team' => $team->id]))->assertForbidden();
+});
+
+it('runs team coverage module audit command', function () {
+    $this->artisan('module:audit', ['module' => 'TeamCoverage'])
+        ->expectsOutput('Module audit: TeamCoverage')
+        ->assertSuccessful();
 });
