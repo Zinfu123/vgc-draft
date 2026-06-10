@@ -6,7 +6,7 @@ Agent and human handoff file for the parallel v2 rebuild. See [architecture/adr/
 
 **Integration branch:** `Dev` (Laravel Cloud dev environment)
 
-**Next PR:** Phase 3 — `v2/matches-add` (branch off `Dev`, PR into `Dev`)
+**Next PR:** Phase 3 — `v2/matches-cutover` (after QA on `v2/matches-add`)
 
 **Blocked:** none
 
@@ -46,6 +46,7 @@ Agent and human handoff file for the parallel v2 rebuild. See [architecture/adr/
 | 8 | `v2/teams-cutover` | merged | #20 | Production `/teams` serves v2 |
 | 9 | `v2/draft-add` | merged | #21 | Preview at `/v2/draft` |
 | 10 | `v2/draft-cutover` | merged | #22 | Production `/draft` serves v2 |
+| 11 | `v2/matches-add` | in progress | — | Preview at `/v2/match`, `/v2/pools` |
 
 ## Module status
 
@@ -56,7 +57,7 @@ Agent and human handoff file for the parallel v2 rebuild. See [architecture/adr/
 | TeamCoverage | 2 | #17 | #18 | ☐ | partial | `/team-coverage` |
 | Teams | 3 | #19 | #20 | ☐ | partial | `/teams` |
 | Draft | 3 | #21 | #22 | ☐ | partial | `/draft` |
-| Matches | 3 | — | — | ☐ | ☐ | `/v2/match`, `/v2/pools` |
+| Matches | 3 | in progress | — | ☐ | ☐ | `/v2/match`, `/v2/pools` |
 | Trade | 3 | — | — | ☐ | ☐ | `/v2/leagues/{id}/trades` |
 | Playoffs | 3 | — | — | ☐ | ☐ | `/v2/leagues/{id}/admin/playoffs` |
 | League | 3 | — | — | ☐ | ☐ | `/v2/leagues` |

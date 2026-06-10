@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\Matches\Controllers;
+namespace App\Modules\V2\Matches\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Match\RespondMatchScheduleRequestRequest;
@@ -22,7 +22,7 @@ class MatchScheduleRequestController extends Controller
             $request->validated('proposed_at'),
         );
 
-        return redirect()->route('sets.show', ['set_id' => $result['set_id']])
+        return redirect()->route('v2.sets.show', ['set_id' => $result['set_id']])
             ->with('success', $result['flash']['success']);
     }
 
@@ -37,7 +37,7 @@ class MatchScheduleRequestController extends Controller
             $request->validated(),
         );
 
-        return redirect()->route('sets.show', ['set_id' => $result['set_id']])
+        return redirect()->route('v2.sets.show', ['set_id' => $result['set_id']])
             ->with('success', $result['flash']['success']);
     }
 }

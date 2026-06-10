@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\Matches\Controllers;
+namespace App\Modules\V2\Matches\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Match\ImportSetReplayTeamsRequest;
@@ -47,14 +47,14 @@ class SetController extends Controller
             ]);
         }
 
-        return redirect()->route('sets.show', ['set_id' => $result['set_id']]);
+        return redirect()->route('v2.sets.show', ['set_id' => $result['set_id']]);
     }
 
     public function updateReplays(UpdateSetReplaysRequest $request, MatchSetOperations $matchSetOperations): RedirectResponse
     {
         $setId = $matchSetOperations->updateReplays($request->validated());
 
-        return redirect()->route('sets.show', ['set_id' => $setId]);
+        return redirect()->route('v2.sets.show', ['set_id' => $setId]);
     }
 
     public function previewReplayPlayers(
