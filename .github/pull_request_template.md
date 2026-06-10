@@ -1,5 +1,6 @@
 ## V2 migration checklist
 
+- [ ] Base branch: **`Dev`** (integration / Laravel Cloud dev). Production merges go `Dev` → `main`.
 - [ ] PR type: additive / cutover / kernel / scaffold
 - [ ] Module(s):
 - [ ] Tests added or ported

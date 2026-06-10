@@ -33,6 +33,6 @@ class V2PreviewNav
             return filter_var($flag, FILTER_VALIDATE_BOOLEAN);
         }
 
-        return app()->environment('local');
+        return app()->environment('local', 'staging');
     }
 }

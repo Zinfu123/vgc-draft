@@ -1,4 +1,4 @@
-# Deploy after the `tests` workflow succeeds on a push to `main`.
+# Deploy after the `tests` workflow succeeds on a push to `main` or `Dev`.
 #
 # Laravel Cloud (one-time / infra — dashboard):
 # - App cluster → Background processes → New → Queue worker: use the `database`
@@ -8,11 +8,12 @@
 # - Reallocate savings: bump the App cluster to the next Flex size if web + worker
 #   need more headroom; watch CPU/RAM during imports and traffic.
 #
-# Add repository secret LARAVEL_CLOUD_DEPLOY_HOOK with your environment deploy hook URL
-# (Settings → Deployments in Laravel Cloud). If unset, the deploy step is skipped.
+# Repository secrets (Settings → Secrets and variables → Actions):
+# - LARAVEL_CLOUD_DEPLOY_HOOK — production (`main`) deploy hook URL
+# - LARAVEL_CLOUD_DEV_DEPLOY_HOOK — dev (`Dev`) deploy hook URL
 #
 # If the environment still has Laravel Cloud "push to deploy" enabled, either turn it off
-# or remove this workflow to avoid two deployments per push to main.
+# or remove this workflow to avoid two deployments per push.
 
 name: Deploy to Laravel Cloud
 
@@ -22,7 +23,7 @@ on:
     types: [completed]
 
 jobs:
-  deploy:
+  deploy-production:
     if: >
       github.event.workflow_run.conclusion == 'success' &&
       github.event.workflow_run.event == 'push' &&
@@ -32,7 +33,7 @@ jobs:
       contents: read
 
     steps:
-      - name: Trigger Laravel Cloud deployment
+      - name: Trigger Laravel Cloud production deployment
         env:
           LARAVEL_CLOUD_DEPLOY_HOOK: ${{ secrets.LARAVEL_CLOUD_DEPLOY_HOOK }}
           HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
@@ -42,3 +43,24 @@ jobs:
             exit 0
           fi
           curl -fsS -X POST "${LARAVEL_CLOUD_DEPLOY_HOOK}?commit_hash=${HEAD_SHA}"
+
+  deploy-dev:
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'Dev'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Trigger Laravel Cloud dev deployment
+        env:
+          LARAVEL_CLOUD_DEV_DEPLOY_HOOK: ${{ secrets.LARAVEL_CLOUD_DEV_DEPLOY_HOOK }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          if [ -z "$LARAVEL_CLOUD_DEV_DEPLOY_HOOK" ]; then
+            echo "LARAVEL_CLOUD_DEV_DEPLOY_HOOK not set; skipping deploy."
+            exit 0
+          fi
+          curl -fsS -X POST "${LARAVEL_CLOUD_DEV_DEPLOY_HOOK}?commit_hash=${HEAD_SHA}"
