@@ -30,11 +30,12 @@ class NotifyUnplayedMatchesCommand extends Command
             return self::SUCCESS;
         }
 
-        $now = Carbon::now();
-        $oneWeekAgo = $now->copy()->subWeeks(1);
+        $timezone = 'America/New_York';
+        $now = Carbon::now($timezone);
+        $oneWeekAgo = $now->copy()->subWeek();
 
         foreach ($leagues as $league) {
-            $startDate = Carbon::parse($league->set_start_date);
+            $startDate = Carbon::parse($league->set_start_date, $timezone)->startOfDay();
             $matchConfig = $league->matchConfig;
 
             $frequencyType = (int) ($matchConfig?->frequency_type ?? 2);
@@ -59,8 +60,8 @@ class NotifyUnplayedMatchesCommand extends Command
                 $unplayedSets = Set::query()
                     ->where('league_id', $league->id)
                     ->where('round', $roundNumber)
-                    ->where('status', 1)
                     ->where('is_bye', false)
+                    ->whereNull('winner_id')
                     ->with(['team1.user', 'team2.user'])
                     ->get();
 

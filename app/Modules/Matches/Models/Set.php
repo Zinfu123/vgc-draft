@@ -85,4 +85,9 @@ class Set extends Model
     {
         return $this->hasMany(MatchScheduleRequest::class, 'set_id');
     }
+
+    public function isComplete(): bool
+    {
+        return $this->winner_id !== null || (int) $this->status === 0;
+    }
 }
