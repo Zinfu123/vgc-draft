@@ -1,10 +1,22 @@
 {
     "agents": [
+        "claude_code",
         "cursor"
     ],
     "editors": [
+        "claude_code",
         "cursor"
     ],
-    "guidelines": [],
-    "herd_mcp": true
+    "herd_mcp": true,
+    "skills": [
+        "laravel-best-practices",
+        "configuring-horizon",
+        "scout-development",
+        "socialite-development",
+        "pest-testing",
+        "inertia-vue-development",
+        "tailwindcss-development",
+        "eloquent-best-practices",
+        "shadcn-vue"
+    ]
 }

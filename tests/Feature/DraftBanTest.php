@@ -4,6 +4,7 @@ use App\Models\User;
 use App\Modules\Draft\Actions\BanPokemonAction;
 use App\Modules\Draft\Actions\CreateEditDraftAction;
 use App\Modules\Draft\Actions\CreateEditDraftOrderAction;
+use App\Modules\Draft\Actions\ReadCurrentDraftAction;
 use App\Modules\Draft\Models\BanOrder;
 use App\Modules\Draft\Models\Bans;
 use App\Modules\Draft\Models\Draft;
@@ -12,17 +13,20 @@ use App\Modules\Draft\Models\DraftOrder;
 use App\Modules\League\Models\League;
 use App\Modules\League\Models\LeaguePokemon;
 use App\Modules\Teams\Models\Team;
+use App\Notifications\DraftNextTurnNotification;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Notification;
 
 uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-function createLeagueWithBans(int $bansPerUser = 2, int $minimumCostToBan = 3, int $teamCount = 3): array
+function createLeagueWithBans(int $bansPerUser = 2, int $minimumCostToBan = 3, int $teamCount = 3, ?string $discordWebhookUrl = null): array
 {
     $league = League::create([
         'name' => 'Test League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::Staging->value,
         'open' => true,
         'league_owner' => User::factory()->create()->id,
+        'discord_webhook_url' => $discordWebhookUrl,
     ]);
 
     DraftConfig::create([
@@ -133,9 +137,9 @@ test('create_ban_order sets status 1 (pending) on all records', function () {
 });
 
 test('draft creation with ban_enabled creates both Bans and BanOrder records', function () {
-    [$league] = createLeagueWithBans(bansPerUser: 1, teamCount: 2);
-    $user = User::factory()->create();
-    $this->actingAs($user);
+    [$league, $teams] = createLeagueWithBans(bansPerUser: 1, teamCount: 2);
+    $admin = User::find($teams[0]->user_id);
+    $this->actingAs($admin);
 
     $this->post(route('draft.create'), ['league_id' => $league->id]);
 
@@ -147,7 +151,7 @@ test('draft creation with ban_enabled creates both Bans and BanOrder records', f
 test('draft creation without ban_enabled creates no Bans or BanOrder records', function () {
     $league = League::create([
         'name' => 'No Ban League',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::Staging->value,
         'open' => true,
         'league_owner' => User::factory()->create()->id,
     ]);
@@ -185,9 +189,9 @@ test('draft creation without ban_enabled creates no Bans or BanOrder records', f
 });
 
 test('abort_draft cleans up Bans and BanOrder records', function () {
-    [$league] = createLeagueWithBans(bansPerUser: 1, teamCount: 2);
-    $user = User::factory()->create();
-    $this->actingAs($user);
+    [$league, $teams] = createLeagueWithBans(bansPerUser: 1, teamCount: 2);
+    $admin = User::find($teams[0]->user_id);
+    $this->actingAs($admin);
 
     $this->post(route('draft.create'), ['league_id' => $league->id]);
     expect(Bans::where('league_id', $league->id)->count())->toBeGreaterThan(0);
@@ -212,8 +216,8 @@ test('abort_draft resets banned flag on league pokemon', function () {
         'banned' => true,
     ]);
 
-    $user = User::factory()->create();
-    $this->actingAs($user)->post(route('draft.create'), ['league_id' => $league->id]);
+    $admin = User::find($teams[0]->user_id);
+    $this->actingAs($admin)->post(route('draft.create'), ['league_id' => $league->id]);
 
     (new CreateEditDraftAction)(['league_id' => $league->id, 'command' => 'abort_draft']);
 
@@ -223,7 +227,7 @@ test('abort_draft resets banned flag on league pokemon', function () {
 test('LeaguePokemon banned field defaults to false', function () {
     $league = League::create([
         'name' => 'Ban Field Test',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::Staging->value,
         'open' => true,
         'league_owner' => User::factory()->create()->id,
     ]);
@@ -240,11 +244,36 @@ test('LeaguePokemon banned field defaults to false', function () {
     expect($pokemon->fresh()->banned)->toBeFalse();
 });
 
+test('BanPokemonAction sends DraftNextTurnNotification when discord webhook is set', function () {
+    Notification::fake();
+
+    [$league, $teams] = createLeagueWithBans(bansPerUser: 1, minimumCostToBan: 3, teamCount: 2, discordWebhookUrl: 'https://discord.com/api/webhooks/test/token');
+
+    $secondTeamCoach = User::find($teams[1]->user_id);
+    $secondTeamCoach?->update(['discord_id' => '555666777888999000']);
+
+    $admin = User::find($teams[0]->user_id);
+    $this->actingAs($admin)->post(route('draft.create'), ['league_id' => $league->id]);
+
+    $pokedexId = DB::table('pokedex')->insertGetId(['nationaldex_id' => 1, 'name' => 'Bulbasaur', 'type1' => 'Grass', 'created_at' => now(), 'updated_at' => now()]);
+    $pokemon = LeaguePokemon::create(['league_id' => $league->id, 'pokedex_id' => $pokedexId, 'name' => 'Bulbasaur', 'cost' => 5]);
+
+    $firstBanOrder = BanOrder::where('league_id', $league->id)->where('status', 1)->orderBy('round_number')->orderBy('ban_number')->first();
+
+    (new BanPokemonAction)(['league_id' => $league->id, 'team_id' => $firstBanOrder->team_id, 'pokemon_id' => $pokemon->id]);
+
+    Notification::assertSentTo($league, DraftNextTurnNotification::class, function (DraftNextTurnNotification $notification) use ($secondTeamCoach): bool {
+        return $notification->phase === 'ban'
+            && $secondTeamCoach !== null
+            && $notification->nextUser->is($secondTeamCoach);
+    });
+});
+
 test('BanPokemonAction bans pokemon, updates Bans record, and marks BanOrder done', function () {
     [$league, $teams] = createLeagueWithBans(bansPerUser: 1, minimumCostToBan: 3, teamCount: 2);
 
-    $user = User::factory()->create();
-    $this->actingAs($user)->post(route('draft.create'), ['league_id' => $league->id]);
+    $admin = User::find($teams[0]->user_id);
+    $this->actingAs($admin)->post(route('draft.create'), ['league_id' => $league->id]);
 
     $pokedexId = DB::table('pokedex')->insertGetId(['nationaldex_id' => 1, 'name' => 'Bulbasaur', 'type1' => 'Grass', 'created_at' => now(), 'updated_at' => now()]);
     $pokemon = LeaguePokemon::create(['league_id' => $league->id, 'pokedex_id' => $pokedexId, 'name' => 'Bulbasaur', 'cost' => 5]);
@@ -261,8 +290,8 @@ test('BanPokemonAction bans pokemon, updates Bans record, and marks BanOrder don
 test('BanPokemonAction transitions to draft phase when all bans complete', function () {
     [$league, $teams] = createLeagueWithBans(bansPerUser: 1, minimumCostToBan: 0, teamCount: 2);
 
-    $user = User::factory()->create();
-    $this->actingAs($user)->post(route('draft.create'), ['league_id' => $league->id]);
+    $admin = User::find($teams[0]->user_id);
+    $this->actingAs($admin)->post(route('draft.create'), ['league_id' => $league->id]);
 
     $banOrders = BanOrder::where('league_id', $league->id)->where('status', 1)->orderBy('ban_number')->get();
 
@@ -280,8 +309,8 @@ test('BanPokemonAction transitions to draft phase when all bans complete', funct
 test('BanPokemonAction throws when pokemon is below minimum cost to ban', function () {
     [$league, $teams] = createLeagueWithBans(bansPerUser: 1, minimumCostToBan: 5, teamCount: 2);
 
-    $user = User::factory()->create();
-    $this->actingAs($user)->post(route('draft.create'), ['league_id' => $league->id]);
+    $admin = User::find($teams[0]->user_id);
+    $this->actingAs($admin)->post(route('draft.create'), ['league_id' => $league->id]);
 
     $pokedexId = DB::table('pokedex')->insertGetId(['nationaldex_id' => 1, 'name' => 'Pikachu', 'type1' => 'Electric', 'created_at' => now(), 'updated_at' => now()]);
     $cheapPokemon = LeaguePokemon::create(['league_id' => $league->id, 'pokedex_id' => $pokedexId, 'name' => 'Pikachu', 'cost' => 2]);
@@ -292,10 +321,80 @@ test('BanPokemonAction throws when pokemon is below minimum cost to ban', functi
         ->toThrow(\Exception::class, 'minimum cost');
 });
 
+test('ReadCurrentDraftAction lastban returns the most recently performed ban, not the highest-id placeholder', function () {
+    // Two rounds of snake-ordered bans across 3 teams. Pre-created Bans rows
+    // follow team-creation order within each round, so team[0]'s round-2 row
+    // has a LOWER id than team[2]'s round-2 row. In snake order, team[0] bans
+    // LAST in round 2 — so the "last ban" is team[0]'s row, even though its
+    // pre-created id is not the highest.
+    [$league, $teams] = createLeagueWithBans(bansPerUser: 2, minimumCostToBan: 0, teamCount: 3);
+
+    $admin = User::find($teams[0]->user_id);
+    $this->actingAs($admin)->post(route('draft.create'), ['league_id' => $league->id]);
+
+    $pokemonByTeam = [];
+    foreach ($teams as $index => $team) {
+        $pokedexIdR1 = DB::table('pokedex')->insertGetId([
+            'nationaldex_id' => 100 + $index,
+            'name' => "PokemonR1_{$index}",
+            'type1' => 'Fire',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $pokedexIdR2 = DB::table('pokedex')->insertGetId([
+            'nationaldex_id' => 200 + $index,
+            'name' => "PokemonR2_{$index}",
+            'type1' => 'Fire',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $pokemonByTeam[$team->id] = [
+            1 => LeaguePokemon::create([
+                'league_id' => $league->id,
+                'pokedex_id' => $pokedexIdR1,
+                'name' => "PokemonR1_{$index}",
+                'cost' => 5,
+            ]),
+            2 => LeaguePokemon::create([
+                'league_id' => $league->id,
+                'pokedex_id' => $pokedexIdR2,
+                'name' => "PokemonR2_{$index}",
+                'cost' => 5,
+            ]),
+        ];
+    }
+
+    $banSequence = [
+        [$teams[0], 1],
+        [$teams[1], 1],
+        [$teams[2], 1],
+        [$teams[2], 2],
+        [$teams[1], 2],
+        [$teams[0], 2],
+    ];
+
+    foreach ($banSequence as $step => [$team, $round]) {
+        Carbon\Carbon::setTestNow(Carbon\Carbon::create(2026, 1, 1, 12, 0, $step));
+        (new BanPokemonAction)([
+            'league_id' => $league->id,
+            'team_id' => $team->id,
+            'pokemon_id' => $pokemonByTeam[$team->id][$round]->id,
+        ]);
+    }
+    Carbon\Carbon::setTestNow();
+
+    $lastBan = (new ReadCurrentDraftAction)(['league_id' => $league->id, 'command' => 'lastban']);
+
+    expect($lastBan)->not->toBeNull();
+    expect($lastBan->team_id)->toBe($teams[0]->id);
+    expect($lastBan->round_number)->toBe(2);
+});
+
 test('DraftConfig bans_per_user and minimum_cost_to_ban are stored correctly', function () {
     $league = League::create([
         'name' => 'Config Test',
-        'status' => 1,
+        'status' => \App\Modules\League\Enums\LeagueStatus::Staging->value,
         'open' => true,
         'league_owner' => User::factory()->create()->id,
     ]);

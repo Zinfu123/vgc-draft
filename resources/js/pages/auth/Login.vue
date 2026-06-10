@@ -1,32 +1,40 @@
 <script setup lang="ts">
-import PokeBallLoginForm from '@/components/auth/PokeBallLoginForm.vue';
-import TournamentBracketBackground from '@/components/auth/TournamentBracketBackground.vue';
-import { Head, useForm } from '@inertiajs/vue3';
+import AuthAlert from '@/components/auth/AuthAlert.vue';
+import DiscordOAuthLink from '@/components/auth/DiscordOAuthLink.vue';
+import MarketingAuthShell from '@/components/auth/MarketingAuthShell.vue';
+import { authLinkClass } from '@/lib/authLink';
+import { Head, Link, usePage } from '@inertiajs/vue3';
+import { computed } from 'vue';
 
 defineProps<{
     status?: string;
     canResetPassword: boolean;
 }>();
 
-const form = useForm({
-    email: '',
-    password: '',
-    remember: false,
-});
-
-const submit = () => {
-    form.post(route('login'), {
-        onFinish: () => form.reset('password'),
-    });
-};
+const page = usePage();
+const pageErrors = computed(() => page.props.errors as Record<string, string | undefined>);
 </script>
 
 <template>
-    <div class="relative flex min-h-screen items-center justify-center overflow-hidden bg-gradient-to-br from-slate-900 via-blue-900 to-cyan-800">
-        <Head title="Log in" />
+    <Head title="Log in" />
 
-        <TournamentBracketBackground />
+    <MarketingAuthShell
+        title="Log in"
+        description="Welcome back. Log in with Discord to access your leagues and drafts."
+    >
+        <AuthAlert v-if="status" :message="status" class="mb-4" />
 
-        <PokeBallLoginForm :status="status" :can-reset-password="canResetPassword" :form="form" :on-submit="submit" />
-    </div>
+        <div class="flex flex-col gap-6">
+            <div v-if="pageErrors.email || pageErrors.link_email" class="rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                {{ pageErrors.email || pageErrors.link_email }}
+            </div>
+
+            <DiscordOAuthLink label="Log in with Discord" />
+
+            <p class="text-center text-sm text-muted-foreground">
+                Have an existing account without Discord?
+                <Link :href="route('discord.link-form')" :class="authLinkClass">Link your account</Link>
+            </p>
+        </div>
+    </MarketingAuthShell>
 </template>

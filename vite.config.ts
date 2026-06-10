@@ -25,12 +25,5 @@ export default defineConfig(({ mode }) => {
                 },
             }),
         ],
-        build: {
-            ...(isLocal && {
-                watch: {
-                    include: ['resources/**'],
-                },
-            }),
-        },
     };
 });

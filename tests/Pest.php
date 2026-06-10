@@ -41,7 +41,61 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+function createLeagueForDiscordTests(): array
 {
-    // ..
+    $owner = \App\Models\User::factory()->create();
+
+    $league = \App\Modules\League\Models\League::create([
+        'name' => 'Discord League',
+        'status' => \App\Modules\League\Enums\LeagueStatus::RegularSeason->value,
+        'league_owner' => $owner->id,
+        'discord_webhook_url' => 'https://discord.com/api/webhooks/test/token',
+    ]);
+
+    \App\Modules\Draft\Models\DraftConfig::create([
+        'league_id' => $league->id,
+        'draft_date' => now()->addDay(),
+        'draft_points' => 80,
+        'ban_enabled' => false,
+    ]);
+
+    \App\Modules\Matches\Models\MatchConfig::create([
+        'league_id' => $league->id,
+        'enforce_round_count' => false,
+    ]);
+
+    $user1 = \App\Models\User::factory()->create();
+    $user2 = \App\Models\User::factory()->create();
+
+    $team1 = \App\Modules\Teams\Models\Team::create([
+        'name' => 'Team Rocket',
+        'league_id' => $league->id,
+        'user_id' => $user1->id,
+        'admin_flag' => 1,
+        'pick_position' => 1,
+        'seed' => 1,
+        'draft_points' => 80,
+        'victory_points' => 0,
+        'set_wins' => 0,
+        'set_losses' => 0,
+        'game_wins' => 0,
+        'game_losses' => 0,
+    ]);
+
+    $team2 = \App\Modules\Teams\Models\Team::create([
+        'name' => 'Team Aqua',
+        'league_id' => $league->id,
+        'user_id' => $user2->id,
+        'admin_flag' => 0,
+        'pick_position' => 2,
+        'seed' => 2,
+        'draft_points' => 80,
+        'victory_points' => 0,
+        'set_wins' => 0,
+        'set_losses' => 0,
+        'game_wins' => 0,
+        'game_losses' => 0,
+    ]);
+
+    return [$owner, $league, $team1, $team2, $user1, $user2];
 }

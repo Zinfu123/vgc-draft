@@ -3,10 +3,9 @@ import AppLogoIcon from '@/components/AppLogoIcon.vue';
 </script>
 
 <template>
-    <div class="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-        <AppLogoIcon class="size-5 fill-current text-white dark:text-black" />
-    </div>
-    <div class="ml-1 grid flex-1 text-left text-sm">
-        <span class="mb-0.5 truncate leading-tight font-semibold">VGC Draft</span>
+    <AppLogoIcon class="size-9 shrink-0" />
+    <div class="ml-2.5 grid flex-1 text-left leading-none">
+        <span class="truncate text-sm font-bold tracking-wider uppercase text-foreground">VGC</span>
+        <span class="truncate text-[10px] font-medium tracking-widest uppercase text-muted-foreground -mt-0.5">Draft</span>
     </div>
 </template>

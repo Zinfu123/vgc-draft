@@ -22,7 +22,7 @@ class ShowSetsAction
 
             return $sets;
         } elseif ($data['command'] == 'detail') {
-            $set = Set::where('id', $data['set_id'])->with('team1', 'team2')->first();
+            $set = Set::where('id', $data['set_id'])->with(['team1.user', 'team2.user'])->first();
             if (! $set) {
                 return null;
             }
@@ -35,8 +35,12 @@ class ShowSetsAction
                 $set->team2->logo = $action->logoToUrl($set->team2->logo);
             }
 
-            $set->team1->pokemon = LeaguePokemon::where('drafted_by', $set->team1->id)->with('pokemon')->get();
-            $set->team2->pokemon = LeaguePokemon::where('drafted_by', $set->team2->id)->with('pokemon')->get();
+            if ($set->team1) {
+                $set->team1->pokemon = LeaguePokemon::where('drafted_by', $set->team1->id)->with('pokemon')->get();
+            }
+            if ($set->team2) {
+                $set->team2->pokemon = LeaguePokemon::where('drafted_by', $set->team2->id)->with('pokemon')->get();
+            }
 
             return $set;
         } elseif ($data['command'] == 'round') {
@@ -128,7 +132,7 @@ class ShowSetsAction
                 ->orderBy('round', 'asc')
                 ->get();
             $sets = $sets->map(function ($set) {
-                if ($set->team1->logo !== null) {
+                if ($set->team1 && $set->team1->logo !== null) {
                     $action = new LogoToUrlAction;
                     $set->team1->logo = $action->logoToUrl($set->team1->logo);
                 }
@@ -144,6 +148,35 @@ class ShowSetsAction
             });
 
             return $grouped;
+        } elseif ($data['command'] == 'team_by_round') {
+            if (empty($data['team_id'])) {
+                return [];
+            }
+
+            $action = new LogoToUrlAction;
+
+            $sets = Set::query()
+                ->where('league_id', $data['league_id'])
+                ->where(function ($query) use ($data): void {
+                    $query->where('team1_id', $data['team_id'])
+                        ->orWhere('team2_id', $data['team_id']);
+                })
+                ->with('team1', 'team2')
+                ->orderBy('round', 'asc')
+                ->get();
+
+            $sets = $sets->map(function ($set) use ($action) {
+                if ($set->team1 && $set->team1->logo !== null) {
+                    $set->team1->logo = $action->logoToUrl($set->team1->logo);
+                }
+                if ($set->team2 && $set->team2->logo !== null) {
+                    $set->team2->logo = $action->logoToUrl($set->team2->logo);
+                }
+
+                return $set;
+            });
+
+            return $sets->mapToGroups(fn ($set) => [$set->round => $set]);
         }
     }
 }

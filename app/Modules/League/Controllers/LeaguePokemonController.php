@@ -3,6 +3,7 @@
 namespace App\Modules\League\Controllers;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\League\ImportLeaguePokemonCsvRequest;
 use App\Modules\League\Actions\CreateEditLeaguePokemonAction;
 use App\Modules\League\Actions\ReadLeagueDraftAction;
 use App\Modules\League\Actions\ReadLeaguePokemonAction;
@@ -11,7 +12,6 @@ use App\Modules\Matches\Models\MatchConfig;
 use App\Modules\Teams\Actions\ReadTeamAction;
 use App\Modules\Teams\Models\Team;
 use Illuminate\Filesystem\FilesystemAdapter;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -34,6 +34,8 @@ class LeaguePokemonController extends Controller
                 'frequency_value' => 0,
                 'duration' => 0,
                 'status' => 0,
+                'require_replays_before_results' => false,
+                'auto_complete_set_from_replays' => false,
             ];
         }
         if ($league->logo !== null) {
@@ -54,10 +56,18 @@ class LeaguePokemonController extends Controller
         ]);
     }
 
-    public function create(Request $data, CreateEditLeaguePokemonAction $createEditLeaguePokemonAction)
+    public function create(ImportLeaguePokemonCsvRequest $request, CreateEditLeaguePokemonAction $createEditLeaguePokemonAction): \Illuminate\Http\RedirectResponse
     {
-        $leaguePokemon = $createEditLeaguePokemonAction($data->all());
+        $leagueId = $request->route('league') instanceof League
+            ? $request->route('league')->id
+            : (int) $request->input('league_id');
 
-        return redirect()->route('leagues.matches', ['league' => $data->league_id]);
+        $createEditLeaguePokemonAction([
+            'league_id' => $leagueId,
+            'csv_file' => $request->file('csv_file'),
+        ]);
+
+        return redirect()->route('leagues.admin.pokemon-pool', ['league' => $leagueId])
+            ->with('success', 'CSV import completed.');
     }
 }

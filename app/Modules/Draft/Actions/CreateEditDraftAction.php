@@ -7,9 +7,13 @@ use App\Modules\Draft\Models\Bans;
 use App\Modules\Draft\Models\Draft;
 use App\Modules\Draft\Models\DraftOrder;
 use App\Modules\Draft\Models\DraftPick;
+use App\Modules\League\Enums\LeagueStagingStatus;
+use App\Modules\League\Enums\LeagueStatus;
 use App\Modules\League\Models\League;
 use App\Modules\League\Models\LeaguePokemon;
 use App\Modules\Teams\Models\Team;
+use App\Notifications\DraftEndedNotification;
+use Carbon\Carbon;
 
 class CreateEditDraftAction
 {
@@ -31,7 +35,14 @@ class CreateEditDraftAction
             $draft->save();
             $league = League::where('id', $data['league_id'])->first();
             $league->open = false;
+            $league->status = LeagueStatus::Staging;
+            $league->staging_sub_status = LeagueStagingStatus::DraftInProgress;
             $league->save();
+
+            activity()
+                ->performedOn($draft)
+                ->withProperties(['league_id' => $data['league_id']])
+                ->log('Draft started');
 
             return $draft;
         }
@@ -66,34 +77,43 @@ class CreateEditDraftAction
             $draft = Draft::where('league_id', $data['league_id'])->first();
             $draft->status = 0;
             $draft->save();
-        } elseif ($data['command'] == 'revert_last_pick') {
-            /* Revert the last picked pokemon */
-            $lastPickedPokemonID = DraftPick::where('league_id', $data['league_id'])->orderBy('round_number', 'desc')->orderBy('pick_number', 'desc')->first()->league_pokemon_id;
-            $lastPick = DraftPick::where('league_id', $data['league_id'])->orderBy('round_number', 'desc')->orderBy('pick_number', 'desc')->first();
-            $lastPick->delete();
-            /* Revert the league pokemon is_drafted */
-            $pokemonReversion = LeaguePokemon::where('id', $lastPickedPokemonID)->first();
-            $pokemonReversion->is_drafted = 0;
-            $pokemonReversion->drafted_by = null;
-            $pokemonReversion->save();
-            /* Revert the team draft points */
-            $team = Team::where('id', $lastPick->team_id)->first();
-            $team->draft_points = $team->draft_points + $pokemonReversion->cost;
-            $team->save();
-            /* Revert the draft order status */
-            $draftOrder = DraftOrder::where('league_id', $data['league_id'])->where('team_id', $lastPick->team_id)->orderBy('round_number', 'desc')->orderBy('pick_number', 'desc')->where('status', 0)->first();
-            $draftOrder->status = 1;
-            $draftOrder->save();
-            /* Revert the draft pick number */
-            if ($lastPick->pick_number > 1 && $lastPick->round_number > 1) {
-                $draft = Draft::where('league_id', $data['league_id'])->first();
-                $draft->pick_number = $draftOrder->pick_number;
-                $draft->round_number = $draftOrder->round_number;
-                $draft->save();
+
+            $this->adjustSetStartDateIfNeeded((int) $data['league_id']);
+
+            $league = League::with('draftConfig')->find($data['league_id']);
+
+            if ($league !== null) {
+                $draftConfig = $league->draftConfig;
+
+                if ($draftConfig !== null) {
+                    $draftConfig->draft_ended_at = Carbon::now();
+                    $draftConfig->save();
+                }
+
+                $league->status = LeagueStatus::Staging;
+                $league->staging_sub_status = LeagueStagingStatus::FreeTradeWindow;
+                $league->save();
+
+                $league->notify(new DraftEndedNotification($league));
             }
+
+            activity()
+                ->performedOn($draft)
+                ->withProperties(['league_id' => $data['league_id']])
+                ->log('Draft finalized');
+        } elseif ($data['command'] == 'revert_last_pick') {
+            $this->revertLastAction((int) $data['league_id']);
         }
         // Abort Draft
         elseif ($data['command'] == 'abort_draft') {
+
+            $draftBeforeAbort = Draft::where('league_id', $data['league_id'])->first();
+
+            activity()
+                ->performedOn($draftBeforeAbort)
+                ->withProperties(['league_id' => $data['league_id']])
+                ->log('Draft aborted');
+
             $draft = Draft::where('league_id', $data['league_id'])->get();
             foreach ($draft as $draft) {
                 $draft->delete();
@@ -136,9 +156,275 @@ class CreateEditDraftAction
                 $team->save();
             }
 
-            $league = League::where('id', $data['league_id'])->first();
+            $league = League::with('draftConfig')->where('id', $data['league_id'])->first();
             $league->open = true;
+            $league->status = LeagueStatus::Registration;
+            $league->staging_sub_status = null;
+            $draftConfig = $league->draftConfig;
+            if ($draftConfig !== null) {
+                $draftConfig->draft_ended_at = null;
+                $draftConfig->save();
+            }
             $league->save();
         }
+        // Finalize draft also clears any timer state
+        if ($data['command'] == 'finalize_draft') {
+            (new DraftTimerAction)(['league_id' => $data['league_id'], 'command' => DraftTimerAction::COMMAND_CLEAR]);
+        }
+    }
+
+    private function adjustSetStartDateIfNeeded(int $leagueId): void
+    {
+        $league = League::find($leagueId);
+        if ($league === null) {
+            return;
+        }
+
+        $today = Carbon::today()->toDateString();
+        if ($league->set_start_date === null || $league->set_start_date < $today) {
+            $league->set_start_date = $today;
+            $league->save();
+        }
+    }
+
+    /**
+     * Revert whichever of (last pick | last draft-skip | last ban | last ban-skip)
+     * happened most recently. Picks/bans are reverted in full; skips just flip the
+     * order back to "your turn" and rewind the draft pointer.
+     */
+    private function revertLastAction(int $leagueId): void
+    {
+        $lastPick = DraftPick::query()
+            ->where('league_id', $leagueId)
+            ->orderBy('created_at', 'desc')
+            ->orderBy('id', 'desc')
+            ->first();
+
+        $lastDraftSkip = DraftOrder::query()
+            ->where('league_id', $leagueId)
+            ->whereNotNull('skipped_at')
+            ->orderBy('skipped_at', 'desc')
+            ->first();
+
+        $lastBan = Bans::query()
+            ->where('league_id', $leagueId)
+            ->whereNotNull('pokedex_id')
+            ->orderBy('updated_at', 'desc')
+            ->orderBy('id', 'desc')
+            ->first();
+
+        $lastBanSkip = BanOrder::query()
+            ->where('league_id', $leagueId)
+            ->whereNotNull('skipped_at')
+            ->orderBy('skipped_at', 'desc')
+            ->first();
+
+        $candidates = collect([
+            ['type' => 'pick', 'at' => $lastPick?->created_at, 'model' => $lastPick],
+            ['type' => 'draft_skip', 'at' => $lastDraftSkip?->skipped_at, 'model' => $lastDraftSkip],
+            ['type' => 'ban', 'at' => $lastBan?->updated_at ?? $lastBan?->created_at, 'model' => $lastBan],
+            ['type' => 'ban_skip', 'at' => $lastBanSkip?->skipped_at, 'model' => $lastBanSkip],
+        ])->filter(fn ($c) => $c['at'] !== null && $c['model'] !== null);
+
+        if ($candidates->isEmpty()) {
+            return;
+        }
+
+        $winner = $candidates->sortByDesc(fn ($c) => $c['at']->getTimestamp())->first();
+
+        match ($winner['type']) {
+            'pick' => $this->revertLastPick($leagueId, $winner['model']),
+            'draft_skip' => $this->revertLastDraftSkip($leagueId, $winner['model']),
+            'ban' => $this->revertLastBan($leagueId, $winner['model']),
+            'ban_skip' => $this->revertLastBanSkip($leagueId, $winner['model']),
+        };
+    }
+
+    private function revertLastPick(int $leagueId, DraftPick $lastPick): void
+    {
+        $lastPickedPokemonId = $lastPick->league_pokemon_id;
+        $teamId = $lastPick->team_id;
+        $lastPick->delete();
+
+        $pokemonReversion = LeaguePokemon::where('id', $lastPickedPokemonId)->first();
+        if ($pokemonReversion !== null) {
+            $pokemonReversion->is_drafted = 0;
+            $pokemonReversion->drafted_by = null;
+            $pokemonReversion->save();
+        }
+
+        $team = Team::where('id', $teamId)->first();
+        if ($team !== null && $pokemonReversion !== null) {
+            $team->draft_points = $team->draft_points + $pokemonReversion->cost;
+            $team->save();
+        }
+
+        $draftOrder = DraftOrder::query()
+            ->where('league_id', $leagueId)
+            ->where('team_id', $teamId)
+            ->where('status', 0)
+            ->whereNull('skipped_at')
+            ->orderBy('round_number', 'desc')
+            ->orderBy('pick_number', 'desc')
+            ->first();
+
+        if ($draftOrder !== null) {
+            $draftOrder->status = 1;
+            $draftOrder->save();
+
+            if ($lastPick->pick_number > 1 && $lastPick->round_number > 1) {
+                $draft = Draft::where('league_id', $leagueId)->first();
+                if ($draft !== null) {
+                    $draft->pick_number = $draftOrder->pick_number;
+                    $draft->round_number = $draftOrder->round_number;
+                    $draft->save();
+                }
+            }
+        }
+
+        activity()
+            ->withProperties([
+                'league_id' => $leagueId,
+                'team_id' => $teamId,
+                'league_pokemon_id' => $lastPickedPokemonId,
+            ])
+            ->log('Draft pick reverted');
+
+        (new DraftTimerAction)(['league_id' => $leagueId, 'command' => DraftTimerAction::COMMAND_START_TURN]);
+    }
+
+    private function revertLastDraftSkip(int $leagueId, DraftOrder $skippedOrder): void
+    {
+        $draft = Draft::where('league_id', $leagueId)->first();
+        if ($draft === null) {
+            return;
+        }
+
+        $skippedOrder->status = 1;
+        $skippedOrder->skipped_at = null;
+        $skippedOrder->save();
+
+        DraftOrder::query()
+            ->where('league_id', $leagueId)
+            ->where('round_number', '>', $skippedOrder->round_number)
+            ->delete();
+
+        $draft->round_number = $skippedOrder->round_number;
+        $draft->pick_number = $skippedOrder->pick_number;
+        $draft->save();
+
+        activity()
+            ->performedOn($skippedOrder)
+            ->withProperties([
+                'league_id' => $leagueId,
+                'team_id' => $skippedOrder->team_id,
+                'round_number' => $skippedOrder->round_number,
+                'pick_number' => $skippedOrder->pick_number,
+            ])
+            ->log('Draft pick skip reverted');
+
+        (new DraftTimerAction)(['league_id' => $leagueId, 'command' => DraftTimerAction::COMMAND_START_TURN]);
+    }
+
+    private function revertLastBanSkip(int $leagueId, BanOrder $skippedBanOrder): void
+    {
+        $draft = Draft::where('league_id', $leagueId)->first();
+        if ($draft === null) {
+            return;
+        }
+
+        $skippedBanOrder->status = 1;
+        $skippedBanOrder->skipped_at = null;
+        $skippedBanOrder->save();
+
+        $this->restoreBanPhaseIfTransitioned($leagueId, $draft);
+
+        activity()
+            ->performedOn($skippedBanOrder)
+            ->withProperties([
+                'league_id' => $leagueId,
+                'team_id' => $skippedBanOrder->team_id,
+                'round_number' => $skippedBanOrder->round_number,
+                'ban_number' => $skippedBanOrder->ban_number,
+            ])
+            ->log('Draft ban skip reverted');
+
+        (new DraftTimerAction)(['league_id' => $leagueId, 'command' => DraftTimerAction::COMMAND_START_TURN]);
+    }
+
+    private function revertLastBan(int $leagueId, Bans $lastBan): void
+    {
+        $draft = Draft::where('league_id', $leagueId)->first();
+        if ($draft === null) {
+            return;
+        }
+
+        $teamId = (int) $lastBan->team_id;
+        $bannedPokedexId = (int) $lastBan->pokedex_id;
+        $roundNumber = (int) $lastBan->round_number;
+
+        $lastBan->pokedex_id = null;
+        $lastBan->status = 0;
+        $lastBan->save();
+
+        $banLeaguePokemon = LeaguePokemon::query()
+            ->where('league_id', $leagueId)
+            ->where('pokedex_id', $bannedPokedexId)
+            ->first();
+        if ($banLeaguePokemon !== null) {
+            $banLeaguePokemon->banned = false;
+            $banLeaguePokemon->save();
+        }
+
+        $banOrder = BanOrder::query()
+            ->where('league_id', $leagueId)
+            ->where('team_id', $teamId)
+            ->where('round_number', $roundNumber)
+            ->where('status', 0)
+            ->whereNull('skipped_at')
+            ->orderBy('ban_number', 'desc')
+            ->first();
+
+        if ($banOrder !== null) {
+            $banOrder->status = 1;
+            $banOrder->save();
+        }
+
+        $this->restoreBanPhaseIfTransitioned($leagueId, $draft);
+
+        activity()
+            ->performedOn($lastBan)
+            ->withProperties([
+                'league_id' => $leagueId,
+                'team_id' => $teamId,
+                'pokedex_id' => $bannedPokedexId,
+                'round_number' => $roundNumber,
+            ])
+            ->log('Draft ban reverted');
+
+        (new DraftTimerAction)(['league_id' => $leagueId, 'command' => DraftTimerAction::COMMAND_START_TURN]);
+    }
+
+    /**
+     * If the draft has already advanced to status=1 (draft phase) and no picks have
+     * happened yet, roll it back to status=2 (ban phase) and drop the auto-created
+     * round-1 draft orders.
+     */
+    private function restoreBanPhaseIfTransitioned(int $leagueId, Draft $draft): void
+    {
+        if ((int) $draft->status !== 1) {
+            return;
+        }
+
+        $draftPickCount = DraftPick::query()->where('league_id', $leagueId)->count();
+        if ($draftPickCount !== 0) {
+            return;
+        }
+
+        DraftOrder::query()->where('league_id', $leagueId)->delete();
+        $draft->status = 2;
+        $draft->round_number = 1;
+        $draft->pick_number = 1;
+        $draft->save();
     }
 }

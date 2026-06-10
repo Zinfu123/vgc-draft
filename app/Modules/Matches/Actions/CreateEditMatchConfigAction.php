@@ -30,6 +30,15 @@ class CreateEditMatchConfigAction
             }
             $matchConfig->number_of_pools = $data['number_of_pools'];
             $matchConfig->frequency_type = $data['frequency_type'];
+            $matchConfig->require_team_match_pokepaste_before_results = true;
+            $matchConfig->require_replays_before_results = filter_var(
+                $data['require_replays_before_results'] ?? false,
+                FILTER_VALIDATE_BOOLEAN
+            );
+            $matchConfig->auto_complete_set_from_replays = filter_var(
+                $data['auto_complete_set_from_replays'] ?? false,
+                FILTER_VALIDATE_BOOLEAN
+            );
             $matchConfig->save();
             redirect()->route('leagues.detail', ['league' => $data['league_id']]);
 

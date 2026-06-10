@@ -6,9 +6,12 @@ on:
       - develop
       - main
   pull_request:
-    branches:
-      - develop
-      - main
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   ci:
@@ -49,5 +52,8 @@ jobs:
       - name: Build Assets
         run: npm run build
 
+      - name: Deptrac
+        run: vendor/bin/deptrac analyse --no-progress
+
       - name: Tests
-        run: ./vendor/bin/pest
+        run: php artisan test

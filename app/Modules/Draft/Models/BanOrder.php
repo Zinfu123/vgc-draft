@@ -17,7 +17,18 @@ class BanOrder extends Model
         'round_number',
         'status',
         'is_last_ban',
+        'skipped_at',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'skipped_at' => 'datetime',
+        ];
+    }
 
     public function league(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {

@@ -1,0 +1,44 @@
+# Deploy after the `tests` workflow succeeds on a push to `main`.
+#
+# Laravel Cloud (one-time / infra — dashboard):
+# - App cluster → Background processes → New → Queue worker: use the `database`
+#   connection (matches config/queue.php default), sleep 3, tries 3; or Custom:
+#   `php artisan queue:work database --sleep=3 --tries=3 --max-time=3600`
+# - Remove the standalone Queue cluster once jobs process correctly.
+# - Reallocate savings: bump the App cluster to the next Flex size if web + worker
+#   need more headroom; watch CPU/RAM during imports and traffic.
+#
+# Add repository secret LARAVEL_CLOUD_DEPLOY_HOOK with your environment deploy hook URL
+# (Settings → Deployments in Laravel Cloud). If unset, the deploy step is skipped.
+#
+# If the environment still has Laravel Cloud "push to deploy" enabled, either turn it off
+# or remove this workflow to avoid two deployments per push to main.
+
+name: Deploy to Laravel Cloud
+
+on:
+  workflow_run:
+    workflows: [tests]
+    types: [completed]
+
+jobs:
+  deploy:
+    if: >
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Trigger Laravel Cloud deployment
+        env:
+          LARAVEL_CLOUD_DEPLOY_HOOK: ${{ secrets.LARAVEL_CLOUD_DEPLOY_HOOK }}
+          HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          if [ -z "$LARAVEL_CLOUD_DEPLOY_HOOK" ]; then
+            echo "LARAVEL_CLOUD_DEPLOY_HOOK not set; skipping deploy."
+            exit 0
+          fi
+          curl -fsS -X POST "${LARAVEL_CLOUD_DEPLOY_HOOK}?commit_hash=${HEAD_SHA}"

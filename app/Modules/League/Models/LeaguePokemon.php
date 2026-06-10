@@ -2,10 +2,15 @@
 
 namespace App\Modules\League\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Spatie\Activitylog\Models\Concerns\LogsActivity;
+use Spatie\Activitylog\Support\LogOptions;
 
 class LeaguePokemon extends Model
 {
+    use LogsActivity;
+
     protected $table = 'league_pokemon';
 
     protected $fillable = [
@@ -14,12 +19,23 @@ class LeaguePokemon extends Model
         'name',
         'cost',
         'banned',
+        'drafted_by',
+        'is_drafted',
     ];
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->logOnly(['drafted_by', 'is_drafted', 'banned', 'cost'])
+            ->logOnlyDirty()
+            ->dontLogEmptyChanges();
+    }
 
     protected function casts(): array
     {
         return [
             'banned' => 'boolean',
+            'is_drafted' => 'boolean',
         ];
     }
 
@@ -41,5 +57,21 @@ class LeaguePokemon extends Model
     public function draftPicks()
     {
         return $this->hasMany(\App\Modules\Draft\Models\DraftPick::class, 'league_pokemon_id');
+    }
+
+    public function draftWishlistItems()
+    {
+        return $this->hasMany(\App\Modules\Draft\Models\DraftWishlistItem::class, 'league_pokemon_id');
+    }
+
+    /**
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeFreeAgencyEligible(Builder $query): Builder
+    {
+        return $query->whereNull('drafted_by')
+            ->where('banned', false)
+            ->where('is_drafted', false);
     }
 }

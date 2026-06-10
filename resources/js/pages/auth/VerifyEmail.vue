@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import AuthAlert from '@/components/auth/AuthAlert.vue';
 import TextLink from '@/components/TextLink.vue';
 import { Button } from '@/components/ui/button';
 import AuthLayout from '@/layouts/AuthLayout.vue';
@@ -20,9 +21,11 @@ const submit = () => {
     <AuthLayout title="Verify email" description="Please verify your email address by clicking on the link we just emailed to you.">
         <Head title="Email verification" />
 
-        <div v-if="status === 'verification-link-sent'" class="mb-4 text-center text-sm font-medium text-green-600">
-            A new verification link has been sent to the email address you provided during registration.
-        </div>
+        <AuthAlert
+            v-if="status === 'verification-link-sent'"
+            message="A new verification link has been sent to the email address you provided during registration."
+            class="mb-4"
+        />
 
         <form @submit.prevent="submit" class="space-y-6 text-center">
             <Button :disabled="form.processing" variant="secondary">

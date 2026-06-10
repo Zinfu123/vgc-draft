@@ -6,8 +6,11 @@ use App\Events\EndDraftEvent;
 use App\Modules\Draft\Models\BanOrder;
 use App\Modules\Draft\Models\Draft;
 use App\Modules\Draft\Models\DraftOrder;
+use App\Modules\League\Enums\LeagueStagingStatus;
+use App\Modules\League\Enums\LeagueStatus;
 use App\Modules\League\Models\League;
 use App\Modules\Teams\Models\Team;
+use Carbon\Carbon;
 
 class CreateEditDraftOrderAction
 {
@@ -20,13 +23,39 @@ class CreateEditDraftOrderAction
         }
 
         $AvailableTeamsCount = Team::where('league_id', $data['league_id'])->where('draft_points', '>', 0)->count();
-        if ($AvailableTeamsCount == 0) {
+        $shouldFinalize = $AvailableTeamsCount === 0;
+
+        if ($shouldFinalize) {
             $draft = Draft::where('league_id', $data['league_id'])->first();
             $draft->status = 0;
+            $draft->current_deadline_at = null;
+            $draft->paused_at = null;
+            $draft->paused_remaining_seconds = null;
             $draft->save();
+
+            $this->adjustSetStartDateIfNeeded((int) $data['league_id']);
+
+            $league = League::with('draftConfig')->find($data['league_id']);
+            if ($league !== null) {
+                $draftConfig = $league->draftConfig;
+                if ($draftConfig !== null) {
+                    $draftConfig->draft_ended_at = Carbon::now();
+                    $draftConfig->save();
+                }
+                $league->status = LeagueStatus::Staging;
+                $league->staging_sub_status = LeagueStagingStatus::FreeTradeWindow;
+                $league->save();
+            }
+
+            activity()
+                ->performedOn($draft)
+                ->withProperties(['league_id' => $data['league_id']])
+                ->log('Draft finalized via order creation');
+
             EndDraftEvent::dispatch([
                 'league_id' => $data['league_id'],
                 'end_draft' => 1,
+                'draft_id' => $draft->id,
             ]);
         } else {
             $draft = Draft::where('league_id', $data['league_id'])->first();
@@ -48,6 +77,20 @@ class CreateEditDraftOrderAction
             $lastPick = DraftOrder::where('league_id', $data['league_id'])->where('status', 1)->orderBy('pick_number', 'desc')->first();
             $lastPick->is_last_pick = 1;
             $lastPick->save();
+        }
+    }
+
+    private function adjustSetStartDateIfNeeded(int $leagueId): void
+    {
+        $league = League::find($leagueId);
+        if ($league === null) {
+            return;
+        }
+
+        $today = Carbon::today()->toDateString();
+        if ($league->set_start_date === null || $league->set_start_date < $today) {
+            $league->set_start_date = $today;
+            $league->save();
         }
     }
 

@@ -2,20 +2,25 @@
 
 namespace App\Modules\Matches\Actions;
 
-/* Define Models */
 use App\Events\SetUpdatedEvent;
+use App\Modules\League\Enums\LeagueStatus;
 use App\Modules\League\Models\League;
 use App\Modules\Matches\Models\Pool;
 use App\Modules\Matches\Models\Set;
+use App\Modules\Matches\Services\PoolSetStandingsAdjuster;
+use App\Modules\Pokepaste\Services\EnforceTeamMatchPokepasteChecker;
+use App\Modules\Pokepaste\Services\ReplaySetOutcomeAggregator;
 use App\Modules\Teams\Models\Team;
-
-/* End Define Models */
-
-/* Define Dependencies */
-/* End Define Dependencies */
+use App\Notifications\MatchReplaysNotification;
+use App\Notifications\MatchResultNotification;
+use Illuminate\Support\Facades\Auth;
 
 class CreateEditSetsAction
 {
+    public function __construct(
+        private PoolSetStandingsAdjuster $poolSetStandingsAdjuster,
+    ) {}
+
     public function __invoke($data)
     {
         if ($data['command'] == 'create') {
@@ -23,7 +28,7 @@ class CreateEditSetsAction
             $roundCount = $league?->matchConfig?->round_count;
             $pools = Pool::where('league_id', $data['league_id'])->where('status', 1)->get();
             foreach ($pools as $pool) {
-                $teams = Team::where('pool_id', $pool->id)->orderBy('seed', 'asc')->get();
+                $teams = Team::query()->where('pool_id', $pool->id)->whereNull('dropped_at')->orderBy('seed', 'asc')->get();
                 $oddCheck = $teams->count() % 2 !== 0;
                 if ($oddCheck === true) {
                     $teams->push(null);
@@ -52,14 +57,37 @@ class CreateEditSetsAction
             }
             if ($set->status == 0) {
                 return;
+            }
+            if ($set->team2_id === null) {
+                return false;
             } else {
+                $setLeague = League::query()->find($set->league_id);
+                if ($setLeague !== null && ! in_array($setLeague->status, [LeagueStatus::RegularSeason, LeagueStatus::Playoffs], true)) {
+                    return false;
+                }
+                $leagueForPaste = League::with('matchConfig')->find($set->league_id);
+                $user = Auth::user();
+                $isLeagueAdmin = $leagueForPaste !== null
+                    && $user !== null
+                    && $user->can('admin', $leagueForPaste);
+                $isSetParticipant = $user !== null && Team::query()
+                    ->where('user_id', $user->id)
+                    ->where('league_id', $set->league_id)
+                    ->whereIn('id', [$set->team1_id, $set->team2_id])
+                    ->exists();
+                $canBypassRequirements = $isLeagueAdmin && ! $isSetParticipant;
+                if (! $canBypassRequirements && $leagueForPaste?->matchConfig?->require_team_match_pokepaste_before_results === true) {
+                    if (! app(EnforceTeamMatchPokepasteChecker::class)->poolSetBothSidesHaveData($set)) {
+                        return false;
+                    }
+                }
+
                 $winner = $this->CalculateWinner($data);
                 $team1points = $this->calculatePoints($data['team1_score'], $data['team2_score']);
                 $team2points = $this->calculatePoints($data['team2_score'], $data['team1_score']);
                 $set->team1_score = $data['team1_score'];
                 $set->team2_score = $data['team2_score'];
-                $set->team1_pokepaste = ! empty($data['team1_pokepaste']) ? $data['team1_pokepaste'] : null;
-                $set->team2_pokepaste = ! empty($data['team2_pokepaste']) ? $data['team2_pokepaste'] : null;
+                $this->applyPokepasteUrlsFromSubmitter($data, $set);
                 $set->winner_id = $winner;
                 $set->status = 0;
                 $set->save();
@@ -88,15 +116,120 @@ class CreateEditSetsAction
                 $team2->save();
                 SetUpdatedEvent::dispatch(['set_id' => $set->id, 'status' => $set->status]);
 
+                $league = League::find($set->league_id);
+                $set->load(['team1', 'team2']);
+                $league->notify(new MatchResultNotification($set));
+
                 return true;
             }
+        } elseif ($data['command'] == 'reopen') {
+            $set = Set::where('id', $data['set_id'])->first();
+            if (! $set) {
+                return false;
+            }
+            if ($set->status !== 0) {
+                return false;
+            }
+
+            if ($set->is_bye) {
+                if ($set->team1_id === null) {
+                    return false;
+                }
+                $this->poolSetStandingsAdjuster->revertByeStandings($set);
+            } else {
+                $team1 = Team::where('id', $set->team1_id)->first();
+                $team2 = Team::where('id', $set->team2_id)->first();
+                if (! $team1 || ! $team2) {
+                    return false;
+                }
+                $this->poolSetStandingsAdjuster->revertCompletedMatchStandings($set);
+            }
+
+            $set->status = 1;
+            $set->winner_id = null;
+            $set->team1_score = null;
+            $set->team2_score = null;
+            $set->is_bye = false;
+            $set->save();
+            SetUpdatedEvent::dispatch(['set_id' => $set->id, 'status' => $set->status]);
+
+            return true;
         } elseif ($data['command'] == 'updatePokepaste') {
             $set = Set::where('id', $data['set_id'])->first();
-            $set->team1_pokepaste = ! empty($data['team1_pokepaste']) ? $data['team1_pokepaste'] : null;
-            $set->team2_pokepaste = ! empty($data['team2_pokepaste']) ? $data['team2_pokepaste'] : null;
+            if (! $set) {
+                return false;
+            }
+            $this->applyPokepasteUrlsFromSubmitter($data, $set);
             $set->save();
 
             return true;
+        } elseif ($data['command'] == 'updateReplays') {
+            $set = Set::where('id', $data['set_id'])->first();
+            if (! $set) {
+                return false;
+            }
+
+            $set->replay1 = ! empty($data['replay1']) ? $data['replay1'] : null;
+            $set->replay2 = ! empty($data['replay2']) ? $data['replay2'] : null;
+            $set->replay3 = ! empty($data['replay3']) ? $data['replay3'] : null;
+            $set->save();
+
+            $hasReplays = $set->replay1 || $set->replay2 || $set->replay3;
+            if ($hasReplays) {
+                $league = League::find($set->league_id);
+                $set->load(['team1', 'team2']);
+                $league->notify(new MatchReplaysNotification($set));
+            }
+
+            app(ParseSetGameResultsFromReplaysAction::class)($set);
+
+            $set->refresh();
+            $leagueForAuto = League::with('matchConfig')->find($set->league_id);
+            if ((int) $set->status === 1
+                && $set->team2_id !== null
+                && $leagueForAuto?->matchConfig?->auto_complete_set_from_replays === true) {
+                $scores = app(ReplaySetOutcomeAggregator::class)->aggregateScoresFromSetReplays($set);
+                if ($scores !== null) {
+                    $this->__invoke([
+                        'command' => 'update',
+                        'set_id' => $set->id,
+                        'team1_id' => $set->team1_id,
+                        'team2_id' => $set->team2_id,
+                        'team1_score' => $scores['team1_score'],
+                        'team2_score' => $scores['team2_score'],
+                    ]);
+                }
+            }
+
+            return true;
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    protected function applyPokepasteUrlsFromSubmitter(array $data, Set $set): void
+    {
+        $userId = Auth::id();
+        if ($userId === null) {
+            return;
+        }
+
+        $submitter = Team::query()
+            ->where('user_id', $userId)
+            ->where('league_id', $set->league_id)
+            ->first();
+
+        if ($submitter === null) {
+            return;
+        }
+
+        if ($submitter->id === $set->team1_id && array_key_exists('team1_pokepaste', $data)) {
+            $set->team1_pokepaste = ! empty($data['team1_pokepaste']) ? $data['team1_pokepaste'] : null;
+        }
+
+        if ($submitter->id === $set->team2_id && array_key_exists('team2_pokepaste', $data)) {
+            $set->team2_pokepaste = ! empty($data['team2_pokepaste']) ? $data['team2_pokepaste'] : null;
         }
     }
 
@@ -159,6 +292,9 @@ class CreateEditSetsAction
     protected function rotate($teams)
     {
         $teamsCount = $teams->count();
+        if ($teamsCount <= 2) {
+            return $teams;
+        }
         $lastIndex = $teamsCount - 1;
         $factor = (int) ($teamsCount % 2 === 0 ? $teamsCount / 2 : ceil($teamsCount / 2));
         $topRightIndex = $factor - 1;

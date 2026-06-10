@@ -13,5 +13,28 @@ class Draft extends Model
         'status',
         'round_number',
         'pick_number',
+        'current_deadline_at',
+        'paused_at',
+        'paused_remaining_seconds',
     ];
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'status' => 'integer',
+            'round_number' => 'integer',
+            'pick_number' => 'integer',
+            'current_deadline_at' => 'datetime',
+            'paused_at' => 'datetime',
+            'paused_remaining_seconds' => 'integer',
+        ];
+    }
+
+    public function reminders(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(DraftReminder::class);
+    }
 }
