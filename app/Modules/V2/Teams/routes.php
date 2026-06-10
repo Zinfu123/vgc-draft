@@ -1,11 +1,26 @@
 <?php
 
-use App\Modules\V2\Teams\Http\Controllers\TeamController;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'verified'])->prefix('teams')->name('teams.')->group(function (): void {
-    Route::get('/', [TeamController::class, 'index'])->name('index');
-    Route::post('/', [TeamController::class, 'create'])->name('create');
-    Route::get('/{team_id}', [TeamController::class, 'show'])->name('detail');
-    Route::post('/{team_id}', [TeamController::class, 'edit'])->name('edit');
+    Route::get('/', function (Request $request) {
+        $query = $request->getQueryString();
+
+        return redirect($query ? "/teams?{$query}" : '/teams');
+    })->name('index');
+
+    Route::post('/', function (Request $request) {
+        return redirect('/teams', 307);
+    })->name('create');
+
+    Route::get('/{team_id}', function (Request $request, int $team_id) {
+        $query = $request->getQueryString();
+
+        return redirect($query ? "/teams/{$team_id}?{$query}" : "/teams/{$team_id}");
+    })->name('detail');
+
+    Route::post('/{team_id}', function (Request $request, int $team_id) {
+        return redirect("/teams/{$team_id}", 307);
+    })->name('edit');
 });

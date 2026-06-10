@@ -30,7 +30,7 @@ return [
         'preview_routes' => [
             'Pokedex' => '/pokedex',
             'TeamCoverage' => '/team-coverage',
-            'Teams' => '/v2/teams',
+            'Teams' => '/teams',
             'Draft' => '/v2/draft',
             'Matches' => '/v2/match',
             'Trade' => '/v2/leagues',

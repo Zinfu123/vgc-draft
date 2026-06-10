@@ -32,16 +32,16 @@ it('exposes v2 preview nav links when modules are enabled', function () {
     expect(\App\Kernel\Support\V2PreviewNav::links())->toBe([
         ['module' => 'Pokedex', 'href' => '/pokedex'],
         ['module' => 'TeamCoverage', 'href' => '/team-coverage'],
-        ['module' => 'Teams', 'href' => '/v2/teams'],
+        ['module' => 'Teams', 'href' => '/teams'],
     ]);
 });
 
-it('renders v2 teams index page', function () {
+it('redirects v2 teams index to production route', function () {
     $user = \App\Models\User::factory()->create();
 
     $this->actingAs($user)
         ->get('/v2/teams?league_id=1')
-        ->assertSuccessful();
+        ->assertRedirect('/teams?league_id=1');
 })->group('v2');
 
 it('renders pool detail page', function () {
