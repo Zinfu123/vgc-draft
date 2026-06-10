@@ -4,13 +4,17 @@ namespace App\Providers;
 
 use App\Kernel\Audit\ModuleAuditRegistry;
 use App\Kernel\Contracts\DraftOperations;
+use App\Kernel\Contracts\MatchSetOperations;
 use App\Kernel\Contracts\PokedexPages;
+use App\Kernel\Contracts\PoolOperations;
 use App\Kernel\Contracts\ShowdownFormatter;
 use App\Kernel\Contracts\TeamCoveragePlanner;
 use App\Kernel\Contracts\TeamOperations;
 use App\Kernel\Support\ShowdownFormatterService;
 use App\Modules\Draft\Services\DraftOperationsService;
 use App\Modules\League\Models\League;
+use App\Modules\Matches\Services\MatchSetOperationsService;
+use App\Modules\Matches\Services\PoolOperationsService;
 use App\Modules\Pokedex\Services\PokedexPagesService;
 use App\Modules\TeamCoverage\Services\TeamCoveragePlannerService;
 use App\Modules\Teams\Services\TeamOperationsService;
@@ -33,6 +37,8 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(ShowdownFormatter::class, ShowdownFormatterService::class);
         $this->app->singleton(PokedexPages::class, PokedexPagesService::class);
         $this->app->singleton(DraftOperations::class, DraftOperationsService::class);
+        $this->app->singleton(MatchSetOperations::class, MatchSetOperationsService::class);
+        $this->app->singleton(PoolOperations::class, PoolOperationsService::class);
         $this->app->singleton(TeamCoveragePlanner::class, TeamCoveragePlannerService::class);
         $this->app->singleton(TeamOperations::class, TeamOperationsService::class);
 

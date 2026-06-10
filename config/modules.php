@@ -18,6 +18,7 @@ return [
             'TeamCoverage',
             'Teams',
             'Draft',
+            'Matches',
         ],
 
         'providers' => [
@@ -25,6 +26,7 @@ return [
             App\Modules\V2\TeamCoverage\Providers\TeamCoverageServiceProvider::class,
             App\Modules\V2\Teams\Providers\TeamsServiceProvider::class,
             App\Modules\V2\Draft\Providers\DraftServiceProvider::class,
+            App\Modules\V2\Matches\Providers\MatchesServiceProvider::class,
         ],
 
         'preview_nav' => env('V2_PREVIEW_NAV', null),

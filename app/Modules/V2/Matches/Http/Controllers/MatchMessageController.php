@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\Matches\Controllers;
+namespace App\Modules\V2\Matches\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Match\SendMatchMessageRequest;
