@@ -24,6 +24,5 @@ Route::middleware(['auth', 'verified'])->prefix('match')->name('sets.')->group(f
 
 Route::middleware(['auth', 'verified'])->prefix('pools')->name('pools.')->group(function (): void {
     Route::post('/create', [PoolController::class, 'create'])->name('create');
-    Route::get('/{pool_id}', [PoolController::class, 'show'])->name('detail');
     Route::post('/assign-teams-to-pools', [PoolController::class, 'assignTeamsToPools'])->name('assign-teams-to-pools');
 });

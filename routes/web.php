@@ -192,7 +192,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 Route::prefix('pools')->group(function () {
     Route::post('/create', [PoolController::class, 'create'])->middleware(['auth', 'verified'])->name('pools.create');
-    Route::get('/{pool_id}', [PoolController::class, 'show'])->middleware(['auth', 'verified'])->name('pools.detail');
     Route::post('/assign-teams-to-pools', [PoolController::class, 'assignTeamsToPools'])->middleware(['auth', 'verified'])->name('pools.assign-teams-to-pools');
 });
 

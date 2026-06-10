@@ -5,7 +5,6 @@ namespace App\Modules\Matches\Services;
 use App\Kernel\Contracts\PoolOperations;
 use App\Modules\Matches\Actions\CreateEditPoolAction;
 use App\Modules\Matches\Actions\TeamsToPoolsAction;
-use App\Modules\Matches\Models\Pool;
 
 class PoolOperationsService implements PoolOperations
 {
@@ -13,11 +12,6 @@ class PoolOperationsService implements PoolOperations
         private CreateEditPoolAction $createEditPoolAction,
         private TeamsToPoolsAction $teamsToPoolsAction,
     ) {}
-
-    public function poolForDetail(int $poolId): mixed
-    {
-        return Pool::query()->where('id', $poolId)->first();
-    }
 
     public function createPools(int $leagueId): int
     {

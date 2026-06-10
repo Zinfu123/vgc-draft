@@ -75,19 +75,6 @@ it('renders v2 match detail page', function () {
             ->where('set.id', $set->id));
 });
 
-it('renders v2 pool detail page', function () {
-    $user = User::factory()->create();
-    $user2 = User::factory()->create();
-    [, $pool] = createV2MatchSet($user, $user2);
-
-    $this->actingAs($user)
-        ->get("/v2/pools/{$pool->id}")
-        ->assertOk()
-        ->assertInertia(fn ($page) => $page
-            ->component('pools/PoolDetail')
-            ->where('pool.id', $pool->id));
-});
-
 it('stores a match message via v2 preview route', function () {
     $user1 = User::factory()->create();
     $user2 = User::factory()->create();

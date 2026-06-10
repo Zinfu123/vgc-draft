@@ -53,11 +53,3 @@ it('redirects v2 teams index to production route', function () {
         ->get('/v2/teams?league_id=1')
         ->assertRedirect('/teams?league_id=1');
 })->group('v2');
-
-it('renders pool detail page', function () {
-    $user = \App\Models\User::factory()->create();
-
-    $this->actingAs($user)
-        ->get('/pools/1')
-        ->assertSuccessful();
-})->group('v2');
