@@ -61,7 +61,14 @@ class LeagueDraftCsvImportService
             $this->insertChunks('sets', array_map(fn (array $r): array => $this->mapSetsRow($r), $parsed['sets.csv']));
         });
 
-        $this->resyncIdSequences();
+        app(\App\Console\Services\DatabaseIdSequenceResyncService::class)->resyncTables([
+            'league_pokemon',
+            'draft_config',
+            'drafts',
+            'draft_order',
+            'draft_picks',
+            'sets',
+        ]);
 
         return [
             'inserted' => array_map(fn (array $rows): int => count($rows), $parsed),
@@ -472,38 +479,5 @@ class LeagueDraftCsvImportService
         sort($list);
 
         return $list;
-    }
-
-    private function resyncIdSequences(): void
-    {
-        $tables = ['league_pokemon', 'draft_config', 'drafts', 'draft_order', 'draft_picks', 'sets'];
-        $driver = Schema::getConnection()->getDriverName();
-
-        foreach ($tables as $table) {
-            $max = DB::table($table)->max('id');
-            if ($max === null) {
-                continue;
-            }
-            $max = (int) $max;
-
-            if ($driver === 'sqlite') {
-                if (! Schema::hasTable('sqlite_sequence')) {
-                    continue;
-                }
-                $exists = DB::table('sqlite_sequence')->where('name', $table)->exists();
-                if ($exists) {
-                    DB::table('sqlite_sequence')->where('name', $table)->update(['seq' => $max]);
-                } else {
-                    DB::table('sqlite_sequence')->insert(['name' => $table, 'seq' => $max]);
-                }
-            } elseif ($driver === 'mysql') {
-                DB::statement('ALTER TABLE `'.$table.'` AUTO_INCREMENT = '.($max + 1));
-            } elseif ($driver === 'pgsql') {
-                $seq = DB::selectOne('SELECT pg_get_serial_sequence(?, ?) AS s', [$table, 'id']);
-                if ($seq !== null && $seq->s !== null) {
-                    DB::statement('SELECT setval(?, ?, true)', [$seq->s, $max]);
-                }
-            }
-        }
     }
 }

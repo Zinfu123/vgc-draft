@@ -4,6 +4,7 @@ Custom commands live in `app/Console/Commands/` and auto-register in Laravel 12 
 
 | Command | Purpose |
 | --- | --- |
+| `db:resync-sequences` | Resync auto-increment ID sequences after a DB restore or CSV import with preserved primary keys |
 | `pokemon:import-version-group` | Import or refresh `pokemon_generation_data` from PokeAPI for a version group |
 | `pokemon:import-version-group-held-items` | Import holdable items into `version_group_held_items` from PokeAPI |
 | `pokemon:validate-sv-import` | Sanity-check Scarlet/Violet import coverage against PokeAPI regional dexes |

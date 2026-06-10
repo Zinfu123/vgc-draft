@@ -114,7 +114,7 @@ class DatabaseCsvDumpImportService
             }
         });
 
-        $this->resyncIdSequences();
+        app(DatabaseIdSequenceResyncService::class)->resyncTables(array_column(self::IMPORT_STEPS, 0));
 
         return ['inserted' => $inserted];
     }
@@ -342,43 +342,6 @@ class DatabaseCsvDumpImportService
             }
         } finally {
             Schema::enableForeignKeyConstraints();
-        }
-    }
-
-    private function resyncIdSequences(): void
-    {
-        $tables = array_column(self::IMPORT_STEPS, 0);
-        $driver = Schema::getConnection()->getDriverName();
-
-        foreach ($tables as $table) {
-            if (! Schema::hasTable($table)) {
-                continue;
-            }
-
-            $max = DB::table($table)->max('id');
-            if ($max === null) {
-                continue;
-            }
-            $max = (int) $max;
-
-            if ($driver === 'sqlite') {
-                if (! Schema::hasTable('sqlite_sequence')) {
-                    continue;
-                }
-                $exists = DB::table('sqlite_sequence')->where('name', $table)->exists();
-                if ($exists) {
-                    DB::table('sqlite_sequence')->where('name', $table)->update(['seq' => $max]);
-                } else {
-                    DB::table('sqlite_sequence')->insert(['name' => $table, 'seq' => $max]);
-                }
-            } elseif ($driver === 'mysql') {
-                DB::statement('ALTER TABLE `'.$table.'` AUTO_INCREMENT = '.($max + 1));
-            } elseif ($driver === 'pgsql') {
-                $seq = DB::selectOne('SELECT pg_get_serial_sequence(?, ?) AS s', [$table, 'id']);
-                if ($seq !== null && $seq->s !== null) {
-                    DB::statement('SELECT setval(?, ?, true)', [$seq->s, $max]);
-                }
-            }
         }
     }
 }
