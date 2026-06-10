@@ -1,14 +1,12 @@
 <?php
 
-namespace App\Modules\TeamCoverage\Controllers;
+namespace App\Modules\V2\TeamCoverage\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\TeamCoverage\TeamCoverageLearnsetRequest;
 use App\Http\Requests\TeamCoverage\TeamCoveragePokedexSearchRequest;
 use App\Http\Requests\TeamCoverage\TeamCoverageTeamRosterRequest;
 use App\Kernel\Contracts\TeamCoveragePlanner;
-use App\Modules\Pokedex\Models\Pokedex;
-use App\Modules\Teams\Models\Team;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -21,7 +19,7 @@ class TeamCoveragePlannerController extends Controller
         $user = Auth::user();
         abort_if($user === null, 403);
 
-        return Inertia::render('tools/TeamCoveragePlanner', $planner->showProps((int) $user->id));
+        return Inertia::render('v2/team-coverage/TeamCoveragePlanner', $planner->showProps((int) $user->id));
     }
 
     public function search(
@@ -36,7 +34,7 @@ class TeamCoveragePlannerController extends Controller
 
     public function learnset(
         TeamCoverageLearnsetRequest $request,
-        Pokedex $pokedex,
+        int $pokedex,
         TeamCoveragePlanner $planner,
     ): JsonResponse {
         $validated = $request->validated();
@@ -44,14 +42,14 @@ class TeamCoveragePlannerController extends Controller
             ? $validated['game']
             : null;
 
-        return response()->json($planner->learnsetPayload($pokedex->id, $game));
+        return response()->json($planner->learnsetPayload($pokedex, $game));
     }
 
     public function roster(
         TeamCoverageTeamRosterRequest $request,
-        Team $team,
+        int $team,
         TeamCoveragePlanner $planner,
     ): JsonResponse {
-        return response()->json($planner->rosterPayload($team->id));
+        return response()->json($planner->rosterPayload($team));
     }
 }

@@ -15,10 +15,12 @@ return [
     'v2' => [
         'enabled' => [
             'Pokedex',
+            'TeamCoverage',
         ],
 
         'providers' => [
             App\Modules\V2\Pokedex\Providers\PokedexServiceProvider::class,
+            App\Modules\V2\TeamCoverage\Providers\TeamCoverageServiceProvider::class,
         ],
 
         'preview_nav' => env('V2_PREVIEW_NAV', null),
