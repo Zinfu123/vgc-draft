@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\Teams\Controllers;
+namespace App\Modules\V2\Teams\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Kernel\Contracts\TeamOperations;
