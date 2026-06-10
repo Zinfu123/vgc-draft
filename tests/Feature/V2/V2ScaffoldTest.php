@@ -31,7 +31,7 @@ it('loads modules config', function () {
 it('exposes v2 preview nav links when modules are enabled', function () {
     expect(\App\Kernel\Support\V2PreviewNav::links())->toBe([
         ['module' => 'Pokedex', 'href' => '/pokedex'],
-        ['module' => 'TeamCoverage', 'href' => '/v2/team-coverage'],
+        ['module' => 'TeamCoverage', 'href' => '/team-coverage'],
     ]);
 });
 

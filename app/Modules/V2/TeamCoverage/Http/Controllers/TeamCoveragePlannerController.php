@@ -19,7 +19,7 @@ class TeamCoveragePlannerController extends Controller
         $user = Auth::user();
         abort_if($user === null, 403);
 
-        return Inertia::render('v2/team-coverage/TeamCoveragePlanner', $planner->showProps((int) $user->id));
+        return Inertia::render('tools/TeamCoveragePlanner', $planner->showProps((int) $user->id));
     }
 
     public function search(
