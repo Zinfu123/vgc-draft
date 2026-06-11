@@ -2,17 +2,18 @@
 
 namespace App\Http\Requests\Playoff;
 
-use App\Modules\League\Models\League;
+use App\Http\Requests\Playoff\Concerns\ResolvesRouteLeague;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ClosePlayoffsRequest extends FormRequest
 {
+    use ResolvesRouteLeague;
+
     public function authorize(): bool
     {
         $user = $this->user();
-        $league = $this->route('league');
 
-        return $user !== null && $league instanceof League && $user->can('admin', $league);
+        return $user !== null && $user->can('admin', $this->routeLeague());
     }
 
     /**

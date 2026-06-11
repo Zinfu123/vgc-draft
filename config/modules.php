@@ -42,7 +42,7 @@ return [
             'Draft' => '/draft',
             'Matches' => '/match',
             'Trade' => '/leagues/1/trades',
-            'Playoffs' => '/v2/leagues/1/admin/playoffs',
+            'Playoffs' => '/leagues/1/admin/playoffs',
             'League' => '/v2/leagues',
             'Pokepaste' => '/v2/pokepaste',
             'MatchPrep' => '/v2/match-prep',

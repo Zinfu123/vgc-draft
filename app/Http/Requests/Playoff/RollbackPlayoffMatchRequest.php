@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Playoff;
 
-use App\Modules\League\Models\League;
+use App\Http\Requests\Playoff\Concerns\ResolvesRouteLeague;
 use App\Modules\Playoffs\Models\Playoff;
 use App\Modules\Playoffs\Models\PlayoffMatch;
 use Illuminate\Foundation\Http\FormRequest;
@@ -10,12 +10,13 @@ use Illuminate\Validation\Rule;
 
 class RollbackPlayoffMatchRequest extends FormRequest
 {
+    use ResolvesRouteLeague;
+
     public function authorize(): bool
     {
         $user = $this->user();
-        $league = $this->route('league');
 
-        return $user !== null && $league instanceof League && $user->can('admin', $league);
+        return $user !== null && $user->can('admin', $this->routeLeague());
     }
 
     /**
@@ -23,8 +24,7 @@ class RollbackPlayoffMatchRequest extends FormRequest
      */
     public function rules(): array
     {
-        /** @var League $league */
-        $league = $this->route('league');
+        $league = $this->routeLeague();
 
         return [
             'playoff_match_id' => [
