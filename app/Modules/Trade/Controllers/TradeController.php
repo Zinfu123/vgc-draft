@@ -3,15 +3,8 @@
 namespace App\Modules\Trade\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Modules\League\Actions\LeagueDetailLayoutDataAction;
-use App\Modules\League\Actions\ReadLeaguePokemonAction;
+use App\Kernel\Contracts\TradeOperations;
 use App\Modules\League\Models\League;
-use App\Modules\Teams\Models\Team;
-use App\Modules\Trade\Actions\CreateTradeAction;
-use App\Modules\Trade\Actions\ExecuteFreeAgencyTradeAction;
-use App\Modules\Trade\Actions\ReadLeagueTradeHistoryAction;
-use App\Modules\Trade\Actions\ReadTradesAction;
-use App\Modules\Trade\Actions\RespondToTradeAction;
 use App\Modules\Trade\Models\Trade;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,82 +14,45 @@ use Inertia\Response;
 
 class TradeController extends Controller
 {
-    public function index(
-        League $league,
-        LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction,
-        ReadTradesAction $readTradesAction,
-        ReadLeagueTradeHistoryAction $readLeagueTradeHistoryAction,
-        ReadLeaguePokemonAction $readLeaguePokemonAction,
-    ): Response {
-        $userTeam = Team::query()
-            ->where('user_id', Auth::id())
-            ->where('league_id', $league->id)
-            ->whereNull('dropped_at')
-            ->with('pokemon:id,drafted_by,name,cost,pokedex_id', 'pokemon.pokemon:id,name,sprite_url')
-            ->first();
+    public function index(League $league, TradeOperations $tradeOperations): Response
+    {
+        $user = Auth::user();
+        abort_if($user === null, 403);
 
-        $leagueTeams = Team::query()
-            ->where('league_id', $league->id)
-            ->notDropped()
-            ->where('id', '!=', $userTeam?->id)
-            ->with('pokemon.pokemon:id,name,sprite_url', 'user:id,name')
-            ->get()
-            ->map(function (Team $team) {
-                $team->coach = $team->user?->name ?? '—';
-                unset($team->user);
-
-                return $team;
-            });
-
-        $trades = $userTeam
-            ? $readTradesAction(['league_id' => $league->id, 'team_id' => $userTeam->id])
-            : collect();
-
-        $freeAgencyPool = $readLeaguePokemonAction(['league_id' => $league->id, 'command' => 'available']);
-
-        $leagueTradeHistory = $readLeagueTradeHistoryAction($league->id);
-
-        return Inertia::render('league/LeagueDetailTrades', [
-            ...$leagueDetailLayoutDataAction($league),
-            'section' => 'trades',
-            'userTeam' => $userTeam,
-            'leagueTeams' => $leagueTeams,
-            'trades' => $trades,
-            'leagueTradeHistory' => $leagueTradeHistory,
-            'freeAgencyPool' => $freeAgencyPool,
-        ]);
+        return Inertia::render(
+            'league/LeagueDetailTrades',
+            $tradeOperations->indexPageProps((int) $league->id, (int) $user->id),
+        );
     }
 
-    public function create(Request $request, League $league, CreateTradeAction $createTradeAction): RedirectResponse
+    public function create(Request $request, League $league, TradeOperations $tradeOperations): RedirectResponse
     {
-        $request->merge(['league_id' => $league->id]);
-        $createTradeAction($request);
+        $tradeOperations->createTrade($request, (int) $league->id);
 
         return back()->with('success', 'Trade request sent.');
     }
 
-    public function freeAgency(Request $request, League $league, ExecuteFreeAgencyTradeAction $executeFreeAgencyTradeAction): RedirectResponse
+    public function freeAgency(Request $request, League $league, TradeOperations $tradeOperations): RedirectResponse
     {
-        $request->merge(['league_id' => $league->id]);
-        $executeFreeAgencyTradeAction($request);
+        $tradeOperations->executeFreeAgency($request, (int) $league->id);
 
         return back()->with('success', 'Free-agency trade completed.');
     }
 
-    public function respond(Request $request, League $league, Trade $trade, RespondToTradeAction $respondToTradeAction): RedirectResponse
+    public function respond(Request $request, League $league, Trade $trade, TradeOperations $tradeOperations): RedirectResponse
     {
-        $respondToTradeAction($request, $trade);
+        $tradeOperations->respondToTrade($request, (int) $trade->id);
 
         return back()->with('success', 'Trade updated.');
     }
 
-    public function setTeamTrades(Request $request, League $league): RedirectResponse
+    public function setTeamTrades(Request $request, League $league, TradeOperations $tradeOperations): RedirectResponse
     {
-        $request->validate([
+        $validated = $request->validate([
             'trades' => ['required', 'integer', 'min:0'],
         ]);
 
-        Team::where('league_id', $league->id)->update(['trades' => $request->trades]);
+        $tradeOperations->setTeamTrades((int) $league->id, (int) $validated['trades']);
 
         return back()->with('success', 'Trades updated for all teams.');
     }
