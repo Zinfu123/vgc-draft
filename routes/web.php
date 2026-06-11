@@ -12,7 +12,6 @@ use App\Modules\MatchPrep\Controllers\MatchPrepController;
 use App\Modules\Playoffs\Controllers\PlayoffController;
 use App\Modules\Pokepaste\Controllers\PokepasteController;
 use App\Modules\Stats\Controllers\PokemonUsageStatsController;
-use App\Modules\Trade\Controllers\TradeController;
 use App\Modules\V2\Draft\Http\Controllers\DraftController;
 use App\Modules\V2\Matches\Http\Controllers\MatchMessageController;
 use App\Modules\V2\Matches\Http\Controllers\MatchScheduleRequestController;
@@ -23,6 +22,7 @@ use App\Modules\V2\Pokedex\Http\Controllers\PokedexController;
 use App\Modules\V2\Pokedex\Http\Controllers\PokedexItemController;
 use App\Modules\V2\TeamCoverage\Http\Controllers\TeamCoveragePlannerController;
 use App\Modules\V2\Teams\Http\Controllers\TeamController;
+use App\Modules\V2\Trade\Http\Controllers\TradeController;
 /* End Define Controllers */
 
 /* Dependencies */
