@@ -10,7 +10,7 @@ it('redirects v2 league admin playoffs to production route', function () {
     $this->actingAs($user)
         ->get('/v2/leagues/42/admin/playoffs')
         ->assertRedirect('/leagues/42/admin/playoffs');
-});
+})->group('v2');
 
 it('redirects v2 league admin playoffs update to production route', function () {
     $user = User::factory()->create();

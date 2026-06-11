@@ -36,7 +36,7 @@ it('exposes v2 preview nav links when modules are enabled', function () {
         ['module' => 'Draft', 'href' => '/draft'],
         ['module' => 'Matches', 'href' => '/match'],
         ['module' => 'Trade', 'href' => '/leagues/1/trades'],
-        ['module' => 'Playoffs', 'href' => '/v2/leagues/1/admin/playoffs'],
+        ['module' => 'Playoffs', 'href' => '/leagues/1/admin/playoffs'],
     ]);
 });
 
@@ -70,4 +70,12 @@ it('redirects v2 league trades index to production route', function () {
     $this->actingAs($user)
         ->get('/v2/leagues/1/trades')
         ->assertRedirect('/leagues/1/trades');
+})->group('v2');
+
+it('redirects v2 league admin playoffs index to production route', function () {
+    $user = \App\Models\User::factory()->create();
+
+    $this->actingAs($user)
+        ->get('/v2/leagues/1/admin/playoffs')
+        ->assertRedirect('/leagues/1/admin/playoffs');
 })->group('v2');

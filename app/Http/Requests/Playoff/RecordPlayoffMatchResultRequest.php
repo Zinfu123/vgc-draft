@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Playoff;
 
-use App\Modules\League\Models\League;
+use App\Http\Requests\Playoff\Concerns\ResolvesRouteLeague;
 use App\Modules\Playoffs\Models\Playoff;
 use App\Modules\Playoffs\Models\PlayoffMatch;
 use App\Modules\Pokepaste\Services\EnforceTeamMatchPokepasteChecker;
@@ -12,12 +12,13 @@ use Illuminate\Validation\Validator;
 
 class RecordPlayoffMatchResultRequest extends FormRequest
 {
+    use ResolvesRouteLeague;
+
     public function authorize(): bool
     {
         $user = $this->user();
-        $league = $this->route('league');
 
-        return $user !== null && $league instanceof League && $user->can('admin', $league);
+        return $user !== null && $user->can('admin', $this->routeLeague());
     }
 
     /**
@@ -25,8 +26,7 @@ class RecordPlayoffMatchResultRequest extends FormRequest
      */
     public function rules(): array
     {
-        /** @var League $league */
-        $league = $this->route('league');
+        $league = $this->routeLeague();
 
         return [
             'playoff_match_id' => [
@@ -62,8 +62,7 @@ class RecordPlayoffMatchResultRequest extends FormRequest
                 return;
             }
 
-            /** @var League $league */
-            $league = $this->route('league');
+            $league = $this->routeLeague();
             $match = PlayoffMatch::query()->find((int) $this->input('playoff_match_id'));
             if ($match === null) {
                 return;
