@@ -36,7 +36,7 @@ return [
             'TeamCoverage' => '/team-coverage',
             'Teams' => '/teams',
             'Draft' => '/draft',
-            'Matches' => '/v2/match',
+            'Matches' => '/match',
             'Trade' => '/v2/leagues',
             'Playoffs' => '/v2/leagues',
             'League' => '/v2/leagues',

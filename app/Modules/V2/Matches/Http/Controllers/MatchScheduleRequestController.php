@@ -22,7 +22,7 @@ class MatchScheduleRequestController extends Controller
             $request->validated('proposed_at'),
         );
 
-        return redirect()->route('v2.sets.show', ['set_id' => $result['set_id']])
+        return redirect()->route('sets.show', ['set_id' => $result['set_id']])
             ->with('success', $result['flash']['success']);
     }
 
@@ -37,7 +37,7 @@ class MatchScheduleRequestController extends Controller
             $request->validated(),
         );
 
-        return redirect()->route('v2.sets.show', ['set_id' => $result['set_id']])
+        return redirect()->route('sets.show', ['set_id' => $result['set_id']])
             ->with('success', $result['flash']['success']);
     }
 }

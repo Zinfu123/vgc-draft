@@ -8,16 +8,16 @@ use App\Modules\League\Controllers\LeaguePokemonAdminController;
 use App\Modules\League\Controllers\LeaguePokemonController;
 use App\Modules\League\Controllers\PoolTemplateCatalogController;
 use App\Modules\Matches\Controllers\MatchConfigController;
-use App\Modules\Matches\Controllers\MatchMessageController;
-use App\Modules\Matches\Controllers\MatchScheduleRequestController;
-use App\Modules\Matches\Controllers\PoolController;
-use App\Modules\Matches\Controllers\SetController;
 use App\Modules\MatchPrep\Controllers\MatchPrepController;
 use App\Modules\Playoffs\Controllers\PlayoffController;
 use App\Modules\Pokepaste\Controllers\PokepasteController;
 use App\Modules\Stats\Controllers\PokemonUsageStatsController;
 use App\Modules\Trade\Controllers\TradeController;
 use App\Modules\V2\Draft\Http\Controllers\DraftController;
+use App\Modules\V2\Matches\Http\Controllers\MatchMessageController;
+use App\Modules\V2\Matches\Http\Controllers\MatchScheduleRequestController;
+use App\Modules\V2\Matches\Http\Controllers\PoolController;
+use App\Modules\V2\Matches\Http\Controllers\SetController;
 use App\Modules\V2\Pokedex\Http\Controllers\PokedexAbilityController;
 use App\Modules\V2\Pokedex\Http\Controllers\PokedexController;
 use App\Modules\V2\Pokedex\Http\Controllers\PokedexItemController;
@@ -192,7 +192,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 Route::prefix('pools')->group(function () {
     Route::post('/create', [PoolController::class, 'create'])->middleware(['auth', 'verified'])->name('pools.create');
-    Route::get('/{pool_id}', [PoolController::class, 'show'])->middleware(['auth', 'verified'])->name('pools.detail');
     Route::post('/assign-teams-to-pools', [PoolController::class, 'assignTeamsToPools'])->middleware(['auth', 'verified'])->name('pools.assign-teams-to-pools');
 });
 
