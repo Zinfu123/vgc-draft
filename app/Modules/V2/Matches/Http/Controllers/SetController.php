@@ -47,14 +47,14 @@ class SetController extends Controller
             ]);
         }
 
-        return redirect()->route('v2.sets.show', ['set_id' => $result['set_id']]);
+        return redirect()->route('sets.show', ['set_id' => $result['set_id']]);
     }
 
     public function updateReplays(UpdateSetReplaysRequest $request, MatchSetOperations $matchSetOperations): RedirectResponse
     {
         $setId = $matchSetOperations->updateReplays($request->validated());
 
-        return redirect()->route('v2.sets.show', ['set_id' => $setId]);
+        return redirect()->route('sets.show', ['set_id' => $setId]);
     }
 
     public function previewReplayPlayers(
