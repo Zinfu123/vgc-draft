@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Modules\Playoffs\Controllers;
+namespace App\Modules\V2\Playoffs\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Playoff\ClosePlayoffsRequest;
@@ -9,7 +9,6 @@ use App\Http\Requests\Playoff\RecordPlayoffMatchResultRequest;
 use App\Http\Requests\Playoff\RollbackPlayoffMatchRequest;
 use App\Http\Requests\Playoff\UpdatePlayoffConfigRequest;
 use App\Kernel\Contracts\PlayoffsOperations;
-use App\Modules\League\Models\League;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -17,20 +16,20 @@ use Inertia\Response;
 
 class PlayoffController extends Controller
 {
-    public function show(League $league, PlayoffsOperations $playoffsOperations): Response
+    public function show(int $league, PlayoffsOperations $playoffsOperations): Response
     {
         $user = Auth::user();
         abort_if($user === null, 403);
 
         return Inertia::render(
             'league/admin/Playoffs',
-            $playoffsOperations->adminPageProps((int) $league->id, (int) $user->id),
+            $playoffsOperations->adminPageProps($league, (int) $user->id),
         );
     }
 
-    public function update(UpdatePlayoffConfigRequest $request, League $league, PlayoffsOperations $playoffsOperations): RedirectResponse
+    public function update(UpdatePlayoffConfigRequest $request, int $league, PlayoffsOperations $playoffsOperations): RedirectResponse
     {
-        $result = $playoffsOperations->updateConfig((int) $league->id, $request->validated());
+        $result = $playoffsOperations->updateConfig($league, $request->validated());
 
         if (isset($result['errors'])) {
             return back()->withErrors($result['errors']);
@@ -39,9 +38,9 @@ class PlayoffController extends Controller
         return back()->with('success', 'Playoff configuration saved.');
     }
 
-    public function generate(GeneratePlayoffBracketRequest $request, League $league, PlayoffsOperations $playoffsOperations): RedirectResponse
+    public function generate(GeneratePlayoffBracketRequest $request, int $league, PlayoffsOperations $playoffsOperations): RedirectResponse
     {
-        $result = $playoffsOperations->generateBracket((int) $league->id);
+        $result = $playoffsOperations->generateBracket($league);
 
         if (isset($result['errors'])) {
             return back()->withErrors($result['errors']);
@@ -50,10 +49,10 @@ class PlayoffController extends Controller
         return back()->with('success', 'Playoff bracket generated.');
     }
 
-    public function recordResult(RecordPlayoffMatchResultRequest $request, League $league, PlayoffsOperations $playoffsOperations): RedirectResponse
+    public function recordResult(RecordPlayoffMatchResultRequest $request, int $league, PlayoffsOperations $playoffsOperations): RedirectResponse
     {
         $result = $playoffsOperations->recordResult(
-            (int) $league->id,
+            $league,
             (int) $request->validated('playoff_match_id'),
             (int) $request->validated('team1_score'),
             (int) $request->validated('team2_score'),
@@ -66,12 +65,12 @@ class PlayoffController extends Controller
         return back()->with('success', 'Playoff result saved.');
     }
 
-    public function rollback(RollbackPlayoffMatchRequest $request, League $league, PlayoffsOperations $playoffsOperations): RedirectResponse
+    public function rollback(RollbackPlayoffMatchRequest $request, int $league, PlayoffsOperations $playoffsOperations): RedirectResponse
     {
         $match = $request->playoffMatch();
         abort_if($match === null, 404);
 
-        $result = $playoffsOperations->rollbackResult((int) $league->id, (int) $match->id);
+        $result = $playoffsOperations->rollbackResult($league, (int) $match->id);
 
         if (isset($result['errors'])) {
             return back()->withErrors($result['errors']);
@@ -80,9 +79,9 @@ class PlayoffController extends Controller
         return back()->with('success', 'Playoff result rolled back.');
     }
 
-    public function close(ClosePlayoffsRequest $request, League $league, PlayoffsOperations $playoffsOperations): RedirectResponse
+    public function close(ClosePlayoffsRequest $request, int $league, PlayoffsOperations $playoffsOperations): RedirectResponse
     {
-        $result = $playoffsOperations->closePlayoffs((int) $league->id);
+        $result = $playoffsOperations->closePlayoffs($league);
 
         if (isset($result['errors'])) {
             return back()->withErrors($result['errors']);
@@ -91,12 +90,12 @@ class PlayoffController extends Controller
         return back()->with('success', 'Playoffs closed. League champion and medals are set.');
     }
 
-    public function reset(League $league, PlayoffsOperations $playoffsOperations): RedirectResponse
+    public function reset(int $league, PlayoffsOperations $playoffsOperations): RedirectResponse
     {
         $user = Auth::user();
         abort_if($user === null, 403);
 
-        $result = $playoffsOperations->resetBracket((int) $league->id, (int) $user->id);
+        $result = $playoffsOperations->resetBracket($league, (int) $user->id);
 
         if (isset($result['errors'])) {
             return back()->withErrors($result['errors']);

@@ -10,13 +10,13 @@ it('exposes v2 health endpoint with enabled modules list', function () {
     $response->assertSuccessful()
         ->assertJson([
             'version' => 2,
-            'modules' => ['Pokedex', 'TeamCoverage', 'Teams', 'Draft', 'Matches', 'Trade'],
+            'modules' => ['Pokedex', 'TeamCoverage', 'Teams', 'Draft', 'Matches', 'Trade', 'Playoffs'],
         ]);
 });
 
 it('registers module audit command', function () {
     $this->artisan('module:audit')
-        ->expectsOutput('Registered module auditors: Pokedex, TeamCoverage, Teams, Draft, Matches, Trade')
+        ->expectsOutput('Registered module auditors: Pokedex, TeamCoverage, Teams, Draft, Matches, Trade, Playoffs')
         ->assertSuccessful();
 });
 
@@ -36,6 +36,7 @@ it('exposes v2 preview nav links when modules are enabled', function () {
         ['module' => 'Draft', 'href' => '/draft'],
         ['module' => 'Matches', 'href' => '/match'],
         ['module' => 'Trade', 'href' => '/leagues/1/trades'],
+        ['module' => 'Playoffs', 'href' => '/v2/leagues/1/admin/playoffs'],
     ]);
 });
 
