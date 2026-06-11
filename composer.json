@@ -18,6 +18,7 @@
         "laravel/scout": "^11.1",
         "laravel/socialite": "^5.25",
         "laravel/tinker": "^2.10.1",
+        "laravel/wayfinder": "^0.1.20",
         "league/flysystem-aws-s3-v3": "^3.29",
         "league/flysystem-path-prefixing": "^3.28",
         "socialiteproviders/discord": "^4.2",
