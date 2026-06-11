@@ -12,6 +12,7 @@ use App\Http\Requests\League\DropTeamFromLeagueRequest;
 use App\Http\Requests\League\UpdateTeamAdminRequest;
 use App\Http\Requests\Match\ReopenMatchSetRequest;
 use App\Jobs\EnforceTradeDeadlineJob;
+use App\Kernel\Contracts\PlayoffsOperations;
 use App\Modules\Draft\Actions\ReadCurrentDraftAction;
 use App\Modules\Draft\Models\Draft;
 use App\Modules\Draft\Models\DraftConfig;
@@ -30,7 +31,6 @@ use App\Modules\Matches\Enums\ScheduleRequestStatus;
 use App\Modules\Matches\Models\MatchMessage;
 use App\Modules\Matches\Models\MatchScheduleRequest;
 use App\Modules\Matches\Models\Set;
-use App\Modules\Playoffs\Controllers\PlayoffController;
 use App\Modules\Playoffs\Services\PlayoffBracketLayoutService;
 use App\Modules\Playoffs\Services\PlayoffBracketService;
 use App\Modules\Shared\Actions\LogoToUrlAction;
@@ -246,7 +246,7 @@ class LeagueController extends Controller
         ReadTeamAction $readTeamAction,
         PlayoffBracketService $playoffBracketService,
         PlayoffBracketLayoutService $playoffBracketLayoutService,
-        PlayoffController $playoffController,
+        PlayoffsOperations $playoffsOperations,
     ): \Inertia\Response {
         $user_team = Team::where('user_id', Auth::user()->id)->where('league_id', $league->id)->select('id')->first();
 
@@ -303,7 +303,11 @@ class LeagueController extends Controller
             'team_next' => $showSetsAction(['league_id' => $league->id, 'command' => 'team_next', 'team_id' => $teamIdForNextSet]),
             'matches_filter_team_id' => $matchesFilterTeamId,
             'standings' => $readTeamAction(['league_id' => $league->id, 'command' => 'standings']),
-            'playoff' => $playoffController->playoffPayloadWithPokepaste($playoff, $league, Auth::user()),
+            'playoff' => $playoffsOperations->playoffPayloadWithPokepaste(
+                (int) $playoff->id,
+                (int) $league->id,
+                Auth::id() !== null ? (int) Auth::id() : null,
+            ),
             'bracketLayout' => $bracketLayout,
             'canAdjustPlayoff' => $canAdjustPlayoff,
             'canRecordPlayoffResults' => $canRecordPlayoffResults,
@@ -391,7 +395,7 @@ class LeagueController extends Controller
         LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction,
         PlayoffBracketService $playoffBracketService,
         PlayoffBracketLayoutService $playoffBracketLayoutService,
-        PlayoffController $playoffController,
+        PlayoffsOperations $playoffsOperations,
     ): \Inertia\Response {
         $data = $leagueDetailLayoutDataAction($league);
 
@@ -426,7 +430,11 @@ class LeagueController extends Controller
         return Inertia::render('league/LeagueDetailPlayoffs', [
             ...$data,
             'section' => 'playoffs',
-            'playoff' => $playoffController->playoffPayloadWithPokepaste($playoff, $league, Auth::user()),
+            'playoff' => $playoffsOperations->playoffPayloadWithPokepaste(
+                (int) $playoff->id,
+                (int) $league->id,
+                Auth::id() !== null ? (int) Auth::id() : null,
+            ),
             'bracketLayout' => $bracketLayout,
             'canAdjustPlayoff' => $canAdjustPlayoff,
             'canRecordPlayoffResults' => $canRecordPlayoffResults,

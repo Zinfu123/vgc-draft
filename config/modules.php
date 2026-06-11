@@ -20,6 +20,7 @@ return [
             'Draft',
             'Matches',
             'Trade',
+            'Playoffs',
         ],
 
         'providers' => [
@@ -29,6 +30,7 @@ return [
             App\Modules\V2\Draft\Providers\DraftServiceProvider::class,
             App\Modules\V2\Matches\Providers\MatchesServiceProvider::class,
             App\Modules\V2\Trade\Providers\TradeServiceProvider::class,
+            App\Modules\V2\Playoffs\Providers\PlayoffsServiceProvider::class,
         ],
 
         'preview_nav' => env('V2_PREVIEW_NAV', null),
@@ -40,7 +42,7 @@ return [
             'Draft' => '/draft',
             'Matches' => '/match',
             'Trade' => '/leagues/1/trades',
-            'Playoffs' => '/v2/leagues',
+            'Playoffs' => '/v2/leagues/1/admin/playoffs',
             'League' => '/v2/leagues',
             'Pokepaste' => '/v2/pokepaste',
             'MatchPrep' => '/v2/match-prep',
