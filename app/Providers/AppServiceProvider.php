@@ -10,6 +10,7 @@ use App\Kernel\Contracts\PoolOperations;
 use App\Kernel\Contracts\ShowdownFormatter;
 use App\Kernel\Contracts\TeamCoveragePlanner;
 use App\Kernel\Contracts\TeamOperations;
+use App\Kernel\Contracts\TradeOperations;
 use App\Kernel\Support\ShowdownFormatterService;
 use App\Modules\Draft\Services\DraftOperationsService;
 use App\Modules\League\Models\League;
@@ -18,6 +19,7 @@ use App\Modules\Matches\Services\PoolOperationsService;
 use App\Modules\Pokedex\Services\PokedexPagesService;
 use App\Modules\TeamCoverage\Services\TeamCoveragePlannerService;
 use App\Modules\Teams\Services\TeamOperationsService;
+use App\Modules\Trade\Services\TradeOperationsService;
 use App\Policies\LeaguePolicy;
 use App\Support\CleanupInvalidViteHotFile;
 use Illuminate\Database\Eloquent\Model;
@@ -41,6 +43,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(PoolOperations::class, PoolOperationsService::class);
         $this->app->singleton(TeamCoveragePlanner::class, TeamCoveragePlannerService::class);
         $this->app->singleton(TeamOperations::class, TeamOperationsService::class);
+        $this->app->singleton(TradeOperations::class, TradeOperationsService::class);
 
         if ($this->app->environment('local') && class_exists(\Laravel\Telescope\TelescopeServiceProvider::class)) {
             $this->app->register(\Laravel\Telescope\TelescopeServiceProvider::class);
