@@ -25,3 +25,6 @@ yarn-error.log
 /.zed
 /database/schema/sqlite-schema.sql
 /database/data/*.csv
+/resources/js/actions
+/resources/js/routes
+/resources/js/wayfinder

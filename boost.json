@@ -3,16 +3,13 @@
         "claude_code",
         "cursor"
     ],
-    "editors": [
-        "claude_code",
-        "cursor"
-    ],
-    "herd_mcp": true,
+    "guidelines": true,
     "skills": [
         "laravel-best-practices",
         "configuring-horizon",
         "scout-development",
         "socialite-development",
+        "wayfinder-development",
         "pest-testing",
         "inertia-vue-development",
         "tailwindcss-development",
