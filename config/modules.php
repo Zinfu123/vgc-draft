@@ -39,7 +39,7 @@ return [
             'Teams' => '/teams',
             'Draft' => '/draft',
             'Matches' => '/match',
-            'Trade' => '/v2/leagues/1/trades',
+            'Trade' => '/leagues/1/trades',
             'Playoffs' => '/v2/leagues',
             'League' => '/v2/leagues',
             'Pokepaste' => '/v2/pokepaste',

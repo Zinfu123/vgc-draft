@@ -10,7 +10,7 @@ it('redirects v2 league trades index to production route', function () {
     $this->actingAs($user)
         ->get('/v2/leagues/42/trades')
         ->assertRedirect('/leagues/42/trades');
-});
+})->group('v2');
 
 it('redirects v2 league trades create to production route', function () {
     $user = User::factory()->create();
