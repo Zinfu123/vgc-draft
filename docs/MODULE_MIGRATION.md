@@ -49,7 +49,7 @@ Agent and human handoff file for the parallel v2 rebuild. See [architecture/adr/
 | 11 | `v2/matches-add` | merged | #24 | Preview at `/v2/match` |
 | 12 | `v2/matches-cutover` | merged | #25 | Production `/match` serves v2; QA passed |
 | 13 | `v2/trade-add` | merged | #26 | Preview at `/v2/leagues/{id}/trades` |
-| 14 | `v2/trade-cutover` | in progress | — | Production `/leagues/{id}/trades` serves v2 |
+| 14 | `v2/trade-cutover` | merged | #27 | Production `/leagues/{id}/trades` serves v2; QA passed |
 
 ## Module status
 
@@ -61,7 +61,7 @@ Agent and human handoff file for the parallel v2 rebuild. See [architecture/adr/
 | Teams | 3 | #19 | #20 | ☐ | partial | `/teams` |
 | Draft | 3 | #21 | #22 | ☐ | partial | `/draft` |
 | Matches | 3 | #24 | #25 | ☐ | yes | `/match` |
-| Trade | 3 | #26 | in progress | ☐ | yes | `/leagues/{id}/trades` |
+| Trade | 3 | #26 | #27 | ☐ | yes | `/leagues/{id}/trades` |
 | Playoffs | 3 | — | — | ☐ | ☐ | `/v2/leagues/{id}/admin/playoffs` |
 | League | 3 | — | — | ☐ | ☐ | `/v2/leagues` |
 | Pokepaste | 4 | — | — | ☐ | ☐ | `/v2/pokepaste/{id}` |
