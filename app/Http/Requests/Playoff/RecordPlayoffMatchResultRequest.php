@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Playoff;
 
-use App\Http\Requests\Playoff\Concerns\ResolvesRouteLeague;
+use App\Http\Requests\Concerns\ResolvesRouteLeague;
 use App\Modules\Playoffs\Models\Playoff;
 use App\Modules\Playoffs\Models\PlayoffMatch;
 use App\Modules\Pokepaste\Services\EnforceTeamMatchPokepasteChecker;

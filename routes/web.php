@@ -3,7 +3,6 @@
 /* Define Controllers */
 use App\Modules\Calendar\Controllers\CalendarController;
 use App\Modules\Dashboard\Controllers\DashboardController;
-use App\Modules\League\Controllers\LeagueController;
 use App\Modules\League\Controllers\LeaguePokemonAdminController;
 use App\Modules\League\Controllers\LeaguePokemonController;
 use App\Modules\League\Controllers\PoolTemplateCatalogController;
@@ -12,6 +11,7 @@ use App\Modules\MatchPrep\Controllers\MatchPrepController;
 use App\Modules\Pokepaste\Controllers\PokepasteController;
 use App\Modules\Stats\Controllers\PokemonUsageStatsController;
 use App\Modules\V2\Draft\Http\Controllers\DraftController;
+use App\Modules\V2\League\Http\Controllers\LeagueController;
 use App\Modules\V2\Matches\Http\Controllers\MatchMessageController;
 use App\Modules\V2\Matches\Http\Controllers\MatchScheduleRequestController;
 use App\Modules\V2\Matches\Http\Controllers\PoolController;

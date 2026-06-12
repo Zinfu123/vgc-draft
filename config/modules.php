@@ -45,7 +45,7 @@ return [
             'Matches' => '/match',
             'Trade' => '/leagues/1/trades',
             'Playoffs' => '/leagues/1/admin/playoffs',
-            'League' => '/v2/leagues/1',
+            'League' => '/leagues/1',
             'Pokepaste' => '/v2/pokepaste',
             'MatchPrep' => '/v2/match-prep',
             'Dashboard' => '/v2/dashboard',

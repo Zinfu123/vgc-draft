@@ -2,18 +2,19 @@
 
 namespace App\Http\Requests\Match;
 
-use App\Modules\League\Models\League;
+use App\Http\Requests\Concerns\ResolvesRouteLeague;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class ReopenMatchSetRequest extends FormRequest
 {
+    use ResolvesRouteLeague;
+
     public function authorize(): bool
     {
         $user = $this->user();
-        $league = $this->route('league');
 
-        return $user !== null && $league instanceof League && $user->can('admin', $league);
+        return $user !== null && $user->can('admin', $this->routeLeague());
     }
 
     /**
@@ -21,8 +22,7 @@ class ReopenMatchSetRequest extends FormRequest
      */
     public function rules(): array
     {
-        /** @var League $league */
-        $league = $this->route('league');
+        $league = $this->routeLeague();
 
         return [
             'match_reference' => 'required|string|max:2000',
