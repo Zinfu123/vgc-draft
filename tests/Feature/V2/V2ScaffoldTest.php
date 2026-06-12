@@ -10,13 +10,13 @@ it('exposes v2 health endpoint with enabled modules list', function () {
     $response->assertSuccessful()
         ->assertJson([
             'version' => 2,
-            'modules' => ['Pokedex', 'TeamCoverage', 'Teams', 'Draft', 'Matches', 'Trade', 'Playoffs'],
+            'modules' => ['Pokedex', 'TeamCoverage', 'Teams', 'Draft', 'Matches', 'Trade', 'Playoffs', 'League'],
         ]);
 });
 
 it('registers module audit command', function () {
     $this->artisan('module:audit')
-        ->expectsOutput('Registered module auditors: Pokedex, TeamCoverage, Teams, Draft, Matches, Trade, Playoffs')
+        ->expectsOutput('Registered module auditors: Pokedex, TeamCoverage, Teams, Draft, Matches, Trade, Playoffs, League')
         ->assertSuccessful();
 });
 
@@ -37,6 +37,7 @@ it('exposes v2 preview nav links when modules are enabled', function () {
         ['module' => 'Matches', 'href' => '/match'],
         ['module' => 'Trade', 'href' => '/leagues/1/trades'],
         ['module' => 'Playoffs', 'href' => '/leagues/1/admin/playoffs'],
+        ['module' => 'League', 'href' => '/v2/leagues/1'],
     ]);
 });
 
@@ -78,4 +79,12 @@ it('redirects v2 league admin playoffs index to production route', function () {
     $this->actingAs($user)
         ->get('/v2/leagues/1/admin/playoffs')
         ->assertRedirect('/leagues/1/admin/playoffs');
+})->group('v2');
+
+it('redirects v2 league dashboard to production route', function () {
+    $user = \App\Models\User::factory()->create();
+
+    $this->actingAs($user)
+        ->get('/v2/leagues/1/dashboard')
+        ->assertRedirect('/leagues/1/dashboard');
 })->group('v2');
