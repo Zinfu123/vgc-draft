@@ -2,866 +2,339 @@
 
 namespace App\Modules\League\Controllers;
 
-use App\Enums\Playoffs\PlayoffFormat;
-use App\Enums\Playoffs\PlayoffStatus;
-use App\Enums\PokemonGame;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Draft\UpdateDraftConfigRequest;
 use App\Http\Requests\Draft\UpdateDraftPickOrderRequest;
 use App\Http\Requests\League\DropTeamFromLeagueRequest;
 use App\Http\Requests\League\UpdateTeamAdminRequest;
 use App\Http\Requests\Match\ReopenMatchSetRequest;
-use App\Jobs\EnforceTradeDeadlineJob;
-use App\Kernel\Contracts\PlayoffsOperations;
-use App\Modules\Draft\Actions\ReadCurrentDraftAction;
-use App\Modules\Draft\Models\Draft;
-use App\Modules\Draft\Models\DraftConfig;
-use App\Modules\League\Actions\CreateEditLeagueAction;
-use App\Modules\League\Actions\LeagueDetailLayoutDataAction;
-use App\Modules\League\Actions\ReadLeagueAction;
-use App\Modules\League\Actions\ReadLeagueKillLeadersAction;
-use App\Modules\League\Actions\ReadLeaguePokemonAction;
-use App\Modules\League\Actions\StartRegularSeasonAction;
-use App\Modules\League\Enums\LeagueStatus;
+use App\Kernel\Contracts\LeagueOperations;
 use App\Modules\League\Models\League;
-use App\Modules\League\Services\DropTeamFromLeagueService;
-use App\Modules\Matches\Actions\CreateEditSetsAction;
-use App\Modules\Matches\Actions\ShowSetsAction;
-use App\Modules\Matches\Enums\ScheduleRequestStatus;
-use App\Modules\Matches\Models\MatchMessage;
-use App\Modules\Matches\Models\MatchScheduleRequest;
-use App\Modules\Matches\Models\Set;
-use App\Modules\Playoffs\Services\PlayoffBracketLayoutService;
-use App\Modules\Playoffs\Services\PlayoffBracketService;
-use App\Modules\Shared\Actions\LogoToUrlAction;
-use App\Modules\Teams\Actions\ReadTeamAction;
-use App\Modules\Teams\Models\Team;
-use App\Modules\Trade\Actions\ReadTradesAction;
-use App\Modules\Trade\Models\Trade;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
+use Inertia\Response;
 
 class LeagueController extends Controller
 {
-    public function index(ReadLeagueAction $readLeagueAction)
+    public function index(LeagueOperations $leagueOperations): Response
     {
-        $currentLeagues = $readLeagueAction(['command' => 'active']);
-        $pastLeagues = $readLeagueAction(['command' => 'past']);
-
-        return Inertia::render('league/LeagueIndex', [
-            'currentLeagues' => $currentLeagues,
-            'pastLeagues' => $pastLeagues,
-        ]);
+        return Inertia::render('league/LeagueIndex', $leagueOperations->indexPageProps());
     }
 
-    public function show(League $league)
+    public function show(League $league): RedirectResponse
     {
         return redirect()->route('leagues.dashboard', ['league' => $league->id]);
     }
 
-    public function showDashboard(
-        Request $request,
-        League $league,
-        LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction,
-        ReadTeamAction $readTeamAction,
-        ReadTradesAction $readTradesAction,
-        ReadLeaguePokemonAction $readLeaguePokemonAction,
-        ShowSetsAction $showSetsAction,
-    ): \Inertia\Response {
-        $data = $leagueDetailLayoutDataAction($league);
-
+    public function showDashboard(Request $request, League $league, LeagueOperations $leagueOperations): Response
+    {
         $userId = Auth::id();
-        $userTeamBasic = $data['teams']->first(fn ($t) => $t->user_id === $userId);
+        abort_if($userId === null, 403);
 
-        $selectedTeamId = null;
-        if ($request->filled('team')) {
-            $candidate = (int) $request->query('team');
-            if ($data['teams']->firstWhere('id', $candidate)) {
-                $selectedTeamId = $candidate;
-            }
-        }
-
-        $selectedTeamId = $selectedTeamId ?? $userTeamBasic?->id ?? $data['teams']->first()?->id;
-
-        $selectedTeam = $selectedTeamId !== null
-            ? $readTeamAction(['command' => 'team', 'team_id' => $selectedTeamId])
-            : null;
-
-        // User's own team with Pokémon loaded for trade forms
-        $userTradesTeam = Team::query()
-            ->where('user_id', $userId)
-            ->where('league_id', $league->id)
-            ->whereNull('dropped_at')
-            ->with('pokemon:id,drafted_by,name,cost,pokedex_id', 'pokemon.pokemon:id,name,sprite_url')
-            ->first();
-
-        $leagueTeamsForTrades = Team::query()
-            ->where('league_id', $league->id)
-            ->notDropped()
-            ->when($userTradesTeam, fn ($q) => $q->where('id', '!=', $userTradesTeam->id))
-            ->with('pokemon.pokemon:id,name,sprite_url', 'user:id,name')
-            ->get()
-            ->map(function (Team $team): Team {
-                $team->coach = $team->user?->name ?? '—';
-                unset($team->user);
-
-                return $team;
-            });
-
-        $userTrades = $userTradesTeam
-            ? $readTradesAction(['league_id' => $league->id, 'team_id' => $userTradesTeam->id])
-            : collect();
-
-        $freeAgencyPool = $readLeaguePokemonAction(['league_id' => $league->id, 'command' => 'available']);
-
-        $nextSet = $selectedTeamId !== null
-            ? Set::query()
-                ->where('league_id', $league->id)
-                ->where(function ($q) use ($selectedTeamId): void {
-                    $q->where('team1_id', $selectedTeamId)
-                        ->orWhere('team2_id', $selectedTeamId);
-                })
-                ->whereNull('winner_id')
-                ->where('is_bye', false)
-                ->with(['team1', 'team2'])
-                ->orderByRaw('CASE WHEN scheduled_at IS NULL THEN 1 ELSE 0 END')
-                ->orderBy('scheduled_at')
-                ->orderBy('round')
-                ->first()
-            : null;
-
-        $isUserInNextSet = $nextSet !== null
-            && $userTradesTeam !== null
-            && ($nextSet->team1_id === $userTradesTeam->id || $nextSet->team2_id === $userTradesTeam->id);
-
-        $nextSetPendingScheduleRequest = ($nextSet && $isUserInNextSet)
-            ? MatchScheduleRequest::query()
-                ->where('set_id', $nextSet->id)
-                ->where('status', ScheduleRequestStatus::Pending->value)
-                ->latest()
-                ->first()
-            : null;
-
-        $nextSetData = $nextSet ? [
-            'id' => $nextSet->id,
-            'round' => $nextSet->round,
-            'scheduled_at' => $nextSet->scheduled_at?->toIso8601String(),
-            'opponent_name' => $nextSet->team1_id === $selectedTeamId
-                ? ($nextSet->team2?->name ?? '—')
-                : ($nextSet->team1?->name ?? '—'),
-            'unread_message_count' => $isUserInNextSet
-                ? MatchMessage::query()
-                    ->where('set_id', $nextSet->id)
-                    ->where('user_id', '!=', $userId)
-                    ->where('is_read', false)
-                    ->count()
-                : 0,
-            'pending_schedule_request' => $nextSetPendingScheduleRequest ? [
-                'id' => $nextSetPendingScheduleRequest->id,
-                'proposed_at' => $nextSetPendingScheduleRequest->proposed_at?->toISOString(),
-                'is_mine' => $nextSetPendingScheduleRequest->proposed_by_user_id === $userId,
-            ] : null,
-        ] : null;
-
-        $leagueTransactions = Trade::query()
-            ->where('league_id', $league->id)
-            ->where('status', 'accepted')
-            ->with([
-                'requestingTeam:id,name,user_id',
-                'targetTeam:id,name,user_id',
-                'offeredPokemon.leaguePokemon.pokemon:id,name,sprite_url',
-                'requestedPokemon.leaguePokemon.pokemon:id,name,sprite_url',
-            ])
-            ->latest()
-            ->take(80)
-            ->get();
-
-        return Inertia::render('league/LeagueDashboard', [
-            ...$data,
-            'section' => 'dashboard',
-            'selected_team' => $selectedTeam,
-            'selected_team_id' => $selectedTeamId,
-            'userTradesTeam' => $userTradesTeam,
-            'leagueTeamsForTrades' => $leagueTeamsForTrades,
-            'trades' => $userTrades,
-            'freeAgencyPool' => $freeAgencyPool,
-            'freeTradeWindowEndsAt' => $league->freeTradeWindowEndsAt()?->toIso8601String(),
-            'nextSet' => $nextSetData,
-            'leagueTransactions' => $leagueTransactions,
-            'team_sets_by_round' => $selectedTeamId !== null
-                ? $showSetsAction(['league_id' => $league->id, 'command' => 'team_by_round', 'team_id' => $selectedTeamId])
-                : [],
-        ]);
-    }
-
-    public function showTeams(League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction): \Inertia\Response
-    {
-        $logoAction = new LogoToUrlAction;
-
-        $rosterTeams = Team::query()
-            ->where('league_id', $league->id)
-            ->notDropped()
-            ->with([
-                'user:id,name,discord_avatar_url',
-                'pokemon.pokemon:id,name,sprite_url,type1,type2',
-            ])
-            ->orderBy('name')
-            ->get()
-            ->map(fn (Team $team) => [
-                'id' => $team->id,
-                'league_id' => $team->league_id,
-                'name' => $team->name,
-                'logo' => $team->logo !== null && trim($team->logo) !== ''
-                    ? $logoAction->logoToUrl($team->logo)
-                    : null,
-                'coach' => $team->user?->name ?? '—',
-                'coach_discord_avatar_url' => $team->user?->discord_avatar_url,
-                'pokemon' => $team->pokemon
-                    ->map(fn ($tp) => [
-                        'id' => $tp->id,
-                        'name' => $tp->name,
-                        'sprite_url' => $tp->pokemon?->sprite_url,
-                        'type1' => $tp->pokemon?->type1,
-                    ])
-                    ->all(),
-            ])
-            ->all();
-
-        return Inertia::render('league/LeagueDetailTeams', [
-            ...$leagueDetailLayoutDataAction($league),
-            'section' => 'rosters',
-            'rosterTeams' => $rosterTeams,
-        ]);
-    }
-
-    public function showSchedule(
-        Request $request,
-        League $league,
-        LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction,
-        ShowSetsAction $showSetsAction,
-        ReadTeamAction $readTeamAction,
-        PlayoffBracketService $playoffBracketService,
-        PlayoffBracketLayoutService $playoffBracketLayoutService,
-        PlayoffsOperations $playoffsOperations,
-    ): \Inertia\Response {
-        $user_team = Team::where('user_id', Auth::user()->id)->where('league_id', $league->id)->select('id')->first();
-
-        $matchesFilterTeamId = null;
-        if ($request->filled('team')) {
-            $candidate = (int) $request->query('team');
-            if (Team::query()->where('league_id', $league->id)->whereKey($candidate)->exists()) {
-                $matchesFilterTeamId = $candidate;
-            }
-        }
-
-        $teamIdForNextSet = $matchesFilterTeamId ?? $user_team?->id;
-
-        $data = $leagueDetailLayoutDataAction($league);
-
-        $playoff = $league->playoff()->firstOrCreate(
-            ['league_id' => $league->id],
-            [
-                'format' => PlayoffFormat::SingleElimination,
-                'bracket_size' => 4,
-                'status' => PlayoffStatus::Draft,
-                'seed_order' => null,
-            ]
-        );
-
-        if ($playoff->status === PlayoffStatus::Draft && $playoff->seed_order === null) {
-            $playoff->seed_order = $playoffBracketService->suggestedSeedTeams($league)->pluck('id')->all();
-            $playoff->save();
-        }
-
-        $playoff->load(['matches.team1', 'matches.team2']);
-
-        $teamsById = $data['teams']->keyBy('id');
-        $bracketLayout = $playoffBracketLayoutService->build($playoff, $teamsById);
-
-        $canAdjustPlayoff = Auth::user()?->can('admin', $league) === true
-            && $playoff->status === PlayoffStatus::Draft;
-
-        $canRecordPlayoffResults = Auth::user()?->can('admin', $league) === true
-            && $playoff->status === PlayoffStatus::Active;
-
-        $league->loadMissing('matchConfig');
-
-        $hasActivePlayoffs = $playoff->status === PlayoffStatus::Active;
-
-        $requestedView = $request->query('view', 'matches');
-        $scheduleView = in_array($requestedView, ['matches', 'standings', 'playoffs']) ? $requestedView : 'matches';
-
-        return Inertia::render('league/LeagueDetailSchedule', [
-            ...$data,
-            'section' => 'schedule',
-            'played_sets' => $showSetsAction(['league_id' => $league->id, 'command' => 'played']),
-            'upcoming_sets' => $showSetsAction(['league_id' => $league->id, 'command' => 'upcoming']),
-            'team_next' => $showSetsAction(['league_id' => $league->id, 'command' => 'team_next', 'team_id' => $teamIdForNextSet]),
-            'matches_filter_team_id' => $matchesFilterTeamId,
-            'standings' => $readTeamAction(['league_id' => $league->id, 'command' => 'standings']),
-            'playoff' => $playoffsOperations->playoffPayloadWithPokepaste(
-                (int) $playoff->id,
+        return Inertia::render(
+            'league/LeagueDashboard',
+            $leagueOperations->dashboardPageProps(
                 (int) $league->id,
-                Auth::id() !== null ? (int) Auth::id() : null,
+                (int) $userId,
+                $request->filled('team') ? (int) $request->query('team') : null,
             ),
-            'bracketLayout' => $bracketLayout,
-            'canAdjustPlayoff' => $canAdjustPlayoff,
-            'canRecordPlayoffResults' => $canRecordPlayoffResults,
-            'allowedBracketSizes' => PlayoffBracketService::allowedBracketSizes(),
-            'doubleEliminationSupported' => false,
-            'hasActivePlayoffs' => $hasActivePlayoffs,
-            'scheduleView' => $scheduleView,
-        ]);
+        );
     }
 
-    public function showMatches(Request $request, League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction, ShowSetsAction $showSetsAction)
+    public function showTeams(League $league, LeagueOperations $leagueOperations): Response
     {
-        $user_team = Team::where('user_id', Auth::user()->id)->where('league_id', $league->id)->select('id')->first();
-
-        $matchesFilterTeamId = null;
-        if ($request->filled('team')) {
-            $candidate = (int) $request->query('team');
-            if (Team::query()->where('league_id', $league->id)->whereKey($candidate)->exists()) {
-                $matchesFilterTeamId = $candidate;
-            }
-        }
-
-        $teamIdForNextSet = $matchesFilterTeamId ?? $user_team?->id;
-
-        return Inertia::render('league/LeagueDetailMatches', [
-            ...$leagueDetailLayoutDataAction($league),
-            'section' => 'matches',
-            'played_sets' => $showSetsAction(['league_id' => $league->id, 'command' => 'played']),
-            'upcoming_sets' => $showSetsAction(['league_id' => $league->id, 'command' => 'upcoming']),
-            'team_next' => $showSetsAction(['league_id' => $league->id, 'command' => 'team_next', 'team_id' => $teamIdForNextSet]),
-            'matches_filter_team_id' => $matchesFilterTeamId,
-        ]);
+        return Inertia::render('league/LeagueDetailTeams', $leagueOperations->teamsPageProps((int) $league->id));
     }
 
-    public function showStandings(League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction, ReadTeamAction $readTeamAction)
+    public function showSchedule(Request $request, League $league, LeagueOperations $leagueOperations): Response
     {
-        return Inertia::render('league/LeagueDetailStandings', [
-            ...$leagueDetailLayoutDataAction($league),
-            'section' => 'standings',
-            'standings' => $readTeamAction(['league_id' => $league->id, 'command' => 'standings']),
-        ]);
+        $userId = Auth::id();
+        abort_if($userId === null, 403);
+
+        return Inertia::render(
+            'league/LeagueDetailSchedule',
+            $leagueOperations->schedulePageProps(
+                (int) $league->id,
+                (int) $userId,
+                $request->filled('team') ? (int) $request->query('team') : null,
+                (string) $request->query('view', 'matches'),
+            ),
+        );
     }
 
-    public function showStats(League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction, ReadLeagueKillLeadersAction $readLeagueKillLeadersAction): \Inertia\Response
+    public function showMatches(Request $request, League $league, LeagueOperations $leagueOperations): Response
+    {
+        $userId = Auth::id();
+        abort_if($userId === null, 403);
+
+        return Inertia::render(
+            'league/LeagueDetailMatches',
+            $leagueOperations->matchesPageProps(
+                (int) $league->id,
+                (int) $userId,
+                $request->filled('team') ? (int) $request->query('team') : null,
+            ),
+        );
+    }
+
+    public function showStandings(League $league, LeagueOperations $leagueOperations): Response
+    {
+        return Inertia::render('league/LeagueDetailStandings', $leagueOperations->standingsPageProps((int) $league->id));
+    }
+
+    public function showStats(League $league, LeagueOperations $leagueOperations): Response
     {
         return Inertia::render('league/LeagueDetailStats', [
-            ...$leagueDetailLayoutDataAction($league),
-            'section' => 'stats',
-            'killLeaders' => Inertia::defer(fn () => $readLeagueKillLeadersAction($league)),
+            ...$leagueOperations->statsPageProps((int) $league->id),
+            'killLeaders' => Inertia::defer($leagueOperations->statsKillLeadersLoader((int) $league->id)),
         ]);
     }
 
-    public function showTrades(League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction)
+    public function showTrades(League $league, LeagueOperations $leagueOperations): Response
     {
-        return Inertia::render('league/LeagueDetailTrades', [
-            ...$leagueDetailLayoutDataAction($league),
-            'section' => 'trades',
-        ]);
+        return Inertia::render('league/LeagueDetailTrades', $leagueOperations->tradesPageProps((int) $league->id));
     }
 
-    public function showDraft(League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction, ReadCurrentDraftAction $readCurrentDraftAction): \Inertia\Response
+    public function showDraft(League $league, LeagueOperations $leagueOperations): Response
     {
-        $data = $leagueDetailLayoutDataAction($league);
-        $draft = $data['draft'];
-        $draftRecapTeams = null;
-        $draftRecapBans = null;
-
-        if ($draft !== null && (int) $draft->status === 0) {
-            $draftRecapTeams = $readCurrentDraftAction(['league_id' => $league->id, 'command' => 'teams'])
-                ->sortBy('name')
-                ->values();
-            $draftRecapBans = $readCurrentDraftAction(['league_id' => $league->id, 'command' => 'allbans']);
-        }
-
-        return Inertia::render('league/LeagueDetailDraft', [
-            ...$data,
-            'section' => 'draft',
-            'draft_recap_teams' => $draftRecapTeams,
-            'draft_recap_bans' => $draftRecapBans,
-        ]);
+        return Inertia::render('league/LeagueDetailDraft', $leagueOperations->draftPageProps((int) $league->id));
     }
 
-    public function showPlayoffs(
-        League $league,
-        LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction,
-        PlayoffBracketService $playoffBracketService,
-        PlayoffBracketLayoutService $playoffBracketLayoutService,
-        PlayoffsOperations $playoffsOperations,
-    ): \Inertia\Response {
-        $data = $leagueDetailLayoutDataAction($league);
-
-        $playoff = $league->playoff()->firstOrCreate(
-            ['league_id' => $league->id],
-            [
-                'format' => PlayoffFormat::SingleElimination,
-                'bracket_size' => 4,
-                'status' => PlayoffStatus::Draft,
-                'seed_order' => null,
-            ]
+    public function showPlayoffs(League $league, LeagueOperations $leagueOperations): Response
+    {
+        return Inertia::render(
+            'league/LeagueDetailPlayoffs',
+            $leagueOperations->playoffsPageProps((int) $league->id, Auth::id() !== null ? (int) Auth::id() : null),
         );
-
-        if ($playoff->status === PlayoffStatus::Draft && $playoff->seed_order === null) {
-            $playoff->seed_order = $playoffBracketService->suggestedSeedTeams($league)->pluck('id')->all();
-            $playoff->save();
-        }
-
-        $playoff->load(['matches.team1', 'matches.team2']);
-
-        $teamsById = $data['teams']->keyBy('id');
-        $bracketLayout = $playoffBracketLayoutService->build($playoff, $teamsById);
-
-        $canAdjustPlayoff = Auth::user()?->can('admin', $league) === true
-            && $playoff->status === PlayoffStatus::Draft;
-
-        $canRecordPlayoffResults = Auth::user()?->can('admin', $league) === true
-            && $playoff->status === PlayoffStatus::Active;
-
-        $league->loadMissing('matchConfig');
-
-        return Inertia::render('league/LeagueDetailPlayoffs', [
-            ...$data,
-            'section' => 'playoffs',
-            'playoff' => $playoffsOperations->playoffPayloadWithPokepaste(
-                (int) $playoff->id,
-                (int) $league->id,
-                Auth::id() !== null ? (int) Auth::id() : null,
-            ),
-            'bracketLayout' => $bracketLayout,
-            'canAdjustPlayoff' => $canAdjustPlayoff,
-            'canRecordPlayoffResults' => $canRecordPlayoffResults,
-            'allowedBracketSizes' => PlayoffBracketService::allowedBracketSizes(),
-            'doubleEliminationSupported' => false,
-        ]);
     }
 
-    public function showAdmin(League $league): \Illuminate\Http\RedirectResponse
+    public function showAdmin(League $league, LeagueOperations $leagueOperations): RedirectResponse
     {
-        $this->authorize('admin', $league);
+        $userId = Auth::id();
+        abort_if($userId === null, 403);
+
+        $leagueOperations->assertAdmin((int) $league->id, (int) $userId);
 
         return redirect()->route('leagues.admin.league-admins', ['league' => $league->id]);
     }
 
-    public function showAdminMatchConfig(League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction): \Inertia\Response
+    public function showAdminMatchConfig(League $league, LeagueOperations $leagueOperations): Response
     {
-        $this->authorize('admin', $league);
+        $userId = Auth::id();
+        abort_if($userId === null, 403);
 
-        $data = $leagueDetailLayoutDataAction($league);
-
-        return Inertia::render('league/admin/MatchConfig', [
-            ...$data,
-        ]);
-    }
-
-    public function showAdminDiscord(League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction): \Inertia\Response
-    {
-        $this->authorize('admin', $league);
-
-        $data = $leagueDetailLayoutDataAction($league);
-
-        return Inertia::render('league/admin/Discord', [
-            ...$data,
-        ]);
-    }
-
-    public function showAdminTrades(League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction): \Inertia\Response
-    {
-        $this->authorize('admin', $league);
-
-        $data = $leagueDetailLayoutDataAction($league);
-
-        return Inertia::render('league/admin/Trades', [
-            ...$data,
-        ]);
-    }
-
-    public function showAdminWinner(League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction, ReadTeamAction $readTeamAction): \Inertia\Response
-    {
-        $this->authorize('admin', $league);
-
-        $data = $leagueDetailLayoutDataAction($league);
-
-        $groupedStandings = $readTeamAction(['league_id' => $league->id, 'command' => 'standings']);
-        $flatStandings = $groupedStandings->flatten(1)->sortByDesc('victory_points')->values();
-
-        return Inertia::render('league/admin/Winner', [
-            ...$data,
-            'standings' => $flatStandings,
-        ]);
-    }
-
-    public function showAdminReopenMatch(League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction): \Inertia\Response
-    {
-        $this->authorize('admin', $league);
-
-        $data = $leagueDetailLayoutDataAction($league);
-
-        return Inertia::render('league/admin/ReopenMatch', [
-            ...$data,
-        ]);
-    }
-
-    public function showAdminDraft(League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction): \Inertia\Response
-    {
-        $this->authorize('admin', $league);
-
-        $data = $leagueDetailLayoutDataAction($league);
-
-        DraftConfig::firstOrCreate(
-            ['league_id' => $league->id],
-            [
-                'draft_points' => 80,
-                'minimum_drafts' => 0,
-                'ban_enabled' => false,
-                'bans_per_user' => null,
-                'minimum_cost_to_ban' => null,
-            ]
+        return Inertia::render(
+            'league/admin/MatchConfig',
+            $leagueOperations->adminMatchConfigPageProps((int) $league->id, (int) $userId),
         );
-
-        $league->refresh();
-        $league->load('draftConfig');
-
-        $teamsForPicks = $data['teams']->sortBy('pick_position')->values()->all();
-        $draftExists = Draft::where('league_id', $league->id)->exists();
-        $canReorderPicks = ! $draftExists;
-        $activeTeamCount = Team::query()
-            ->where('league_id', $league->id)
-            ->whereNull('dropped_at')
-            ->count();
-        $canStartDraft = ! $draftExists && $activeTeamCount > 0;
-
-        return Inertia::render('league/admin/DraftSettings', [
-            ...$data,
-            'draftConfig' => $league->draftConfig,
-            'teams' => $teamsForPicks,
-            'canReorderPicks' => $canReorderPicks,
-            'canStartDraft' => $canStartDraft,
-            'draftExists' => $draftExists,
-            'activeTeamCount' => $activeTeamCount,
-        ]);
     }
 
-    public function updateDraftConfig(UpdateDraftConfigRequest $request, League $league): RedirectResponse
+    public function showAdminDiscord(League $league, LeagueOperations $leagueOperations): Response
     {
-        $config = DraftConfig::firstOrCreate(
-            ['league_id' => $league->id],
-            [
-                'draft_points' => 80,
-                'minimum_drafts' => 0,
-                'ban_enabled' => false,
-                'bans_per_user' => null,
-                'minimum_cost_to_ban' => null,
-            ]
+        $userId = Auth::id();
+        abort_if($userId === null, 403);
+
+        return Inertia::render(
+            'league/admin/Discord',
+            $leagueOperations->adminDiscordPageProps((int) $league->id, (int) $userId),
         );
+    }
 
-        $validated = $request->validated();
-        $banEnabled = $request->boolean('ban_enabled');
-        $pickTimerEnabled = $request->boolean('pick_timer_enabled');
-        $quietHoursEnabled = $request->boolean('quiet_hours_enabled');
+    public function showAdminTrades(League $league, LeagueOperations $leagueOperations): Response
+    {
+        $userId = Auth::id();
+        abort_if($userId === null, 403);
 
-        $config->draft_date = $validated['draft_date'] ?? null;
-        $config->draft_start_at = $validated['draft_start_at'] ?? null;
-        $config->draft_points = (int) $validated['draft_points'];
-        $config->minimum_drafts = (int) $validated['minimum_drafts'];
-        $config->ban_enabled = $banEnabled;
-        $config->bans_per_user = $banEnabled ? (int) $validated['bans_per_user'] : null;
-        $config->minimum_cost_to_ban = $banEnabled ? (int) $validated['minimum_cost_to_ban'] : null;
-        $config->pick_timer_enabled = $pickTimerEnabled;
-        $config->pick_timer_seconds = $pickTimerEnabled ? (int) $validated['pick_timer_seconds'] : null;
-        $config->quiet_hours_enabled = $quietHoursEnabled;
-        $config->quiet_hours_start = $quietHoursEnabled ? ($validated['quiet_hours_start'] ?? null) : null;
-        $config->quiet_hours_end = $quietHoursEnabled ? ($validated['quiet_hours_end'] ?? null) : null;
-        $config->quiet_hours_timezone = $quietHoursEnabled ? ($validated['quiet_hours_timezone'] ?? null) : null;
-        $config->save();
+        return Inertia::render(
+            'league/admin/Trades',
+            $leagueOperations->adminTradesPageProps((int) $league->id, (int) $userId),
+        );
+    }
+
+    public function showAdminWinner(League $league, LeagueOperations $leagueOperations): Response
+    {
+        $userId = Auth::id();
+        abort_if($userId === null, 403);
+
+        return Inertia::render(
+            'league/admin/Winner',
+            $leagueOperations->adminWinnerPageProps((int) $league->id, (int) $userId),
+        );
+    }
+
+    public function showAdminReopenMatch(League $league, LeagueOperations $leagueOperations): Response
+    {
+        $userId = Auth::id();
+        abort_if($userId === null, 403);
+
+        return Inertia::render(
+            'league/admin/ReopenMatch',
+            $leagueOperations->adminReopenMatchPageProps((int) $league->id, (int) $userId),
+        );
+    }
+
+    public function showAdminDraft(League $league, LeagueOperations $leagueOperations): Response
+    {
+        $userId = Auth::id();
+        abort_if($userId === null, 403);
+
+        return Inertia::render(
+            'league/admin/DraftSettings',
+            $leagueOperations->adminDraftPageProps((int) $league->id, (int) $userId),
+        );
+    }
+
+    public function updateDraftConfig(UpdateDraftConfigRequest $request, League $league, LeagueOperations $leagueOperations): RedirectResponse
+    {
+        $leagueOperations->updateDraftConfig((int) $league->id, $request);
 
         return back()->with('success', 'Draft configuration saved.');
     }
 
-    public function updateDraftPickOrder(UpdateDraftPickOrderRequest $request, League $league): RedirectResponse
+    public function updateDraftPickOrder(UpdateDraftPickOrderRequest $request, League $league, LeagueOperations $leagueOperations): RedirectResponse
     {
         /** @var list<int> $ids */
         $ids = array_map(fn ($id) => (int) $id, $request->validated('team_ids'));
-
-        DB::transaction(function () use ($league, $ids): void {
-            foreach ($ids as $index => $teamId) {
-                Team::query()
-                    ->where('league_id', $league->id)
-                    ->where('id', $teamId)
-                    ->update(['pick_position' => $index + 1]);
-            }
-        });
+        $leagueOperations->updateDraftPickOrder((int) $league->id, $ids);
 
         return back()->with('success', 'Pick order saved.');
     }
 
-    public function showAdminLeagueAdmins(League $league, LeagueDetailLayoutDataAction $leagueDetailLayoutDataAction): \Inertia\Response
+    public function showAdminLeagueAdmins(League $league, LeagueOperations $leagueOperations): Response
     {
-        $this->authorize('admin', $league);
+        $userId = Auth::id();
+        abort_if($userId === null, 403);
 
-        $data = $leagueDetailLayoutDataAction($league);
-        $isLeagueOwner = (int) Auth::id() === (int) $league->league_owner;
-
-        return Inertia::render('league/admin/LeagueAdmins', [
-            ...$data,
-            'isLeagueOwner' => $isLeagueOwner,
-            'isLeagueAdmin' => Auth::user()->can('admin', $league),
-        ]);
+        return Inertia::render(
+            'league/admin/LeagueAdmins',
+            $leagueOperations->adminLeagueAdminsPageProps((int) $league->id, (int) $userId),
+        );
     }
 
-    public function updateTeamAdmin(UpdateTeamAdminRequest $request, League $league): RedirectResponse
+    public function updateTeamAdmin(UpdateTeamAdminRequest $request, League $league, LeagueOperations $leagueOperations): RedirectResponse
     {
-        $team = Team::query()
-            ->where('league_id', $league->id)
-            ->where('id', $request->integer('team_id'))
-            ->firstOrFail();
-
-        $team->admin_flag = $request->boolean('admin_flag') ? 1 : 0;
-        $team->save();
+        $leagueOperations->updateTeamAdmin(
+            (int) $league->id,
+            $request->integer('team_id'),
+            $request->boolean('admin_flag'),
+        );
 
         return back()->with('success', 'Admin access updated.');
     }
 
-    public function dropTeamFromLeague(DropTeamFromLeagueRequest $request, League $league, DropTeamFromLeagueService $dropTeamFromLeagueService): RedirectResponse
+    public function dropTeamFromLeague(DropTeamFromLeagueRequest $request, League $league, LeagueOperations $leagueOperations): RedirectResponse
     {
-        $team = Team::query()
-            ->where('league_id', $league->id)
-            ->where('id', $request->integer('team_id'))
-            ->whereNull('dropped_at')
-            ->firstOrFail();
-
-        $dropTeamFromLeagueService($team);
+        $leagueOperations->dropTeamFromLeague((int) $league->id, $request->integer('team_id'));
 
         return back()->with('success', 'Team removed from the league. Their Pokémon returned to the pool; matches were converted to byes where applicable.');
     }
 
-    public function reopenMatchSet(ReopenMatchSetRequest $request, League $league, CreateEditSetsAction $createEditSetsAction): \Illuminate\Http\RedirectResponse
+    public function reopenMatchSet(ReopenMatchSetRequest $request, League $league, LeagueOperations $leagueOperations): RedirectResponse
     {
-        $createEditSetsAction([
-            'command' => 'reopen',
-            'set_id' => $request->integer('set_id'),
-        ]);
+        $leagueOperations->reopenMatchSet((int) $league->id, $request->integer('set_id'));
 
         return redirect()
             ->route('leagues.admin.reopen-match', ['league' => $league->id])
             ->with('success', 'Match reopened. Standings were updated; coaches can submit a new result.');
     }
 
-    public function create(Request $request)
+    public function create(Request $request, LeagueOperations $leagueOperations): RedirectResponse
     {
-        $action = new CreateEditLeagueAction;
-        $isEditingExistingLeague = $request->integer('league_id') > 0;
-        $league = $isEditingExistingLeague ? $action->edit($request) : $action->create($request);
+        $leagueId = $leagueOperations->createOrEditLeague($request);
 
-        return redirect()->route('leagues.dashboard', ['league' => $league->id]);
+        return redirect()->route('leagues.dashboard', ['league' => $leagueId]);
     }
 
-    public function updateDiscordWebhook(Request $request, League $league)
+    public function updateDiscordWebhook(Request $request, League $league, LeagueOperations $leagueOperations): RedirectResponse
     {
-        $request->validate([
-            'discord_webhook_url' => 'nullable|url|max:500',
-            'discord_replay_webhook_url' => 'nullable|url|max:500',
-        ]);
-
-        $league->discord_webhook_url = $request->discord_webhook_url ?: null;
-        $league->discord_replay_webhook_url = $request->discord_replay_webhook_url ?: null;
-        $league->save();
+        $leagueOperations->updateDiscordWebhook((int) $league->id, $request);
 
         return back();
     }
 
-    public function createEditShow(Request $request, ReadLeagueAction $readLeagueAction)
+    public function createEditShow(Request $request, LeagueOperations $leagueOperations): Response
     {
-        $league = $readLeagueAction(['league_id' => $request->league_id, 'command' => 'league']);
-        $league?->loadMissing('playoff');
-
-        $draftConfig = $league?->draftConfig;
-        $matchConfig = $league?->matchConfig;
-        $playoff = $league?->playoff;
-
-        return Inertia::render('league/LeagueCreateEdit', [
-            'command' => $request->command,
-            'league_id' => $request->league_id ?? 0,
-            'league_name' => $league?->name ?? '',
-            'draft_date' => $draftConfig?->draft_date ?? null,
-            'set_start_date' => $league?->set_start_date ?? null,
-            'set_frequency' => $league?->set_frequency ?? 3,
-            'enforce_round_count' => (bool) ($matchConfig?->enforce_round_count ?? false),
-            'round_count' => $matchConfig?->round_count ?? null,
-            'draft_points' => $draftConfig?->draft_points ?? 80,
-            'minimum_drafts' => $draftConfig?->minimum_drafts ?? 1,
-            'ban_enabled' => (bool) ($draftConfig?->ban_enabled ?? false),
-            'bans_per_user' => $draftConfig?->bans_per_user ?? null,
-            'minimum_cost_to_ban' => $draftConfig?->minimum_cost_to_ban ?? null,
-            'logo' => $league?->logo ?? null,
-            'pokemon_generation' => $league?->pokemon_generation ?? (int) config('pokemon.default_league_generation'),
-            'pokemon_game' => $league?->pokemon_game instanceof PokemonGame
-                ? $league->pokemon_game->value
-                : (string) config('pokemon.default_league_game'),
-            'pokemon_game_options' => collect(PokemonGame::cases())
-                ->filter(fn (PokemonGame $game) => $game->isAvailable())
-                ->map(fn (PokemonGame $game) => [
-                    'value' => $game->value,
-                    'label' => $game->label(),
-                    'generation' => $game->generation(),
-                ])->values()->all(),
-            'pokemon_generation_options' => collect(range(1, 9))
-                ->filter(fn (int $generation) => count(PokemonGame::forGeneration($generation)) > 0)
-                ->values()
-                ->all(),
-            'discord_webhook_url' => $league?->discord_webhook_url ?? '',
-            'discord_replay_webhook_url' => $league?->discord_replay_webhook_url ?? '',
-            'require_showdown_username' => (bool) ($league?->require_showdown_username ?? false),
-            'playoff_format' => $playoff?->format?->value ?? PlayoffFormat::SingleElimination->value,
-            'playoff_bracket_size' => $playoff?->bracket_size ?? 4,
-            'playoff_format_options' => collect(PlayoffFormat::cases())->map(fn (PlayoffFormat $f) => [
-                'value' => $f->value,
-                'label' => match ($f) {
-                    PlayoffFormat::SingleElimination => 'Single elimination',
-                    PlayoffFormat::DoubleElimination => 'Double elimination',
-                },
-                'bracket_generation_supported' => $f === PlayoffFormat::SingleElimination,
-            ])->values()->all(),
-            'playoff_bracket_size_options' => PlayoffBracketService::allowedBracketSizes(),
-            'playoffs_enabled' => (bool) ($league?->playoffs_enabled ?? true),
-            'free_trade_window_hours' => $league?->free_trade_window_hours ?? 24,
-        ]);
+        return Inertia::render('league/LeagueCreateEdit', $leagueOperations->createEditPageProps($request));
     }
 
-    public function updateTradeDeadline(Request $request, League $league): RedirectResponse
+    public function updateTradeDeadline(Request $request, League $league, LeagueOperations $leagueOperations): RedirectResponse
     {
-        $this->authorize('admin', $league);
+        $userId = Auth::id();
+        abort_if($userId === null, 403);
 
-        $request->validate([
-            'trade_deadline_at' => ['nullable', 'date'],
-        ]);
+        $leagueOperations->updateTradeDeadline((int) $league->id, (int) $userId, $request);
 
-        $deadline = $request->input('trade_deadline_at')
-            ? Carbon::parse($request->input('trade_deadline_at'))
-            : null;
-
-        $league->trade_deadline_at = $deadline;
-        $league->save();
-
-        if ($deadline !== null && ! $deadline->isPast()) {
-            EnforceTradeDeadlineJob::dispatch($league->id, $deadline)->delay($deadline);
-        }
+        $deadline = $request->input('trade_deadline_at');
 
         return back()->with('success', $deadline ? 'Trade deadline saved.' : 'Trade deadline cleared.');
     }
 
-    public function updateFreeTradeWindow(Request $request, League $league): RedirectResponse
+    public function updateFreeTradeWindow(Request $request, League $league, LeagueOperations $leagueOperations): RedirectResponse
     {
-        $this->authorize('admin', $league);
+        $userId = Auth::id();
+        abort_if($userId === null, 403);
 
-        $request->validate([
-            'free_trade_window_hours' => ['required', 'integer', 'min:0', 'max:8760'],
-        ]);
-
-        $league->free_trade_window_hours = $request->integer('free_trade_window_hours');
-        $league->save();
+        $leagueOperations->updateFreeTradeWindow((int) $league->id, (int) $userId, $request);
 
         return back()->with('success', 'Free trade window updated.');
     }
 
-    public function cancelLeague(League $league): RedirectResponse
+    public function cancelLeague(League $league, LeagueOperations $leagueOperations): RedirectResponse
     {
-        $this->authorize('admin', $league);
+        $userId = Auth::id();
+        abort_if($userId === null, 403);
 
-        if ($league->status === LeagueStatus::Completed) {
-            return back()->withErrors(['league' => 'A completed league cannot be cancelled.']);
+        $result = $leagueOperations->cancelLeague((int) $league->id, (int) $userId);
+
+        if (isset($result['errors'])) {
+            return back()->withErrors($result['errors']);
         }
 
-        $league->status = LeagueStatus::Cancelled;
-        $league->save();
-
-        return redirect()->route('leagues.index')->with('success', 'League has been cancelled.');
+        return redirect($result['redirect'] ?? route('leagues.index'))
+            ->with('success', 'League has been cancelled.');
     }
 
-    public function startRegularSeason(League $league, StartRegularSeasonAction $startRegularSeasonAction): RedirectResponse
+    public function startRegularSeason(League $league, LeagueOperations $leagueOperations): RedirectResponse
     {
-        $this->authorize('admin', $league);
+        $userId = Auth::id();
+        abort_if($userId === null, 403);
 
-        if ($league->status !== LeagueStatus::Staging) {
-            return back()->withErrors(['league' => 'The league must be in the Staging phase to start the regular season.']);
-        }
+        $result = $leagueOperations->startRegularSeason((int) $league->id, (int) $userId);
 
-        if (! ($startRegularSeasonAction)($league)) {
-            return back()->withErrors(['league' => 'The draft must be completed before the regular season can start.']);
+        if (isset($result['errors'])) {
+            return back()->withErrors($result['errors']);
         }
 
         return back()->with('success', 'Regular season has started.');
     }
 
-    public function startPlayoffs(League $league, PlayoffBracketService $playoffBracketService): RedirectResponse
+    public function startPlayoffs(League $league, LeagueOperations $leagueOperations): RedirectResponse
     {
-        $this->authorize('admin', $league);
+        $userId = Auth::id();
+        abort_if($userId === null, 403);
 
-        if ($league->status !== LeagueStatus::RegularSeason) {
-            return back()->withErrors(['league' => 'The league must be in the Regular Season phase to start playoffs.']);
+        $result = $leagueOperations->startPlayoffs((int) $league->id, (int) $userId);
+
+        if (isset($result['errors'])) {
+            return back()->withErrors($result['errors']);
         }
-
-        if (! $league->playoffs_enabled) {
-            return back()->withErrors(['league' => 'Playoffs are not enabled for this league.']);
-        }
-
-        $playoff = $league->playoff()->firstOrCreate(
-            ['league_id' => $league->id],
-            [
-                'format' => PlayoffFormat::SingleElimination,
-                'bracket_size' => 4,
-                'status' => PlayoffStatus::Draft,
-                'seed_order' => null,
-            ]
-        );
-
-        if ($playoff->status !== PlayoffStatus::Draft) {
-            return back()->withErrors(['league' => 'The playoff bracket must be in draft status before activating playoffs.']);
-        }
-
-        if (! $playoff->matches()->exists()) {
-            return back()->withErrors(['league' => 'Generate the playoff bracket before starting playoffs.']);
-        }
-
-        $playoff->status = PlayoffStatus::Active;
-        $playoff->save();
-
-        $league->status = LeagueStatus::Playoffs;
-        $league->save();
 
         return back()->with('success', 'Playoffs have started. The bracket is now live.');
     }
 
-    public function finalizeRegularSeason(League $league, ReadTeamAction $readTeamAction): RedirectResponse
+    public function finalizeRegularSeason(League $league, LeagueOperations $leagueOperations): RedirectResponse
     {
-        $this->authorize('admin', $league);
+        $userId = Auth::id();
+        abort_if($userId === null, 403);
 
-        if ($league->status !== LeagueStatus::RegularSeason) {
-            return back()->withErrors(['league' => 'The league must be in the Regular Season phase to finalize.']);
+        $result = $leagueOperations->finalizeRegularSeason((int) $league->id, (int) $userId);
+
+        if (isset($result['errors'])) {
+            return back()->withErrors($result['errors']);
         }
 
-        if ($league->playoffs_enabled) {
-            return back()->withErrors(['league' => 'This league has playoffs enabled. Use "Start Playoffs" instead.']);
-        }
-
-        $groupedStandings = $readTeamAction(['league_id' => $league->id, 'command' => 'standings']);
-        $topTeam = $groupedStandings->flatten(1)->sortByDesc('victory_points')->first();
-
-        if ($topTeam === null) {
-            return back()->withErrors(['league' => 'No teams found in standings.']);
-        }
-
-        $league->winner = $topTeam->user_id;
-        $league->status = LeagueStatus::Completed;
-        $league->save();
-
-        return back()->with('success', 'League finalized. '.$topTeam->name.' is the champion!');
+        return back()->with('success', $result['success'] ?? 'League finalized.');
     }
 }
