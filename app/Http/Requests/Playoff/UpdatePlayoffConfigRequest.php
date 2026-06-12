@@ -3,7 +3,7 @@
 namespace App\Http\Requests\Playoff;
 
 use App\Enums\Playoffs\PlayoffFormat;
-use App\Http\Requests\Playoff\Concerns\ResolvesRouteLeague;
+use App\Http\Requests\Concerns\ResolvesRouteLeague;
 use App\Modules\Playoffs\Services\PlayoffBracketService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;

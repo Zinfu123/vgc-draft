@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Playoff;
 
-use App\Http\Requests\Playoff\Concerns\ResolvesRouteLeague;
+use App\Http\Requests\Concerns\ResolvesRouteLeague;
 use Illuminate\Foundation\Http\FormRequest;
 
 class ClosePlayoffsRequest extends FormRequest

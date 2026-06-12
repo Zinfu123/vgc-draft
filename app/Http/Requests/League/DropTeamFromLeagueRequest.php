@@ -2,20 +2,20 @@
 
 namespace App\Http\Requests\League;
 
-use App\Modules\League\Models\League;
+use App\Http\Requests\Concerns\ResolvesRouteLeague;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 class DropTeamFromLeagueRequest extends FormRequest
 {
+    use ResolvesRouteLeague;
+
     public function authorize(): bool
     {
-        $league = $this->route('league');
+        $user = $this->user();
 
-        return $league instanceof League
-            && $this->user() !== null
-            && $this->user()->can('admin', $league);
+        return $user !== null && $user->can('admin', $this->routeLeague());
     }
 
     /**
@@ -23,8 +23,7 @@ class DropTeamFromLeagueRequest extends FormRequest
      */
     public function rules(): array
     {
-        /** @var League $league */
-        $league = $this->route('league');
+        $league = $this->routeLeague();
 
         return [
             'team_id' => [

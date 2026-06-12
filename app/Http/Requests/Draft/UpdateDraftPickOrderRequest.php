@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests\Draft;
 
+use App\Http\Requests\Concerns\ResolvesRouteLeague;
 use App\Modules\Draft\Models\Draft;
-use App\Modules\League\Models\League;
 use App\Modules\Teams\Models\Team;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -11,12 +11,13 @@ use Illuminate\Validation\Validator;
 
 class UpdateDraftPickOrderRequest extends FormRequest
 {
+    use ResolvesRouteLeague;
+
     public function authorize(): bool
     {
         $user = $this->user();
-        $league = $this->route('league');
 
-        return $user !== null && $league instanceof League && $user->can('admin', $league);
+        return $user !== null && $user->can('admin', $this->routeLeague());
     }
 
     /**
@@ -24,8 +25,7 @@ class UpdateDraftPickOrderRequest extends FormRequest
      */
     public function rules(): array
     {
-        /** @var League $league */
-        $league = $this->route('league');
+        $league = $this->routeLeague();
 
         return [
             'team_ids' => ['required', 'array'],
@@ -45,8 +45,7 @@ class UpdateDraftPickOrderRequest extends FormRequest
                 return;
             }
 
-            /** @var League $league */
-            $league = $this->route('league');
+            $league = $this->routeLeague();
 
             if (Draft::where('league_id', $league->id)->exists()) {
                 $validator->errors()->add('team_ids', 'Pick order cannot be changed while a draft exists for this league.');

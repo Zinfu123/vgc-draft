@@ -2,17 +2,18 @@
 
 namespace App\Http\Requests\Draft;
 
-use App\Modules\League\Models\League;
+use App\Http\Requests\Concerns\ResolvesRouteLeague;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateDraftConfigRequest extends FormRequest
 {
+    use ResolvesRouteLeague;
+
     public function authorize(): bool
     {
         $user = $this->user();
-        $league = $this->route('league');
 
-        return $user !== null && $league instanceof League && $user->can('admin', $league);
+        return $user !== null && $user->can('admin', $this->routeLeague());
     }
 
     protected function prepareForValidation(): void

@@ -37,7 +37,7 @@ it('exposes v2 preview nav links when modules are enabled', function () {
         ['module' => 'Matches', 'href' => '/match'],
         ['module' => 'Trade', 'href' => '/leagues/1/trades'],
         ['module' => 'Playoffs', 'href' => '/leagues/1/admin/playoffs'],
-        ['module' => 'League', 'href' => '/v2/leagues/1'],
+        ['module' => 'League', 'href' => '/leagues/1'],
     ]);
 });
 
